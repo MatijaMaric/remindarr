@@ -194,6 +194,102 @@ export async function getUserAchievements(
   });
 }
 
+export type UserAchievementUpsert = {
+  key: string;
+  progress: number;
+  earnedAt: string | null;
+  /** Backfill sets this so historical earns do not notify. */
+  earnedNotified?: 1;
+};
+
+function userAchievementUnchanged(
+  row: UserAchievementRow | undefined,
+  entry: UserAchievementUpsert,
+): boolean {
+  if (!row) return false;
+  if (row.progress !== entry.progress) return false;
+  const wasEarned = row.earnedAt != null;
+  const nowEarned = entry.earnedAt != null;
+  // Already-earned rows keep the first earnedAt, so a new timestamp is not a write.
+  if (!wasEarned && nowEarned) return false;
+  if (entry.earnedNotified === 1 && row.earnedNotified !== 1) return false;
+  return true;
+}
+
+// 7 bound params per row (last_earned_at is inlined NULL). D1 caps a
+// statement at 100, so 14 rows = 98.
+const USER_ACHIEVEMENT_CHUNK = 14;
+
+/**
+ * Upsert many user_achievement rows for one user in chunked multi-row
+ * statements. Skips rows whose progress and earn state already match.
+ * One Sentry span for the whole call — watched/tick must not emit
+ * `upsertUserAchievement` once per key.
+ *
+ * Returns whether each key transitioned earnedAt from null to non-null.
+ * Re-eval keeps the first earn time so already-earned badges stay quiet.
+ */
+export async function upsertUserAchievements(
+  userId: string,
+  entries: readonly UserAchievementUpsert[],
+): Promise<Map<string, { newlyEarned: boolean }>> {
+  const results = new Map<string, { newlyEarned: boolean }>();
+  if (entries.length === 0) return results;
+
+  return traceDbQuery("upsertUserAchievements", async () => {
+    const db = getDb();
+    const unique = new Map<string, UserAchievementUpsert>();
+    for (const entry of entries) unique.set(entry.key, entry);
+
+    const existing = await db
+      .select()
+      .from(userAchievements)
+      .where(eq(userAchievements.userId, userId))
+      .all();
+    const byKey = new Map(existing.map((row) => [row.achievementKey, row]));
+
+    const changed: UserAchievementUpsert[] = [];
+    for (const entry of unique.values()) {
+      const row = byKey.get(entry.key);
+      const wasEarned = row?.earnedAt != null;
+      const nowEarned = entry.earnedAt != null;
+      results.set(entry.key, { newlyEarned: !wasEarned && nowEarned });
+      if (!userAchievementUnchanged(row, entry)) changed.push(entry);
+    }
+
+    if (changed.length === 0) return results;
+
+    const updatedAt = new Date().toISOString();
+    for (let i = 0; i < changed.length; i += USER_ACHIEVEMENT_CHUNK) {
+      const chunk = changed.slice(i, i + USER_ACHIEVEMENT_CHUNK);
+      await db
+        .insert(userAchievements)
+        .values(
+          chunk.map((entry) => ({
+            userId,
+            achievementKey: entry.key,
+            progress: entry.progress,
+            earnedAt: entry.earnedAt,
+            earnedNotified: entry.earnedNotified ?? 0,
+            updatedAt,
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [userAchievements.userId, userAchievements.achievementKey],
+          set: {
+            progress: sql`excluded.progress`,
+            earnedAt: sql`COALESCE(${userAchievements.earnedAt}, excluded.earned_at)`,
+            earnedNotified: sql`CASE WHEN excluded.earned_notified = 1 THEN 1 ELSE ${userAchievements.earnedNotified} END`,
+            updatedAt: sql`excluded.updated_at`,
+          },
+        })
+        .run();
+    }
+
+    return results;
+  });
+}
+
 /**
  * Upsert a user_achievement row, tracking progress and earned status.
  * Returns whether this call newly earned the achievement
@@ -209,53 +305,15 @@ export async function upsertUserAchievement(
   earnedAt: string | null,
   opts?: { earnedNotified?: 1 },
 ): Promise<{ newlyEarned: boolean }> {
-  return traceDbQuery("upsertUserAchievement", async () => {
-    const db = getDb();
-
-    // Check current state
-    const existing = await db
-      .select({ earnedAt: userAchievements.earnedAt })
-      .from(userAchievements)
-      .where(
-        and(
-          eq(userAchievements.userId, userId),
-          eq(userAchievements.achievementKey, key),
-        ),
-      )
-      .get();
-
-    const wasEarned = existing?.earnedAt != null;
-    const nowEarned = earnedAt != null;
-    const newlyEarned = !wasEarned && nowEarned;
-
-    const earnedNotified = opts?.earnedNotified ?? 0;
-
-    await db
-      .insert(userAchievements)
-      .values({
-        userId,
-        achievementKey: key,
-        progress,
-        earnedAt,
-        earnedNotified,
-        updatedAt: new Date().toISOString(),
-      })
-      .onConflictDoUpdate({
-        target: [userAchievements.userId, userAchievements.achievementKey],
-        set: {
-          progress,
-          // Keep the first earn time. Re-eval/backfill must not restamp to now
-          // or already-earned badges look newly unlocked to the toast poller.
-          earnedAt: existing?.earnedAt ?? earnedAt,
-          // Only force earnedNotified=1 when explicitly requested (backfill path)
-          ...(opts?.earnedNotified === 1 ? { earnedNotified: 1 } : {}),
-          updatedAt: new Date().toISOString(),
-        },
-      })
-      .run();
-
-    return { newlyEarned };
-  });
+  const result = await upsertUserAchievements(userId, [
+    {
+      key,
+      progress,
+      earnedAt,
+      ...(opts?.earnedNotified === 1 ? { earnedNotified: 1 as const } : {}),
+    },
+  ]);
+  return result.get(key) ?? { newlyEarned: false };
 }
 
 /**

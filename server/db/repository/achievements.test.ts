@@ -5,14 +5,17 @@ import {
   beforeEach,
   afterAll,
   afterEach,
+  spyOn,
 } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { createUser } from "../repository";
+import { getRawDb } from "../bun-db";
 import {
   upsertAchievementDef,
   listAchievementDefs,
   getUserAchievements,
   upsertUserAchievement,
+  upsertUserAchievements,
   listEarnedSince,
   markAchievementsNotified,
   sumXpForUser,
@@ -110,6 +113,107 @@ describe("getUserAchievements", () => {
     expect(result[0].achievementKey).toBe("ua_key_1");
     expect(result[0].progress).toBe(5);
     expect(result[0].earnedAt).toBeNull();
+  });
+});
+
+/** Count user_achievements INSERT statements issued through the raw sqlite handle. */
+function countUserAchievementInserts(): {
+  count: () => number;
+  maxParams: () => number;
+  restore: () => void;
+} {
+  const db = getRawDb();
+  const statements: string[] = [];
+  const original = db.prepare.bind(db);
+  const spy = spyOn(db, "prepare").mockImplementation(((sql: string) => {
+    if (/insert\s+into\s+["`]?user_achievements["`]?/i.test(sql))
+      statements.push(sql);
+    return original(sql);
+  }) as typeof db.prepare);
+  return {
+    count: () => statements.length,
+    maxParams: () =>
+      Math.max(0, ...statements.map((sql) => (sql.match(/\?/g) ?? []).length)),
+    restore: () => spy.mockRestore(),
+  };
+}
+
+describe("upsertUserAchievements", () => {
+  it("writes many rows in one statement and skips unchanged rows (#1344)", async () => {
+    const userId = await createUser("batch-ua", "hash");
+    const otherId = await createUser("batch-ua-other", "hash");
+    const keys = Array.from({ length: 17 }, (_, i) => `batch_ua_${i}`);
+    for (const key of keys) {
+      await upsertAchievementDef(makeAchievementDef(key));
+    }
+
+    const counter = countUserAchievementInserts();
+    try {
+      const first = await upsertUserAchievements(
+        userId,
+        keys.map((key, i) => ({
+          key,
+          progress: i,
+          earnedAt: i === 0 ? "2024-01-01T00:00:00.000Z" : null,
+        })),
+      );
+      // 17 rows, 7 bound params. D1 caps a statement at 100, so this is two
+      // writes — never one INSERT per achievement.
+      expect(counter.count()).toBe(2);
+      expect(counter.maxParams()).toBeLessThanOrEqual(100);
+      expect(first.get(keys[0])?.newlyEarned).toBe(true);
+      expect(first.get(keys[1])?.newlyEarned).toBe(false);
+
+      const afterInsert = counter.count();
+      const second = await upsertUserAchievements(
+        userId,
+        keys.map((key, i) => ({
+          key,
+          progress: i,
+          earnedAt: i === 0 ? "2024-06-01T00:00:00.000Z" : null,
+        })),
+      );
+      expect(counter.count()).toBe(afterInsert);
+      expect(second.get(keys[0])?.newlyEarned).toBe(false);
+
+      const third = await upsertUserAchievements(userId, [
+        {
+          key: keys[0],
+          progress: 100,
+          earnedAt: "2024-07-01T00:00:00.000Z",
+        },
+        {
+          key: keys[1],
+          progress: 3,
+          earnedAt: "2024-07-01T00:00:00.000Z",
+          earnedNotified: 1,
+        },
+        // progress 2 and still unearned — identical to the first write
+        { key: keys[2], progress: 2, earnedAt: null },
+      ]);
+      expect(counter.count()).toBe(afterInsert + 1);
+      expect(third.get(keys[0])?.newlyEarned).toBe(false);
+      expect(third.get(keys[1])?.newlyEarned).toBe(true);
+      expect(third.get(keys[2])?.newlyEarned).toBe(false);
+    } finally {
+      counter.restore();
+    }
+
+    const rows = await getUserAchievements(userId);
+    const byKey = new Map(rows.map((row) => [row.achievementKey, row]));
+    expect(rows).toHaveLength(keys.length);
+    expect(byKey.get(keys[0])?.earnedAt).toBe("2024-01-01T00:00:00.000Z");
+    expect(byKey.get(keys[0])?.progress).toBe(100);
+    expect(byKey.get(keys[0])?.earnedNotified).toBe(0);
+    expect(byKey.get(keys[1])?.earnedAt).toBe("2024-07-01T00:00:00.000Z");
+    expect(byKey.get(keys[1])?.progress).toBe(3);
+    expect(byKey.get(keys[1])?.earnedNotified).toBe(1);
+    expect(byKey.get(keys[2])?.progress).toBe(2);
+    expect(byKey.get(keys[2])?.earnedAt).toBeNull();
+    expect(await getUserAchievements(otherId)).toHaveLength(0);
+
+    const empty = await upsertUserAchievements(userId, []);
+    expect(empty.size).toBe(0);
   });
 });
 

@@ -82,8 +82,8 @@ describe("onWatchedTitle", () => {
     });
     const upsertSpy = spyOn(
       achievementsRepo,
-      "upsertUserAchievement",
-    ).mockResolvedValue({ newlyEarned: false });
+      "upsertUserAchievements",
+    ).mockResolvedValue(new Map());
     const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(
       undefined,
     );
@@ -101,6 +101,9 @@ describe("onWatchedTitle", () => {
     expect(bumpSpy).toHaveBeenCalledWith(userId);
     expect(evalMoviesSpy).toHaveBeenCalled();
     expect(evalStreakSpy).toHaveBeenCalled();
+    expect(upsertSpy).toHaveBeenCalledTimes(1);
+    expect(upsertSpy.mock.calls[0][0]).toBe(userId);
+    expect(upsertSpy.mock.calls[0][1].length).toBeGreaterThan(1);
     expect(enqueueSpy).toHaveBeenCalledWith(
       "evaluate-achievements",
       expect.objectContaining({
@@ -129,8 +132,8 @@ describe("onWatchedTitle", () => {
     });
     const upsertSpy = spyOn(
       achievementsRepo,
-      "upsertUserAchievement",
-    ).mockResolvedValue({ newlyEarned: false });
+      "upsertUserAchievements",
+    ).mockResolvedValue(new Map());
     const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(
       undefined,
     );
@@ -171,8 +174,8 @@ describe("onWatchedEpisode", () => {
     });
     const upsertSpy = spyOn(
       achievementsRepo,
-      "upsertUserAchievement",
-    ).mockResolvedValue({ newlyEarned: false });
+      "upsertUserAchievements",
+    ).mockResolvedValue(new Map());
     const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(
       undefined,
     );
@@ -223,8 +226,8 @@ describe("onWatchedEpisodesBulk", () => {
     });
     const upsertSpy = spyOn(
       achievementsRepo,
-      "upsertUserAchievement",
-    ).mockResolvedValue({ newlyEarned: false });
+      "upsertUserAchievements",
+    ).mockResolvedValue(new Map());
     const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(
       undefined,
     );
@@ -261,8 +264,8 @@ describe("onFollow", () => {
 
     const upsertSpy = spyOn(
       achievementsRepo,
-      "upsertUserAchievement",
-    ).mockResolvedValue({ newlyEarned: true });
+      "upsertUserAchievements",
+    ).mockResolvedValue(new Map([["social", { newlyEarned: true }]]));
     const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(
       undefined,
     );
@@ -289,8 +292,8 @@ describe("onRecommendation", () => {
 
     const upsertSpy = spyOn(
       achievementsRepo,
-      "upsertUserAchievement",
-    ).mockResolvedValue({ newlyEarned: true });
+      "upsertUserAchievements",
+    ).mockResolvedValue(new Map([["social", { newlyEarned: true }]]));
     const enqueueSpy = spyOn(backend, "enqueueAdhoc").mockResolvedValue(
       undefined,
     );

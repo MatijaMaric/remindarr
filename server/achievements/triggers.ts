@@ -9,6 +9,7 @@ import {
 } from "./evaluate";
 import {
   upsertUserAchievement,
+  upsertUserAchievements,
   appendUserAchievementEarns,
 } from "../db/repository/achievements";
 import { bumpStreak } from "../db/repository/streaks";
@@ -18,26 +19,43 @@ import { logger } from "../logger";
 
 const log = logger.child({ module: "achievement-triggers" });
 
-async function evaluateAndPersist(
-  userId: string,
+type OneShotUpdate = {
+  key: string;
+  kind: AchievementKind;
+  progress: number;
+  earnedAt: string | null;
+};
+
+async function evaluateOneShot(
   key: string,
   kind: AchievementKind,
   evaluator: () => Promise<{ progress: number; earned: boolean }>,
-): Promise<void> {
+): Promise<OneShotUpdate> {
   const result = await evaluator();
-  const earnedAt = result.earned ? new Date().toISOString() : null;
-  const { newlyEarned } = await upsertUserAchievement(
-    userId,
+  return {
     key,
-    result.progress,
-    earnedAt,
+    kind,
+    progress: result.progress,
+    earnedAt: result.earned ? new Date().toISOString() : null,
+  };
+}
+
+async function persistOneShots(
+  userId: string,
+  pending: OneShotUpdate[],
+): Promise<void> {
+  if (pending.length === 0) return;
+  const results = await upsertUserAchievements(
+    userId,
+    pending.map(({ key, progress, earnedAt }) => ({ key, progress, earnedAt })),
   );
-  if (newlyEarned) {
+  for (const item of pending) {
+    if (!results.get(item.key)?.newlyEarned) continue;
     log.info("Achievement newly earned", {
       userId,
-      key,
-      kind,
-      progress: result.progress,
+      key: item.key,
+      kind: item.kind,
+      progress: item.progress,
     });
   }
 }
@@ -78,21 +96,28 @@ export async function onWatchedTitle(
   try {
     await bumpStreak(userId);
 
+    const pending: OneShotUpdate[] = [];
+
     // Inline: count_movies (only if this is a movie)
     if (isMovie) {
       for (const a of ACHIEVEMENTS.filter((a) => a.kind === "count_movies")) {
-        await evaluateAndPersist(userId, a.key, a.kind, () =>
-          evaluateCountMovies(userId, a.threshold),
+        pending.push(
+          await evaluateOneShot(a.key, a.kind, () =>
+            evaluateCountMovies(userId, a.threshold),
+          ),
         );
       }
     }
 
     // Inline: streak_days
     for (const a of ACHIEVEMENTS.filter((a) => a.kind === "streak_days")) {
-      await evaluateAndPersist(userId, a.key, a.kind, () =>
-        evaluateStreak(userId, a.threshold),
+      pending.push(
+        await evaluateOneShot(a.key, a.kind, () =>
+          evaluateStreak(userId, a.threshold),
+        ),
       );
     }
+    await persistOneShots(userId, pending);
 
     // Deferred: completionist + genre_count + explorer/long-haul
     await enqueueAdhoc("evaluate-achievements", {
@@ -122,19 +147,26 @@ export async function onWatchedEpisode(
   try {
     await bumpStreak(userId, watchedAt);
 
+    const pending: OneShotUpdate[] = [];
+
     // Inline: count_episodes
     for (const a of ACHIEVEMENTS.filter((a) => a.kind === "count_episodes")) {
-      await evaluateAndPersist(userId, a.key, a.kind, () =>
-        evaluateCountEpisodes(userId, a.threshold),
+      pending.push(
+        await evaluateOneShot(a.key, a.kind, () =>
+          evaluateCountEpisodes(userId, a.threshold),
+        ),
       );
     }
 
     // Inline: streak_days
     for (const a of ACHIEVEMENTS.filter((a) => a.kind === "streak_days")) {
-      await evaluateAndPersist(userId, a.key, a.kind, () =>
-        evaluateStreak(userId, a.threshold),
+      pending.push(
+        await evaluateOneShot(a.key, a.kind, () =>
+          evaluateStreak(userId, a.threshold),
+        ),
       );
     }
+    await persistOneShots(userId, pending);
 
     // Deferred: look up titleId then enqueue completionist + genre_count + speed_binge_season + repeatables + series kinds
     const titleId = await getEpisodeTitleId(parseInt(episodeId, 10));
@@ -170,19 +202,26 @@ export async function onWatchedEpisodesBulk(
   try {
     await bumpStreak(userId, watchedAt);
 
+    const pending: OneShotUpdate[] = [];
+
     // Inline: count_episodes
     for (const a of ACHIEVEMENTS.filter((a) => a.kind === "count_episodes")) {
-      await evaluateAndPersist(userId, a.key, a.kind, () =>
-        evaluateCountEpisodes(userId, a.threshold),
+      pending.push(
+        await evaluateOneShot(a.key, a.kind, () =>
+          evaluateCountEpisodes(userId, a.threshold),
+        ),
       );
     }
 
     // Inline: streak_days
     for (const a of ACHIEVEMENTS.filter((a) => a.kind === "streak_days")) {
-      await evaluateAndPersist(userId, a.key, a.kind, () =>
-        evaluateStreak(userId, a.threshold),
+      pending.push(
+        await evaluateOneShot(a.key, a.kind, () =>
+          evaluateStreak(userId, a.threshold),
+        ),
       );
     }
+    await persistOneShots(userId, pending);
 
     // Deferred: one job per distinct titleId
     for (const titleId of titleIds) {
@@ -210,13 +249,17 @@ export async function onWatchedEpisodesBulk(
  */
 export async function onFollow(followerId: string): Promise<void> {
   try {
+    const pending: OneShotUpdate[] = [];
     for (const a of ACHIEVEMENTS.filter(
       (a) => a.kind === "social_first_follow",
     )) {
-      await evaluateAndPersist(followerId, a.key, a.kind, () =>
-        evaluateSocialFirstFollow(followerId),
+      pending.push(
+        await evaluateOneShot(a.key, a.kind, () =>
+          evaluateSocialFirstFollow(followerId),
+        ),
       );
     }
+    await persistOneShots(followerId, pending);
     // No job enqueued for social triggers
   } catch (err) {
     log.error("onFollow trigger failed", { followerId, err });
@@ -228,13 +271,17 @@ export async function onFollow(followerId: string): Promise<void> {
  */
 export async function onRecommendation(fromUserId: string): Promise<void> {
   try {
+    const pending: OneShotUpdate[] = [];
     for (const a of ACHIEVEMENTS.filter(
       (a) => a.kind === "social_first_recommendation",
     )) {
-      await evaluateAndPersist(fromUserId, a.key, a.kind, () =>
-        evaluateSocialFirstRecommendation(fromUserId),
+      pending.push(
+        await evaluateOneShot(a.key, a.kind, () =>
+          evaluateSocialFirstRecommendation(fromUserId),
+        ),
       );
     }
+    await persistOneShots(fromUserId, pending);
     // No job enqueued for social triggers
   } catch (err) {
     log.error("onRecommendation trigger failed", { fromUserId, err });
