@@ -1,6 +1,6 @@
 import webpush from "web-push";
 import { CONFIG } from "../config";
-import { getSetting, setSetting } from "../db/repository";
+import { getVapidSettings, setSetting } from "../db/repository/settings";
 import { logger } from "../logger";
 
 const log = logger.child({ module: "vapid" });
@@ -18,10 +18,11 @@ export async function getVapidKeys(): Promise<VapidKeys> {
   let subject = CONFIG.VAPID_SUBJECT;
 
   if (!publicKey || !privateKey) {
-    // Try settings table
-    publicKey = (await getSetting("vapid_public_key")) || "";
-    privateKey = (await getSetting("vapid_private_key")) || "";
-    subject = subject || (await getSetting("vapid_subject")) || "";
+    // One batched read, reused for every send in this tick.
+    const stored = await getVapidSettings();
+    publicKey = stored.vapid_public_key || "";
+    privateKey = stored.vapid_private_key || "";
+    subject = subject || stored.vapid_subject || "";
   }
 
   if (!publicKey || !privateKey) {
@@ -36,7 +37,7 @@ export async function getVapidKeys(): Promise<VapidKeys> {
 
   if (!subject) {
     subject = "mailto:noreply@remindarr.local";
-    if (!CONFIG.VAPID_SUBJECT && !(await getSetting("vapid_subject"))) {
+    if (!CONFIG.VAPID_SUBJECT && !(await getVapidSettings()).vapid_subject) {
       await setSetting("vapid_subject", subject);
     }
   }
