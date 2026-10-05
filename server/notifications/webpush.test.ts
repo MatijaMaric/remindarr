@@ -180,6 +180,82 @@ describe("WebPushProvider.send", () => {
     sendSpy.mockRestore();
   });
 
+  it("surfaces the fetch failure name, message, and cause when statusCode is missing", async () => {
+    const cause = new Error("connect ECONNREFUSED 203.0.113.5:443");
+    const fetchError = new TypeError("fetch failed", { cause });
+    fetchSpy.mockRejectedValue(fetchError);
+    const sendSpy = spyOn(
+      webpush.default,
+      "generateRequestDetails",
+    ).mockImplementation(() => {
+      return {
+        endpoint: validConfig.endpoint,
+        method: "POST",
+        headers: {},
+        body: Buffer.from("encrypted"),
+      } as any;
+    });
+    const consoleErrorSpy = spyOn(console, "error").mockImplementation(
+      () => {},
+    );
+
+    let thrown: unknown;
+    try {
+      await provider.send(validConfig, sampleContent);
+    } catch (err) {
+      thrown = err;
+    }
+
+    try {
+      expect(thrown).toBeInstanceOf(Error);
+      expect(thrown).not.toBeInstanceOf(SubscriptionExpiredError);
+      const error = thrown as Error;
+      expect(error.message).toBe(
+        "Web push failed (unknown). Check the subscription and operator outbound policy. TypeError: fetch failed (cause: Error: connect ECONNREFUSED 203.0.113.5:443)",
+      );
+      expect(error.cause).toBe(fetchError);
+      const original = error.cause as Error;
+      expect(original.name).toBe("TypeError");
+      expect(original.message).toBe("fetch failed");
+      expect(original.cause).toBe(cause);
+
+      const { logger } = await import("../logger");
+      logger
+        .child({ module: "job-processor" })
+        .error("Failed to send notification", {
+          provider: "webpush",
+          err: error,
+        });
+      const logged = JSON.parse(
+        consoleErrorSpy.mock.calls.at(-1)?.[0] as string,
+      ) as {
+        err: {
+          name: string;
+          message: string;
+          cause: {
+            name: string;
+            message: string;
+            cause: { name: string; message: string };
+          };
+        };
+      };
+      expect(logged.err.name).toBe("Error");
+      expect(logged.err.message).toContain("TypeError: fetch failed");
+      expect(logged.err.message).toContain(
+        "cause: Error: connect ECONNREFUSED 203.0.113.5:443",
+      );
+      expect(logged.err.cause.name).toBe("TypeError");
+      expect(logged.err.cause.message).toBe("fetch failed");
+      expect(logged.err.cause.cause.name).toBe("Error");
+      expect(logged.err.cause.cause.message).toBe(
+        "connect ECONNREFUSED 203.0.113.5:443",
+      );
+    } finally {
+      consoleErrorSpy.mockRestore();
+      sendSpy.mockRestore();
+    }
+  });
+
   it("sends New credits even when nothing else is due", async () => {
     const onlyCredits: NotificationContent = {
       episodes: [],

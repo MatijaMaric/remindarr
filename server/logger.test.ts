@@ -1,6 +1,6 @@
 import { describe, it, expect, spyOn } from "bun:test";
 import { Hono } from "hono";
-import { getRecentLogs, requestLogger, type LogLevel } from "./logger";
+import { getRecentLogs, Logger, requestLogger, type LogLevel } from "./logger";
 import { renderMetrics, resetMetrics } from "./metrics";
 import { zValidator } from "./lib/validator";
 import { z } from "zod";
@@ -124,5 +124,33 @@ describe("getRecentLogs", () => {
 
   it("returns at most limit entries", () => {
     expect(getRecentLogs(5).length).toBeLessThanOrEqual(5);
+  });
+});
+
+describe("error serialization", () => {
+  it("includes the error name, message, and cause", () => {
+    const lines: string[] = [];
+    const stderr = spyOn(console, "error").mockImplementation((line) => {
+      lines.push(String(line));
+    });
+    try {
+      const cause = new Error("connect refused");
+      new Logger("error").error("fail", {
+        error: new TypeError("fetch failed", { cause }),
+      });
+      const entry = JSON.parse(lines[0]) as {
+        error: {
+          name: string;
+          message: string;
+          cause: { name: string; message: string };
+        };
+      };
+      expect(entry.error.name).toBe("TypeError");
+      expect(entry.error.message).toBe("fetch failed");
+      expect(entry.error.cause.name).toBe("Error");
+      expect(entry.error.cause.message).toBe("connect refused");
+    } finally {
+      stderr.mockRestore();
+    }
   });
 });

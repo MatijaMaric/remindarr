@@ -42,9 +42,18 @@ const LEVELS: Record<LogLevel, number> = {
   error: 3,
 };
 
-function serializeValue(value: unknown): unknown {
+function serializeValue(value: unknown, seen = new WeakSet<object>()): unknown {
   if (value instanceof Error) {
-    return { message: value.message, stack: value.stack };
+    if (seen.has(value)) return { name: value.name, message: value.message };
+    seen.add(value);
+    return {
+      name: value.name,
+      message: value.message,
+      stack: value.stack,
+      ...(value.cause !== undefined
+        ? { cause: serializeValue(value.cause, seen) }
+        : {}),
+    };
   }
   return value;
 }
