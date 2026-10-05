@@ -1,5 +1,5 @@
 import { ACHIEVEMENTS, ACHIEVEMENT_META } from "./definitions";
-import { upsertAchievementDef } from "../db/repository/achievements";
+import { upsertAchievementDefs } from "../db/repository/achievements";
 import { getSetting } from "../db/repository/settings";
 import { enqueueOnce } from "../jobs/backend";
 import { logger } from "../logger";
@@ -10,16 +10,18 @@ export const BACKFILL_DONE_KEY = "achievements_backfill_done_v2";
 
 /**
  * Sync the ACHIEVEMENTS registry into the `achievements` table.
- * UPSERTs each entry — does NOT delete missing keys (orphan rows are tolerated).
- * Safe to call multiple times (idempotent).
+ * One batched upsert — does NOT delete missing keys (orphan rows are tolerated).
+ * Skips the write when every definition already matches. Safe to call multiple times.
  */
 export async function syncAchievementRegistry(): Promise<void> {
   log.info("Syncing achievement registry", { count: ACHIEVEMENTS.length });
 
-  for (const achievement of ACHIEVEMENTS) {
-    const meta = ACHIEVEMENT_META.get(achievement.key);
-    await upsertAchievementDef(achievement, meta);
-  }
+  await upsertAchievementDefs(
+    ACHIEVEMENTS.map((achievement) => ({
+      achievement,
+      meta: ACHIEVEMENT_META.get(achievement.key),
+    })),
+  );
 
   log.info("Achievement registry sync complete");
 

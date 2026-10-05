@@ -1,12 +1,35 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { eq } from "drizzle-orm";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { ACHIEVEMENTS } from "./definitions";
+import { ACHIEVEMENTS, ACHIEVEMENT_META } from "./definitions";
 import { syncAchievementRegistry, BACKFILL_DONE_KEY } from "./sync";
 import { listAchievementDefs } from "../db/repository/achievements";
+import { getRawDb } from "../db/bun-db";
 import { getDb } from "../db/schema";
 import { achievements, settings } from "../db/schema";
 import * as backend from "../jobs/backend";
+
+/** Count achievement INSERT statements issued through the raw sqlite handle. */
+function countAchievementInserts(): {
+  count: () => number;
+  maxParams: () => number;
+  restore: () => void;
+} {
+  const db = getRawDb();
+  const statements: string[] = [];
+  const original = db.prepare.bind(db);
+  const spy = spyOn(db, "prepare").mockImplementation(((sql: string) => {
+    if (/insert\s+into\s+["`]?achievements["`]?/i.test(sql))
+      statements.push(sql);
+    return original(sql);
+  }) as typeof db.prepare);
+  return {
+    count: () => statements.length,
+    maxParams: () =>
+      Math.max(0, ...statements.map((sql) => (sql.match(/\?/g) ?? []).length)),
+    restore: () => spy.mockRestore(),
+  };
+}
 
 beforeEach(() => setupTestDb());
 afterEach(() => teardownTestDb());
@@ -17,9 +40,35 @@ describe("syncAchievementRegistry", () => {
     const defs = await listAchievementDefs();
     expect(defs.length).toBe(ACHIEVEMENTS.length);
 
-    const keys = new Set(defs.map((d) => d.key));
+    const byKey = new Map(defs.map((d) => [d.key, d]));
     for (const a of ACHIEVEMENTS) {
-      expect(keys.has(a.key)).toBe(true);
+      const row = byKey.get(a.key);
+      const meta = ACHIEVEMENT_META.get(a.key);
+      expect(row).toBeDefined();
+      expect(row?.points).toBe(a.points);
+      expect(row?.title).toBe(a.title);
+      expect(row?.kind).toBe(a.kind);
+      expect(row?.threshold).toBe(a.threshold);
+      expect(row?.description).toBe(a.description);
+      expect(row?.icon).toBe(a.icon);
+      expect(row?.category).toBe(meta?.category);
+      expect(row?.tier).toBe(meta?.tier);
+      expect(row?.family ?? null).toBe(meta?.family ?? null);
+      expect(row?.rungIndex ?? null).toBe(meta?.rungIndex ?? null);
+      expect(row?.repeatable).toBe(meta?.repeatable ? 1 : 0);
+      const metadata =
+        a.genre !== undefined ||
+        a.seasons !== undefined ||
+        a.windowHours !== undefined
+          ? JSON.stringify({
+              ...(a.genre !== undefined ? { genre: a.genre } : {}),
+              ...(a.seasons !== undefined ? { seasons: a.seasons } : {}),
+              ...(a.windowHours !== undefined
+                ? { windowHours: a.windowHours }
+                : {}),
+            })
+          : null;
+      expect(row?.metadata ?? null).toBe(metadata);
     }
   });
 
@@ -71,6 +120,49 @@ describe("syncAchievementRegistry", () => {
     await syncAchievementRegistry();
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
+  });
+
+  it("batches definition upserts and skips them when unchanged (#1331)", async () => {
+    const counter = countAchievementInserts();
+    try {
+      await syncAchievementRegistry();
+      const first = counter.count();
+      // One multi-row write (chunked only to stay under D1's 100-param cap),
+      // never one INSERT per definition.
+      expect(first).toBeGreaterThan(0);
+      expect(first).toBeLessThan(ACHIEVEMENTS.length);
+      expect(counter.maxParams()).toBeLessThanOrEqual(100);
+
+      await syncAchievementRegistry();
+      expect(counter.count()).toBe(first);
+    } finally {
+      counter.restore();
+    }
+
+    const defs = await listAchievementDefs();
+    expect(defs.length).toBe(ACHIEVEMENTS.length);
+
+    // Two stale rows in one re-sync must each get their own values back.
+    const db = getDb();
+    const [firstDef, secondDef] = ACHIEVEMENTS;
+    await db
+      .update(achievements)
+      .set({ title: "Stale A", points: 1 })
+      .where(eq(achievements.key, firstDef.key))
+      .run();
+    await db
+      .update(achievements)
+      .set({ title: "Stale B", points: 2 })
+      .where(eq(achievements.key, secondDef.key))
+      .run();
+    await syncAchievementRegistry();
+    const after = await listAchievementDefs();
+    const rowA = after.find((d) => d.key === firstDef.key);
+    const rowB = after.find((d) => d.key === secondDef.key);
+    expect(rowA?.title).toBe(firstDef.title);
+    expect(rowA?.points).toBe(firstDef.points);
+    expect(rowB?.title).toBe(secondDef.title);
+    expect(rowB?.points).toBe(secondDef.points);
   });
 
   it("updates stale rows with new values on re-sync", async () => {
