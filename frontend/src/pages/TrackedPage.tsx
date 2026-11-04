@@ -81,7 +81,7 @@ function TrackedStatsBand({ titles }: { titles: Title[] }) {
     <div className="hidden sm:grid grid-cols-4 gap-3 mb-6">
       {stats.map((s) => (
         <Card key={s.label} padding="none" className="p-3 lg:p-[18px] min-w-0">
-          <div className="font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-400 font-semibold mb-2">
+          <div className="text-xs text-zinc-400 font-medium mb-2">
             {s.label}
           </div>
           <div className="flex flex-wrap items-baseline gap-2">
@@ -823,7 +823,7 @@ function TrackedTable({
     <div>
       {/* Column header */}
       <div
-        className="grid gap-4 px-4 py-2.5 font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400"
+        className="grid gap-4 px-4 py-2.5 text-xs text-zinc-400"
         style={{
           gridTemplateColumns: selectMode
             ? "32px 38px minmax(0,1fr) 110px 140px 100px 75px 105px"

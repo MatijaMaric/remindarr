@@ -458,7 +458,7 @@ export default function HomePage() {
                 kicker={t("home.kickers.upNext")}
                 title={t("home.unwatched")}
                 href="/upcoming"
-                linkLabel={`${t("home.seeAll")} →`}
+                linkLabel={t("home.seeAll")}
                 headingExtra={
                   <Link
                     to="/reels"
@@ -509,7 +509,7 @@ export default function HomePage() {
               kicker={t("home.kickers.fromFriends")}
               title={t("home.recommendedForYou")}
               href="/discovery"
-              linkLabel={`${t("home.seeAll")} →`}
+              linkLabel={t("home.seeAll")}
             />
             <FullBleedCarousel>
               {recommendations.map((rec) => (
@@ -546,7 +546,7 @@ export default function HomePage() {
               kicker={t("home.kickers.airingTonight")}
               title={t("home.today")}
               href="/calendar"
-              linkLabel={`${t("home.seeAll")} →`}
+              linkLabel={t("home.seeAll")}
             />
             {today.length === 0 ? (
               <p className="text-zinc-400 text-sm">
@@ -585,7 +585,7 @@ export default function HomePage() {
             <div className="space-y-4">
               {upcomingByDateEntries.map(({ date, dateLabel, byShow }) => (
                 <div key={date}>
-                  <h3 className="font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400 mb-2">
+                  <h3 className="text-xs text-zinc-400 mb-2">
                     {dateLabel === "__TOMORROW__"
                       ? t("episodes.tomorrow")
                       : dateLabel}
@@ -677,7 +677,7 @@ export default function HomePage() {
               kicker={t("home.kickers.movies")}
               title={t("home.moviesToWatch")}
               href="/tracked"
-              linkLabel={`${t("home.seeAll")} →`}
+              linkLabel={t("home.seeAll")}
             />
             <MovieRow variant="to_watch" movies={movieData.to_watch} />
           </section>

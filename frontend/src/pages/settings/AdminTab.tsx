@@ -131,7 +131,7 @@ function BackgroundJobsSection() {
 
         {data && data.crons.length > 0 && (
           <>
-            <div className="hidden lg:grid grid-cols-[1.5fr_1fr_1.5fr_90px_100px] gap-3 px-3.5 pb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+            <div className="hidden lg:grid grid-cols-[1.5fr_1fr_1.5fr_90px_100px] gap-3 px-3.5 pb-2 text-xs font-medium text-zinc-500">
               <div>Job</div>
               <div>Schedule</div>
               <div>Last run</div>
@@ -250,16 +250,16 @@ function BackgroundJobsSection() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left">
-                    <th className="pb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                    <th className="pb-2 px-2 text-xs font-medium text-zinc-500">
                       Job
                     </th>
-                    <th className="pb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                    <th className="pb-2 px-2 text-xs font-medium text-zinc-500">
                       Status
                     </th>
-                    <th className="pb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                    <th className="pb-2 px-2 text-xs font-medium text-zinc-500">
                       Started
                     </th>
-                    <th className="pb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                    <th className="pb-2 px-2 text-xs font-medium text-zinc-500">
                       Completed
                     </th>
                   </tr>
@@ -516,7 +516,7 @@ function RuntimeConfigSection() {
       {config && (
         <div className="space-y-4">
           <div>
-            <div className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2 pb-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+            <div className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2 pb-1 text-xs font-medium text-zinc-500">
               <div>Key</div>
               <div>Value</div>
               <div>Source</div>
@@ -544,7 +544,7 @@ function RuntimeConfigSection() {
           </div>
           {config.secrets.length > 0 && (
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 px-2 pb-1">
+              <div className="text-xs font-medium text-zinc-500 px-2 pb-1">
                 Secrets
               </div>
               <div className="space-y-0.5">

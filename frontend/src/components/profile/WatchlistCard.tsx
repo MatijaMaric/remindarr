@@ -115,7 +115,7 @@ export default function WatchlistCard({ title }: WatchlistCardProps) {
           <div className="w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-950" />
         )}
         <span
-          className="absolute top-2 left-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] px-2 py-0.5 rounded"
+          className="absolute top-2 left-2 text-xs font-bold px-2 py-0.5 rounded"
           style={{ color: status.color, background: status.background }}
         >
           {t(status.labelKey)}

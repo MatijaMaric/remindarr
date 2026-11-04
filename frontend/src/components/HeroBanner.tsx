@@ -186,7 +186,7 @@ export default function HeroBanner({
         <div className="max-w-[1440px] mx-auto px-4 w-full">
           <div className="max-w-[560px]">
             {/* Kicker */}
-            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.15em] text-amber-400 mb-3">
+            <p className="text-xs font-medium text-zinc-300 mb-3">
               Continue watching
               {current.remainingCount > 0 &&
                 ` · ${current.remainingCount} unwatched`}

@@ -66,9 +66,7 @@ export function SHead({
   return (
     <div className={cn("flex items-end justify-between gap-4 mb-4", className)}>
       <div>
-        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-amber-400 mb-1.5">
-          {title}
-        </div>
+        <div className="text-xs font-medium text-zinc-300 mb-1.5">{title}</div>
         {subtitle && (
           <div className="text-[13px] text-zinc-400 max-w-[620px]">
             {subtitle}
@@ -94,9 +92,7 @@ export function SLabel({
 }) {
   const inner = (
     <>
-      <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
-        {children}
-      </div>
+      <div className="text-xs font-medium text-zinc-400">{children}</div>
       {hint && <div className="text-[11px] text-zinc-400">{hint}</div>}
     </>
   );
@@ -323,7 +319,7 @@ export function SStatusPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-[3px] rounded-full border font-mono text-[10px] font-bold uppercase tracking-[0.08em] whitespace-nowrap",
+        "inline-flex items-center gap-1.5 px-2.5 py-[3px] rounded-full border text-[11px] font-bold tracking-[0.08em] whitespace-nowrap",
         PILL_STYLES[kind],
         className,
       )}
@@ -375,9 +371,7 @@ export function SDivider({
     <div className={cn("flex items-center gap-3 my-5 mb-3.5", className)}>
       <div className="flex-1 h-px bg-white/[0.06]" />
       {label && (
-        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-400">
-          {label}
-        </div>
+        <div className="text-xs font-medium text-zinc-400">{label}</div>
       )}
       <div className="flex-1 h-px bg-white/[0.06]" />
     </div>

@@ -42,7 +42,7 @@ export default function ProgressCard({ overview }: ProgressCardProps) {
   const { t } = useTranslation();
   return (
     <DossierCard>
-      <Kicker color="zinc">{t("userProfile.dossier.progress")}</Kicker>
+      <Kicker>{t("userProfile.dossier.progress")}</Kicker>
       <div className="flex flex-col gap-3.5">
         <LabeledProgress
           label={t("userProfile.showsCompleted")}

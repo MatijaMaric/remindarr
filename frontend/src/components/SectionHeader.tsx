@@ -22,17 +22,17 @@ export function SectionHeader({
         <Kicker>{kicker}</Kicker>
         {headingExtra ? (
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold tracking-[-0.01em]">{title}</h2>
+            <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
             {headingExtra}
           </div>
         ) : (
-          <h2 className="text-xl font-bold tracking-[-0.01em]">{title}</h2>
+          <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
         )}
       </div>
       {href && linkLabel != null ? (
         <Link
           to={href}
-          className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors"
+          className="text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
         >
           {linkLabel}
         </Link>

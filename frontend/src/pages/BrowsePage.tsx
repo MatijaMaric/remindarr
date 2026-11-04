@@ -693,9 +693,7 @@ export default function BrowsePage() {
           browseYearMax !== "" ||
           browseMinRating !== "") && (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-500 mr-1">
-              Active
-            </span>
+            <span className="text-xs text-zinc-500 mr-1">Active</span>
             {onlyMine && (
               <button
                 type="button"

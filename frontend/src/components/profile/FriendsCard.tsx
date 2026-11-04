@@ -32,14 +32,14 @@ export default function FriendsCard({
   return (
     <DossierCard>
       <div className="flex items-baseline justify-between mb-3">
-        <Kicker color="zinc" className="mb-0">
+        <Kicker className="mb-0">
           {t("userProfile.dossier.friendsCount", { count: totalFriends })}
         </Kicker>
         <Link
           to={`/u/${profileUsername}/followers`}
           className="text-[11px] font-semibold text-amber-400 hover:text-amber-300 transition-colors"
         >
-          {t("userProfile.dossier.seeAll")} →
+          {t("userProfile.dossier.seeAll")}
         </Link>
       </div>
       <div className="flex flex-col gap-2">

@@ -15,9 +15,7 @@ export default function RatingsSection({
   return (
     <div className="flex flex-wrap items-start gap-6">
       <div className="space-y-2">
-        <Kicker color="zinc" className="mb-0">
-          Your rating
-        </Kicker>
+        <Kicker className="mb-0">Your rating</Kicker>
         <RatingButtons titleId={titleId} />
       </div>
       <div className="flex-1 min-w-0" />

@@ -45,7 +45,7 @@ export default function MonthlyActivityCard({
     <DossierCard padding="lg">
       <div className="flex items-baseline justify-between mb-3.5 gap-4">
         <div>
-          <Kicker color="zinc">{t("userProfile.dossier.activity12m")}</Kicker>
+          <Kicker>{t("userProfile.dossier.activity12m")}</Kicker>
           <div className="text-base font-bold text-zinc-100">
             {t("userProfile.dossier.activitySummary", {
               episodes: totals.episodes,

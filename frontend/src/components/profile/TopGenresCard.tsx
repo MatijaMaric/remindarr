@@ -20,7 +20,7 @@ export default function TopGenresCard({
 
   return (
     <DossierCard>
-      <Kicker color="zinc">{t("userProfile.dossier.topGenres")}</Kicker>
+      <Kicker>{t("userProfile.dossier.topGenres")}</Kicker>
       <div className="flex flex-col gap-2.5">
         {slice.map((g) => (
           <div key={g.genre}>

@@ -60,7 +60,7 @@ export default function StatusBreakdown({ byStatus }: StatusBreakdownProps) {
             <div className="text-[22px] font-extrabold tracking-[-0.02em] leading-none text-zinc-100">
               {byStatus[cell.key]}
             </div>
-            <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500">
+            <div className="text-xs font-medium text-zinc-500">
               {t(cell.labelKey)}
             </div>
           </div>

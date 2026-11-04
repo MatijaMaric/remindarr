@@ -132,7 +132,7 @@ export default function ThemePicker() {
                 {isActive && (
                   <span
                     aria-hidden="true"
-                    className="shrink-0 font-mono text-[9px] font-bold uppercase tracking-[0.08em] px-1.5 py-[2px] rounded-full bg-amber-400/10 text-amber-400 border border-amber-400/30"
+                    className="shrink-0 text-[11px] font-bold tracking-[0.08em] px-1.5 py-[2px] rounded-full bg-amber-400/10 text-amber-400 border border-amber-400/30"
                   >
                     ✓
                   </span>

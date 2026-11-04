@@ -20,7 +20,7 @@ export default function FollowedPeopleCard({
 
   return (
     <DossierCard>
-      <Kicker color="zinc" className="mb-3">
+      <Kicker className="mb-3">
         {t("userProfile.dossier.followedPeople")}
       </Kicker>
       <ul className="flex flex-col gap-2">

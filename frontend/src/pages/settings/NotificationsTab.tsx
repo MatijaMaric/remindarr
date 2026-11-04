@@ -369,7 +369,7 @@ function NotifierDeliveryHistory({ notifierId }: { notifierId: string }) {
   if (!history || history.rows.length === 0) {
     return (
       <div className="mt-3 pt-3 border-t border-white/[0.04]">
-        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 mb-1.5">
+        <div className="text-xs font-medium text-zinc-500 mb-1.5">
           Delivery History
         </div>
         <div className="text-zinc-500 text-xs font-mono">
@@ -382,7 +382,7 @@ function NotifierDeliveryHistory({ notifierId }: { notifierId: string }) {
   return (
     <div className="mt-3 pt-3 border-t border-white/[0.04]">
       <div className="flex items-center gap-2 mb-2">
-        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+        <div className="text-xs font-medium text-zinc-500">
           Delivery History
         </div>
         <SStatusPill kind={statusPillKind(history.successRate)}>
@@ -804,7 +804,7 @@ function NotificationsSection() {
                 </div>
                 {previewContent[n.id] && (
                   <div className="mt-3 pt-3 border-t border-white/[0.04]">
-                    <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500 mb-2">
+                    <div className="text-xs font-medium text-zinc-500 mb-2">
                       Content Preview · {previewContent[n.id].date}
                     </div>
                     <pre className="text-[11px] text-zinc-300 font-mono whitespace-pre-wrap overflow-auto max-h-48 bg-zinc-900 rounded-lg p-3 leading-relaxed">

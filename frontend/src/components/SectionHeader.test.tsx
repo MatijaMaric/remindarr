@@ -24,11 +24,10 @@ describe("SectionHeader", () => {
     expect(screen.getByText("Browse")).toBeDefined();
     const heading = screen.getByRole("heading", { name: "Popular" });
     expect(heading.className).toContain("text-xl");
-    expect(heading.className).toContain("font-bold");
+    expect(heading.className).toContain("font-semibold");
     const link = screen.getByRole("link", { name: "Discover More →" });
     expect(link.getAttribute("href")).toBe("/browse");
-    expect(link.className).toContain("font-mono");
-    expect(link.className).toContain("text-amber-400");
+    expect(link.className).toContain("text-zinc-400");
   });
 
   it("omits the trailing link when none is provided", () => {

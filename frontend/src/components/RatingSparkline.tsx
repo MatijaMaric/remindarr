@@ -33,9 +33,7 @@ export default function RatingSparkline({
   return (
     <div data-testid="rating-sparkline" className="space-y-1.5">
       {heading ? (
-        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-500">
-          {heading}
-        </p>
+        <p className="text-xs font-medium text-zinc-500">{heading}</p>
       ) : null}
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "bun:test";
-import { render, cleanup } from "@testing-library/react";
+import { render, cleanup, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { EpisodeShowCard } from "./EpisodeShowCard";
 import { AuthContext } from "../context/AuthContext";
@@ -125,7 +125,9 @@ describe("EpisodeShowCard", () => {
     const streamLink = container.querySelector(
       'a[href="https://example.com/watch"]',
     );
-    const markWatchedBtn = container.querySelector("button.bg-amber-500");
+    const markWatchedBtn = screen.getByRole("button", {
+      name: /mark ?watched/i,
+    });
     expect(streamLink).toBeTruthy();
     expect(markWatchedBtn).toBeTruthy();
 

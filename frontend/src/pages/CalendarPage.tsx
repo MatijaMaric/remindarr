@@ -374,7 +374,7 @@ function MiniMonthGrid({
 
   return (
     <div className="px-5 pb-4">
-      <div className="grid grid-cols-7 gap-0.5 mb-1 text-center font-mono text-[9px] text-zinc-500 uppercase tracking-[0.1em]">
+      <div className="grid grid-cols-7 gap-0.5 mb-1 text-center text-xs text-zinc-500">
         {weekdays.map((d, i) => (
           <div key={i}>{d}</div>
         ))}
@@ -481,7 +481,7 @@ function MobileCalendar({
           {/* Month header */}
           <div className="flex items-baseline justify-between px-5 pt-3 pb-2">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 mb-0.5">
+              <div className="text-xs text-zinc-400 mb-0.5">
                 {year}
                 {!monthError && ` · ${dotDates.size} airings`}
               </div>
@@ -1042,7 +1042,7 @@ function GridCalendar({
             {WEEKDAYS.map((d) => (
               <div
                 key={d}
-                className="px-2 py-2 text-center font-mono text-[11px] text-zinc-400 font-semibold uppercase tracking-[0.15em]"
+                className="px-2 py-2 text-center text-xs text-zinc-400 font-medium"
               >
                 {d}
               </div>
@@ -1456,7 +1456,7 @@ function WeekCalendar({
                     isToday ? "text-amber-400" : "text-zinc-400"
                   }`}
                 >
-                  <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.15em]">
+                  <div className="text-xs font-medium">
                     {day.toLocaleDateString(undefined, { weekday: "short" })}
                   </div>
                   <div
