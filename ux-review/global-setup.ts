@@ -16,6 +16,8 @@ const SEED_EMAIL = "ux_seed@example.com";
 const FRIEND_USERNAME = "ux_friend";
 const FRIEND_PASSWORD = "UxFriend_pw1!";
 const FRIEND_EMAIL = "ux_friend@example.com";
+// Extra followers so leaderboard, activity and recommendation feeds have variety.
+const EXTRA_USERNAMES = ["ux_river", "ux_sam", "ux_kai"];
 
 const MOVIE_ID_1 = "movie-603";
 const SHOW_ID = "tv-1399";
@@ -64,6 +66,12 @@ export default async function globalSetup() {
     FRIEND_EMAIL,
     FRIEND_PASSWORD,
   );
+  const extraUserIds: string[] = [];
+  for (const name of EXTRA_USERNAMES) {
+    extraUserIds.push(
+      await signUp(name, `${name}@example.com`, FRIEND_PASSWORD),
+    );
+  }
 
   // Seed media, tracking, admin flag, and tokens via a Bun subprocess.
   // global-setup runs in Node.js under Playwright; bun-db.ts uses bun:sqlite
@@ -75,6 +83,7 @@ export default async function globalSetup() {
       path.resolve("ux-review/db-seed.ts"),
       `--seed-user-id=${seedUserId}`,
       `--friend-user-id=${friendUserId}`,
+      `--extra-user-ids=${extraUserIds.join(",")}`,
     ],
     {
       env: {

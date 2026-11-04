@@ -75,7 +75,7 @@ export function ToastItem({ achievement, onDismiss }: ToastItemProps) {
         <Trophy size={18} className="text-amber-400" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-xs font-mono font-semibold uppercase tracking-widest text-amber-400 mb-0.5">
+        <div className="text-xs font-semibold text-amber-400 mb-0.5">
           Achievement unlocked
         </div>
         <div className="text-sm font-bold text-zinc-100 truncate">

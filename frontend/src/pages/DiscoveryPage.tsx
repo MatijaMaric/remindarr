@@ -138,13 +138,13 @@ function StateBadge({ state }: { state: "tracked" | "dismissed" | null }) {
   if (!state) return null;
   if (state === "tracked") {
     return (
-      <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-amber-400/90 text-zinc-950 text-[9px] font-black font-mono uppercase tracking-wider">
+      <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-amber-400/90 text-zinc-950 text-[11px] font-semibold">
         ✓ {t("discovery.trackedBadge")}
       </div>
     );
   }
   return (
-    <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-zinc-950/85 text-zinc-400 border border-white/[0.12] text-[9px] font-bold font-mono uppercase tracking-wider">
+    <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-zinc-950/85 text-zinc-400 border border-white/[0.12] text-[11px] font-bold">
       {t("discovery.dismissed")}
     </div>
   );
@@ -356,7 +356,7 @@ function DiscoveryHero({
           {/* Algo source */}
           <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3.5 flex flex-col gap-2.5">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black font-mono uppercase tracking-wider bg-amber-400/[0.14] text-amber-400 border border-amber-400/[0.3]">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-amber-400/[0.14] text-amber-400 border border-amber-400/[0.3]">
                 Remindarr
               </span>
               <span className="text-[11px] text-zinc-500 font-mono">
@@ -378,7 +378,7 @@ function DiscoveryHero({
                   </div>
                 )}
                 <div className="min-w-0">
-                  <p className="font-mono text-[9px] uppercase tracking-wider text-zinc-500 mb-0.5">
+                  <p className="text-[11px] text-zinc-500 mb-0.5">
                     {becausePrefix(algoGroup.source.reason, t)}
                   </p>
                   <p className="text-[13px] text-zinc-200 font-semibold truncate">
@@ -396,7 +396,7 @@ function DiscoveryHero({
           {/* Friends source */}
           <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3.5 flex flex-col gap-2.5">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black font-mono uppercase tracking-wider bg-blue-400/[0.10] text-blue-300 border border-blue-400/[0.2]">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-blue-400/[0.10] text-blue-300 border border-blue-400/[0.2]">
                 {t("discovery.hero.friends")}
               </span>
               <span className="text-[11px] text-zinc-500 font-mono">
@@ -437,7 +437,7 @@ function DiscoveryHero({
                   </p>
                 )}
                 {friendRecs.some((r) => r.is_targeted) && (
-                  <span className="inline-flex items-center self-start px-1.5 py-0.5 rounded text-[9px] font-bold font-mono uppercase tracking-wider bg-amber-400/[0.15] text-amber-400 border border-amber-400/[0.3]">
+                  <span className="inline-flex items-center self-start px-1.5 py-0.5 rounded text-[11px] font-bold bg-amber-400/[0.15] text-amber-400 border border-amber-400/[0.3]">
                     {t("discovery.direct")}
                   </span>
                 )}
@@ -946,7 +946,7 @@ export default function DiscoveryPage() {
         title={t("discovery.forYou")}
         right={
           trackedSet.size > 0 || dismissedSet.size > 0 ? (
-            <span className="font-mono text-[11px] uppercase tracking-[0.15em] text-zinc-500">
+            <span className="text-xs text-zinc-500">
               {t("discovery.sessionCounts", {
                 tracked: trackedSet.size,
                 dismissed: dismissedSet.size,

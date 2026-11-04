@@ -291,7 +291,7 @@ function ActivityRow({ event, isOwnProfile, onHide }: ActivityRowProps) {
           >
             {event.title.title}
           </Link>
-          <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+          <span className="text-[11px] font-semibold text-zinc-500">
             {t(BADGE_LABEL_KEY[badgeKey])}
           </span>
         </div>
@@ -408,7 +408,7 @@ function ActivityFeed({
 
   return (
     <DossierCard padding="lg">
-      <Kicker color="zinc">{t("userProfile.dossier.activity.title")}</Kicker>
+      <Kicker>{t("userProfile.dossier.activity.title")}</Kicker>
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (

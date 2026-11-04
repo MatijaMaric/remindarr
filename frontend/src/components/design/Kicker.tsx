@@ -3,18 +3,11 @@ import { cn } from "@/lib/utils";
 interface KickerProps {
   children: React.ReactNode;
   className?: string;
-  color?: "amber" | "zinc";
 }
 
-export function Kicker({ children, className, color = "amber" }: KickerProps) {
+export function Kicker({ children, className }: KickerProps) {
   return (
-    <div
-      className={cn(
-        "font-mono text-[11px] font-semibold uppercase tracking-[0.15em] mb-3",
-        color === "amber" ? "text-amber-400" : "text-zinc-500",
-        className,
-      )}
-    >
+    <div className={cn("text-sm font-medium text-zinc-500 mb-1", className)}>
       {children}
     </div>
   );

@@ -157,7 +157,7 @@ export default function SubscriptionsTab() {
           <div className="space-y-6">
             {regionProviders.length > 0 && (
               <div>
-                <div className="text-xs font-mono font-semibold uppercase tracking-widest text-amber-400 mb-2">
+                <div className="text-xs font-semibold text-amber-400 mb-2">
                   {t("settings.subscriptions.regionProviders")}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-0.5">
@@ -169,7 +169,7 @@ export default function SubscriptionsTab() {
             )}
             {otherProviders.length > 0 && (
               <div>
-                <div className="text-xs font-mono font-semibold uppercase tracking-widest text-zinc-500 mb-2">
+                <div className="text-xs font-semibold text-zinc-500 mb-2">
                   {t("settings.subscriptions.otherProviders")}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-0.5">

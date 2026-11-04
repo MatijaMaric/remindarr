@@ -27,7 +27,7 @@ export default function BioCard({
   return (
     <DossierCard>
       <div className="flex items-start justify-between">
-        <Kicker color="zinc">{t("userProfile.dossier.bio")}</Kicker>
+        <Kicker>{t("userProfile.dossier.bio")}</Kicker>
         {isOwnProfile && (
           <button
             type="button"

@@ -73,11 +73,7 @@ function PersonCardItem({ person }: { person: TrendingPerson }) {
 }
 
 function GroupHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h3 className="mb-2 font-mono text-[11px] uppercase tracking-[0.12em] text-zinc-400">
-      {children}
-    </h3>
-  );
+  return <h3 className="mb-2 text-xs text-zinc-400">{children}</h3>;
 }
 
 export default function TrendingSection({

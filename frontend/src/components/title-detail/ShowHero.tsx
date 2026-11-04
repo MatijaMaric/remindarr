@@ -108,7 +108,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
               )}
             </div>
             <div className="flex-1 min-w-0 pb-1">
-              <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-amber-400 font-semibold mb-1">
+              <div className="text-xs text-zinc-300 font-medium mb-1">
                 SHOW ·{" "}
                 {title.release_year ?? tmdb?.first_air_date?.slice(0, 4) ?? ""}
                 {title.offers[0]?.provider_name

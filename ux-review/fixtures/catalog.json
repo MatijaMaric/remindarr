@@ -1,0 +1,833 @@
+[
+  {
+    "id": "movie-1380291",
+    "objectType": "MOVIE",
+    "title": "Tom Clancy's Jack Ryan: Ghost War",
+    "originalTitle": "Tom Clancy's Jack Ryan: Ghost War",
+    "releaseYear": 2026,
+    "releaseDate": "2026-05-20",
+    "runtimeMinutes": 107,
+    "shortDescription": "Jack Ryan is reluctantly pulled back into espionage when an international covert mission unravels a deadly conspiracy. Racing against time, he joins CIA allies Mike November & James Greer and sharp MI6 officer Emma Marlowe to battle a rogue black-ops unit in a high-stakes, deeply personal fight.",
+    "genres": ["Action", "Adventure", "Thriller"],
+    "originalLanguage": "en",
+    "imdbId": "tt34378301",
+    "tmdbId": "1380291",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/8ehYxUh5MWE41AeE9gkHE8DKzvB.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/69KkxROnZoJdQAulnY5B7Gx6D7Z.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/movie/1380291",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 7.2
+    },
+    "offers": [
+      {
+        "providerId": 9,
+        "providerName": "Amazon Prime Video",
+        "providerTechnicalName": "amazon_prime_video",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/pvske1MyAoymrs5bguRfVqYiM9a.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/movie/1380291-tom-clancy-s-jack-ryan-ghost-war/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "movie-1630423",
+    "objectType": "MOVIE",
+    "title": "My Dearest Assassin",
+    "originalTitle": "เลือดรัก นักฆ่า",
+    "releaseYear": 2026,
+    "releaseDate": "2026-05-06",
+    "runtimeMinutes": 128,
+    "shortDescription": "Hunted for her rare blood type, a caged woman vows to fight alongside the assassin she loves to protect their future when an old enemy resurfaces.",
+    "genres": ["Action", "Drama", "Romance"],
+    "originalLanguage": "th",
+    "imdbId": "tt39749979",
+    "tmdbId": "1630423",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/ul4dQcA68mtSx8J56N5gEcaCCtP.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/xA6AM5MvEkieZKlv1Tn3sN23I7i.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/movie/1630423",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 8.605
+    },
+    "offers": [
+      {
+        "providerId": 8,
+        "providerName": "Netflix",
+        "providerTechnicalName": "netflix",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/movie/1630423/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "movie-1007757",
+    "objectType": "MOVIE",
+    "title": "Swapped",
+    "originalTitle": "Swapped",
+    "releaseYear": 2026,
+    "releaseDate": "2026-05-01",
+    "runtimeMinutes": 102,
+    "shortDescription": "A small woodland creature and a majestic bird, two natural sworn enemies of the Valley, magically trade places and set off on an adventure of a lifetime to switch back. Their journey soon uncovers a greater threat—one that could endanger not only their species, but the entire valley they call home.",
+    "genres": ["Adventure", "Animation", "Family", "Fantasy"],
+    "originalLanguage": "en",
+    "imdbId": "tt29552248",
+    "tmdbId": "1007757",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/tHhxWxge06goXU6ZQH1hj7vK8Hd.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/zMwhWailP1WY7sb6AoE6b8ugoy.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/movie/1007757",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 8.978
+    },
+    "offers": [
+      {
+        "providerId": 8,
+        "providerName": "Netflix",
+        "providerTechnicalName": "netflix",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/movie/1007757-swapped/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "movie-1318447",
+    "objectType": "MOVIE",
+    "title": "Apex",
+    "originalTitle": "Apex",
+    "releaseYear": 2026,
+    "releaseDate": "2026-04-24",
+    "runtimeMinutes": 96,
+    "shortDescription": "A grieving woman pushing her limits on a solo adventure in the Australian wild is ensnared in a twisted game with a cunning killer who thinks she's prey.",
+    "genres": ["Action", "Thriller"],
+    "originalLanguage": "en",
+    "imdbId": "tt16431404",
+    "tmdbId": "1318447",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/eTp7gSPkSF3Aw79mNx1NkBP1PZT.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/oTE4lNs4PSG5iIWjqaTdCIFJ4Bs.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/movie/1318447",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 6.674
+    },
+    "offers": [
+      {
+        "providerId": 8,
+        "providerName": "Netflix",
+        "providerTechnicalName": "netflix",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/movie/1318447-apex/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "movie-1582770",
+    "objectType": "MOVIE",
+    "title": "Dhurandhar: The Revenge",
+    "originalTitle": "धुरंधर: द रिवेंज",
+    "releaseYear": 2026,
+    "releaseDate": "2026-03-18",
+    "runtimeMinutes": 229,
+    "shortDescription": "As rival gangs, corrupt officials and a ruthless Major Iqbal close in, Hamza's mission for his country spirals into a bloody personal war where the line between patriot and monster disappears in the streets of Lyari.",
+    "genres": ["Action", "Crime", "Thriller"],
+    "originalLanguage": "hi",
+    "imdbId": "tt39139925",
+    "tmdbId": "1582770",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/ov8vrRLZGoXHpYjSY9Vpv1tHJX7.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/gRoZG3Z0zJxgElmTsVHOl2dNYXe.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/movie/1582770",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 7.3
+    },
+    "offers": [
+      {
+        "providerId": 8,
+        "providerName": "Netflix",
+        "providerTechnicalName": "netflix",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/movie/1582770/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "movie-460465",
+    "objectType": "MOVIE",
+    "title": "Mortal Kombat",
+    "originalTitle": "Mortal Kombat",
+    "releaseYear": 2021,
+    "releaseDate": "2021-04-07",
+    "runtimeMinutes": 110,
+    "shortDescription": "Washed-up MMA fighter Cole Young, unaware of his heritage, and hunted by Emperor Shang Tsung's best warrior, Sub-Zero, seeks out and trains with Earth's greatest champions as he prepares to stand against the enemies of Outworld in a high stakes battle for the universe.",
+    "genres": ["Action", "Adventure", "Fantasy"],
+    "originalLanguage": "en",
+    "imdbId": "tt0293429",
+    "tmdbId": "460465",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/ybrX94xQm8lXYpZAPRmwD9iIbWP.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/6ELCZlTA5lGUops70hKdB83WJxH.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/movie/460465",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 7.029
+    },
+    "offers": [
+      {
+        "providerId": 3,
+        "providerName": "Google Play Movies",
+        "providerTechnicalName": "google_play_movies",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+        "monetizationType": "RENT",
+        "url": "https://www.themoviedb.org/movie/460465-mortal-kombat/watch?locale=HR"
+      },
+      {
+        "providerId": 3,
+        "providerName": "Google Play Movies",
+        "providerTechnicalName": "google_play_movies",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+        "monetizationType": "BUY",
+        "url": "https://www.themoviedb.org/movie/460465-mortal-kombat/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "movie-350",
+    "objectType": "MOVIE",
+    "title": "The Devil Wears Prada",
+    "originalTitle": "The Devil Wears Prada",
+    "releaseYear": 2006,
+    "releaseDate": "2006-06-29",
+    "runtimeMinutes": 109,
+    "shortDescription": "A young woman from the Midwest gets more than she bargained for when she moves to New York to become a writer and ends up as the assistant to the tyrannical, larger-than-life editor-in-chief of a major fashion magazine.",
+    "genres": ["Comedy", "Drama"],
+    "originalLanguage": "en",
+    "imdbId": "tt0458352",
+    "tmdbId": "350",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/8912AsVuS7Sj915apArUFbv6F9L.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/gkh6Nt8DtY1XT4gQsyFq9XAVJlJ.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/movie/350",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 7.418
+    },
+    "offers": [
+      {
+        "providerId": 3,
+        "providerName": "Google Play Movies",
+        "providerTechnicalName": "google_play_movies",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+        "monetizationType": "RENT",
+        "url": "https://www.themoviedb.org/movie/350-the-devil-wears-prada/watch?locale=HR"
+      },
+      {
+        "providerId": 3,
+        "providerName": "Google Play Movies",
+        "providerTechnicalName": "google_play_movies",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+        "monetizationType": "BUY",
+        "url": "https://www.themoviedb.org/movie/350-the-devil-wears-prada/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "movie-1734",
+    "objectType": "MOVIE",
+    "title": "The Mummy Returns",
+    "originalTitle": "The Mummy Returns",
+    "releaseYear": 2001,
+    "releaseDate": "2001-05-04",
+    "runtimeMinutes": 130,
+    "shortDescription": "Rick and Evelyn O’Connell, along with their 8-year-old son Alex, discover the key to the legendary Scorpion King’s might: the fabled Bracelet of Anubis. Unfortunately, a newly resurrected Imhotep has designs on the bracelet as well, and isn’t above kidnapping its new bearer, Alex, to gain control of Anubis’s otherworldly army.",
+    "genres": ["Action", "Adventure", "Fantasy"],
+    "originalLanguage": "en",
+    "imdbId": "tt0209163",
+    "tmdbId": "1734",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/kdJsW7hcy1lrj7tdMPycTAQPAiR.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/7s7WkAFPBsMTprYMbqbgKoppQsR.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/movie/1734",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 6.402
+    },
+    "offers": [
+      {
+        "providerId": 1773,
+        "providerName": "SkyShowtime",
+        "providerTechnicalName": "skyshowtime",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/movie/1734-the-mummy-returns/watch?locale=HR"
+      },
+      {
+        "providerId": 3,
+        "providerName": "Google Play Movies",
+        "providerTechnicalName": "google_play_movies",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+        "monetizationType": "RENT",
+        "url": "https://www.themoviedb.org/movie/1734-the-mummy-returns/watch?locale=HR"
+      },
+      {
+        "providerId": 3,
+        "providerName": "Google Play Movies",
+        "providerTechnicalName": "google_play_movies",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+        "monetizationType": "BUY",
+        "url": "https://www.themoviedb.org/movie/1734-the-mummy-returns/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "movie-564",
+    "objectType": "MOVIE",
+    "title": "The Mummy",
+    "originalTitle": "The Mummy",
+    "releaseYear": 1999,
+    "releaseDate": "1999-04-16",
+    "runtimeMinutes": 124,
+    "shortDescription": "Dashing legionnaire Rick O'Connell stumbles upon the hidden ruins of Hamunaptra while in the midst of a battle to claim the area in 1920s Egypt. It has been over three thousand years since former High Priest Imhotep suffered a fate worse than death as a punishment for a forbidden love—along with a curse that guarantees eternal doom upon the world if he is ever awoken.",
+    "genres": ["Action", "Adventure", "Fantasy"],
+    "originalLanguage": "en",
+    "imdbId": "tt0120616",
+    "tmdbId": "564",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/yhIsVvcUm7QxzLfT6HW2wLf5ajY.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/8zLS8p1tRyWFLRFfmgQq0j5WE6z.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/movie/564",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 6.971
+    },
+    "offers": [
+      {
+        "providerId": 1773,
+        "providerName": "SkyShowtime",
+        "providerTechnicalName": "skyshowtime",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/movie/564-the-mummy/watch?locale=HR"
+      },
+      {
+        "providerId": 3,
+        "providerName": "Google Play Movies",
+        "providerTechnicalName": "google_play_movies",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+        "monetizationType": "RENT",
+        "url": "https://www.themoviedb.org/movie/564-the-mummy/watch?locale=HR"
+      },
+      {
+        "providerId": 3,
+        "providerName": "Google Play Movies",
+        "providerTechnicalName": "google_play_movies",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/8z7rC8uIDaTM91X0ZfkRf04ydj2.jpg",
+        "monetizationType": "BUY",
+        "url": "https://www.themoviedb.org/movie/564-the-mummy/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "tv-308014",
+    "objectType": "SHOW",
+    "title": "Berlin and the Lady with an Ermine",
+    "originalTitle": "Berlín y la dama del armiño",
+    "releaseYear": 2026,
+    "releaseDate": "2026-05-15",
+    "runtimeMinutes": null,
+    "shortDescription": "Hungry for a new heist, Berlin summons the gang to Seville and turns an ambitious duke into the victim of his own plan: to steal a da Vinci masterpiece.",
+    "genres": ["Action & Adventure", "Comedy", "Crime", "Drama"],
+    "originalLanguage": "es",
+    "imdbId": "tt42178219",
+    "tmdbId": "308014",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/sTumew0Q01ZHmFneA9cJRi3QUYC.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ntPgSYKwPg9xKO4VvLJYfInSyZa.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/tv/308014",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 8.312
+    },
+    "offers": [
+      {
+        "providerId": 8,
+        "providerName": "Netflix",
+        "providerTechnicalName": "netflix",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/308014-berlin-y-la-dama-del-armino/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "tv-259837",
+    "objectType": "SHOW",
+    "title": "The WONDERfools",
+    "originalTitle": "원더풀스",
+    "releaseYear": 2026,
+    "releaseDate": "2026-05-15",
+    "runtimeMinutes": 80,
+    "shortDescription": "A goofy group of townies stumbles into superpowers and fights rising evil as doomsday panic grows in this wild, turn-of-the-century action comedy.",
+    "genres": ["Action & Adventure", "Comedy", "Drama", "Sci-Fi & Fantasy"],
+    "originalLanguage": "ko",
+    "imdbId": "tt34440854",
+    "tmdbId": "259837",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/jj7AYkz2OLRDL1wfJmjTXyWQ5I4.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/y2u7d8evmnTivi3LaVql01Sfea4.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/tv/259837",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 9.299
+    },
+    "offers": [
+      {
+        "providerId": 8,
+        "providerName": "Netflix",
+        "providerTechnicalName": "netflix",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/259837/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "tv-273240",
+    "objectType": "SHOW",
+    "title": "Off Campus",
+    "originalTitle": "Off Campus",
+    "releaseYear": 2026,
+    "releaseDate": "2026-05-13",
+    "runtimeMinutes": null,
+    "shortDescription": "Hannah Wells tutors hockey captain Garrett Graham to win over her crush. Their deal becomes real connection as they face their pasts. Friends Logan, Dean, Tucker, and Allie navigate college life and love.",
+    "genres": ["Drama"],
+    "originalLanguage": "en",
+    "imdbId": "tt33546863",
+    "tmdbId": "273240",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/cbODFqkcmRgrYH8NkG4Q4Hcg8Z1.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/52sp0vPhLOWrZ1QoZIWiapronM.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/tv/273240",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 9.062
+    },
+    "offers": [
+      {
+        "providerId": 9,
+        "providerName": "Amazon Prime Video",
+        "providerTechnicalName": "amazon_prime_video",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/pvske1MyAoymrs5bguRfVqYiM9a.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/273240-off-campus/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "tv-124364",
+    "objectType": "SHOW",
+    "title": "FROM",
+    "originalTitle": "FROM",
+    "releaseYear": 2022,
+    "releaseDate": "2022-02-20",
+    "runtimeMinutes": null,
+    "shortDescription": "Unravel the mystery of a nightmarish town in middle America that traps all those who enter. As the unwilling residents fight to keep a sense of normalcy and search for a way out, they must also survive the threats of the surrounding forest – including the terrifying creatures that come out when the sun goes down.",
+    "genres": ["Drama", "Mystery", "Sci-Fi & Fantasy"],
+    "originalLanguage": "en",
+    "imdbId": "tt9813792",
+    "tmdbId": "124364",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/pRtJagIxpfODzzb0T0NAvZSzErC.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/auyEi4Xho43HFvVQnd42LzqBdiV.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/tv/124364",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 8.4
+    },
+    "offers": [
+      {
+        "providerId": 384,
+        "providerName": "HBO Max",
+        "providerTechnicalName": "hbo_max",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/124364-from/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "tv-76479",
+    "objectType": "SHOW",
+    "title": "The Boys",
+    "originalTitle": "The Boys",
+    "releaseYear": 2019,
+    "releaseDate": "2019-07-25",
+    "runtimeMinutes": null,
+    "shortDescription": "A group of vigilantes known informally as “The Boys” set out to take down corrupt superheroes with no more than blue-collar grit and a willingness to fight dirty.",
+    "genres": ["Action & Adventure", "Sci-Fi & Fantasy"],
+    "originalLanguage": "en",
+    "imdbId": "tt1190634",
+    "tmdbId": "76479",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/in1R2dDc421JxsoRWaIIAqVI2KE.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/bq28ajZaoMyzEIm6REelqyqtEDZ.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/tv/76479",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 8.463
+    },
+    "offers": [
+      {
+        "providerId": 9,
+        "providerName": "Amazon Prime Video",
+        "providerTechnicalName": "amazon_prime_video",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/pvske1MyAoymrs5bguRfVqYiM9a.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/76479-the-boys/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "tv-85552",
+    "objectType": "SHOW",
+    "title": "Euphoria",
+    "originalTitle": "Euphoria",
+    "releaseYear": 2019,
+    "releaseDate": "2019-06-16",
+    "runtimeMinutes": null,
+    "shortDescription": "A group of high school students navigate love and friendships in a world of drugs, sex, trauma, and social media.",
+    "genres": ["Drama"],
+    "originalLanguage": "en",
+    "imdbId": "tt8772296",
+    "tmdbId": "85552",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/aJrG7OkoTMPWG5c8opz8a93AZPY.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/mez2Z3WqlPKNXpi7mWoiiE5guE9.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/tv/85552",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 8.289
+    },
+    "offers": [
+      {
+        "providerId": 384,
+        "providerName": "HBO Max",
+        "providerTechnicalName": "hbo_max",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/85552-euphoria/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "tv-79744",
+    "objectType": "SHOW",
+    "title": "The Rookie",
+    "originalTitle": "The Rookie",
+    "releaseYear": 2018,
+    "releaseDate": "2018-10-16",
+    "runtimeMinutes": null,
+    "shortDescription": "Starting over isn't easy, especially for small-town guy John Nolan who, after a life-altering incident, is pursuing his dream of being an LAPD officer. As the force's oldest rookie, he's met with skepticism from some higher-ups who see him as just a walking midlife crisis.",
+    "genres": ["Comedy", "Crime", "Drama"],
+    "originalLanguage": "en",
+    "imdbId": "tt7587890",
+    "tmdbId": "79744",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/70kTz0OmjjZe7zHvIDrq2iKW7PJ.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/6iNWfGVCEfASDdlNb05TP5nG0ll.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/tv/79744",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 8.5
+    },
+    "offers": [
+      {
+        "providerId": 8,
+        "providerName": "Netflix",
+        "providerTechnicalName": "netflix",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/79744-the-rookie/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "tv-1399",
+    "objectType": "SHOW",
+    "title": "Game of Thrones",
+    "originalTitle": "Game of Thrones",
+    "releaseYear": 2011,
+    "releaseDate": "2011-04-17",
+    "runtimeMinutes": null,
+    "shortDescription": "Seven noble families fight for control of the mythical land of Westeros. Friction between the houses leads to full-scale war. All while a very ancient evil awakens in the farthest north. Amidst the war, a neglected military order of misfits, the Night's Watch, is all that stands between the realms of men and icy horrors beyond.",
+    "genres": ["Action & Adventure", "Drama", "Sci-Fi & Fantasy"],
+    "originalLanguage": "en",
+    "imdbId": "tt0944947",
+    "tmdbId": "1399",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/1XS1oqL89opfnbLl8WnZY1O1uJx.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/2OMB0ynKlyIenMJWI2Dy9IWT4c.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/tv/1399",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 8.461
+    },
+    "offers": [
+      {
+        "providerId": 384,
+        "providerName": "HBO Max",
+        "providerTechnicalName": "hbo_max",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/1399-game-of-thrones/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "tv-33238",
+    "objectType": "SHOW",
+    "title": "Running Man",
+    "originalTitle": "런닝맨",
+    "releaseYear": 2010,
+    "releaseDate": "2010-07-11",
+    "runtimeMinutes": 85,
+    "shortDescription": "These days, as variety shows are gradually disappearing, this is one of Korea’s representative variety shows that has been responsible for Sunday evenings for over 10 years. This program features numerous stars and members going around various places, playing games, and completing missions. In particular, among the many fun elements of variety shows, this one focuses solely on laughter.\n\nOpen your eyes! Big fun is coming in!\n\nOpen your mouth! Big laughter is coming in!\n\nOpen your heart! Useful lessons are coming in!",
+    "genres": ["Comedy", "Reality"],
+    "originalLanguage": "ko",
+    "imdbId": "tt2185037",
+    "tmdbId": "33238",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/2Wmmu1MkqxJ48J7aySET9EKEjXz.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/wsHj4oHQJoe7DMYaqNFwVoyLiAh.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/tv/33238",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 8.2
+    },
+    "offers": [
+      {
+        "providerId": 464,
+        "providerName": "Kocowa",
+        "providerTechnicalName": "kocowa",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/hwsU65QW7A4dbMEWkDpgHyCNcfS.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/33238/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "tv-5920",
+    "objectType": "SHOW",
+    "title": "The Mentalist",
+    "originalTitle": "The Mentalist",
+    "releaseYear": 2008,
+    "releaseDate": "2008-09-23",
+    "runtimeMinutes": null,
+    "shortDescription": "Patrick Jane, a former celebrity psychic medium, uses his razor sharp skills of observation and expertise at \"reading\" people to solve serious crimes with the California Bureau of Investigation.",
+    "genres": ["Crime", "Drama", "Mystery"],
+    "originalLanguage": "en",
+    "imdbId": "tt1196946",
+    "tmdbId": "5920",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/acYXu4KaDj1NIkMgObnhe4C4a0T.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/q3pCsNvJ7CmdJUz2sJEEUY3pOPC.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/tv/5920",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 8.35
+    },
+    "offers": [
+      {
+        "providerId": 8,
+        "providerName": "Netflix",
+        "providerTechnicalName": "netflix",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/5920-the-mentalist/watch?locale=HR"
+      },
+      {
+        "providerId": 9,
+        "providerName": "Amazon Prime Video",
+        "providerTechnicalName": "amazon_prime_video",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/pvske1MyAoymrs5bguRfVqYiM9a.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/5920-the-mentalist/watch?locale=HR"
+      },
+      {
+        "providerId": 384,
+        "providerName": "HBO Max",
+        "providerTechnicalName": "hbo_max",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/5920-the-mentalist/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "tv-1622",
+    "objectType": "SHOW",
+    "title": "Supernatural",
+    "originalTitle": "Supernatural",
+    "releaseYear": 2005,
+    "releaseDate": "2005-09-13",
+    "runtimeMinutes": 45,
+    "shortDescription": "When they were boys, Sam and Dean Winchester lost their mother to a mysterious and demonic supernatural force. Subsequently, their father raised them to be soldiers. He taught them about the paranormal evil that lives in the dark corners and on the back roads of America ... and he taught them how to kill it. Now, the Winchester brothers crisscross the country in their '67 Chevy Impala, battling every kind of supernatural threat they encounter along the way. ",
+    "genres": ["Drama", "Mystery", "Sci-Fi & Fantasy"],
+    "originalLanguage": "en",
+    "imdbId": "tt0460681",
+    "tmdbId": "1622",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/u40gJarLPlIkwouKlzGdobQOV9k.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/ro0tlgnsco4SwbdAgmscLkSlMSL.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/tv/1622",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 8.307
+    },
+    "offers": [
+      {
+        "providerId": 9,
+        "providerName": "Amazon Prime Video",
+        "providerTechnicalName": "amazon_prime_video",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/pvske1MyAoymrs5bguRfVqYiM9a.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/1622-supernatural/watch?locale=HR"
+      },
+      {
+        "providerId": 384,
+        "providerName": "HBO Max",
+        "providerTechnicalName": "hbo_max",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/jbe4gVSfRlbPTdESXhEKpornsfu.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/1622-supernatural/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "tv-4614",
+    "objectType": "SHOW",
+    "title": "NCIS",
+    "originalTitle": "NCIS",
+    "releaseYear": 2003,
+    "releaseDate": "2003-09-23",
+    "runtimeMinutes": null,
+    "shortDescription": "From murder and espionage to terrorism and stolen submarines, a team of special agents investigates any crime that has any connection to Navy and Marine Corps personnel, regardless of rank or position.",
+    "genres": ["Action & Adventure", "Crime", "Drama"],
+    "originalLanguage": "en",
+    "imdbId": "tt0364845",
+    "tmdbId": "4614",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/mBcu8d6x6zB1el3MPNl7cZQEQ31.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/nn3SuLTO4hum8yAxaY4ql8h6kRk.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/tv/4614",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 7.62
+    },
+    "offers": [
+      {
+        "providerId": 1773,
+        "providerName": "SkyShowtime",
+        "providerTechnicalName": "skyshowtime",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/4614-ncis/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "tv-2734",
+    "objectType": "SHOW",
+    "title": "Law & Order: Special Victims Unit",
+    "originalTitle": "Law & Order: Special Victims Unit",
+    "releaseYear": 1999,
+    "releaseDate": "1999-09-20",
+    "runtimeMinutes": null,
+    "shortDescription": "In the criminal justice system, sexually-based offenses are considered especially heinous. In New York City, the dedicated detectives who investigate these vicious felonies are members of an elite squad known as the Special Victims Unit. These are their stories.",
+    "genres": ["Crime", "Drama", "Mystery"],
+    "originalLanguage": "en",
+    "imdbId": "tt0203259",
+    "tmdbId": "2734",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/iofokHZoUB4Qhik4PflvJl8TT6a.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/obtdxPgmfykYwVnvuYXC5f2xKlQ.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/tv/2734",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 7.94
+    },
+    "offers": [
+      {
+        "providerId": 1773,
+        "providerName": "SkyShowtime",
+        "providerTechnicalName": "skyshowtime",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/2734-law-order-special-victims-unit/watch?locale=HR"
+      }
+    ]
+  },
+  {
+    "id": "tv-549",
+    "objectType": "SHOW",
+    "title": "Law & Order",
+    "originalTitle": "Law & Order",
+    "releaseYear": 1990,
+    "releaseDate": "1990-09-13",
+    "runtimeMinutes": null,
+    "shortDescription": "In cases ripped from the headlines, police investigate serious and often deadly crimes, weighing the evidence and questioning the suspects until someone is taken into custody. The district attorney's office then builds a case to convict the perpetrator by proving the person guilty beyond a reasonable doubt. Working together, these expert teams navigate all sides of the complex criminal justice system to make New York a safer place.",
+    "genres": ["Crime", "Drama"],
+    "originalLanguage": "en",
+    "imdbId": "tt0098844",
+    "tmdbId": "549",
+    "posterUrl": "https://image.tmdb.org/t/p/w342/haJ9eHytVO3H3JooMJG1DiWwDNm.jpg",
+    "backdropUrl": "https://image.tmdb.org/t/p/w1280/tc7canPSAn2X14hYi6Rl3gZm1o4.jpg",
+    "ageCertification": null,
+    "tmdbUrl": "https://www.themoviedb.org/tv/549",
+    "scores": {
+      "imdbScore": null,
+      "imdbVotes": null,
+      "tmdbScore": 7.306
+    },
+    "offers": [
+      {
+        "providerId": 1773,
+        "providerName": "SkyShowtime",
+        "providerTechnicalName": "skyshowtime",
+        "providerIconUrl": "https://image.tmdb.org/t/p/w92/h0ZYcYHicKQ4Ixm5nOjqvwni5NG.jpg",
+        "monetizationType": "FLATRATE",
+        "url": "https://www.themoviedb.org/tv/549-law-order/watch?locale=HR"
+      }
+    ]
+  }
+]

@@ -180,7 +180,7 @@ export default function ReelsCard({
             </span>
           ) : null}
           {providerName && (
-            <span className="bg-black/55 backdrop-blur text-zinc-300 border border-white/10 text-[10px] font-bold font-mono px-2.5 py-1.5 rounded-full tracking-[0.12em] uppercase">
+            <span className="bg-black/55 backdrop-blur text-zinc-300 border border-white/10 text-[11px] font-bold px-2.5 py-1.5 rounded-full tracking-[0.12em]">
               {providerName}
             </span>
           )}
@@ -242,7 +242,7 @@ export default function ReelsCard({
           className="absolute z-10 text-right sm:hidden"
           style={{ right: 20, top: 160 }}
         >
-          <div className="font-mono text-[10px] text-zinc-400 tracking-[0.12em] uppercase leading-relaxed">
+          <div className="text-[11px] text-zinc-400 tracking-[0.12em] leading-relaxed">
             ↑ SWIPE
             <br />
             FOR NEXT
@@ -272,7 +272,7 @@ export default function ReelsCard({
           <>
             {/* Show title — mono amber kicker */}
             <Link to={`/title/${episode.title_id}`}>
-              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-amber-400 font-semibold mb-1.5 drop-shadow hover:opacity-80 transition-opacity">
+              <div className="text-xs text-zinc-300 font-medium mb-1.5 drop-shadow hover:opacity-80 transition-opacity">
                 <span>{episode.show_title}</span>
                 {!isMovie && <span> · {formatEpisodeCode(episode)}</span>}
                 {isMovie && <span> · Movie</span>}

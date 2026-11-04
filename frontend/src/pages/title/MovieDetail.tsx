@@ -217,9 +217,7 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
           .filter(Boolean)
           .map((cell) => (
             <div key={cell!.label}>
-              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-zinc-400 mb-1">
-                {cell!.label}
-              </div>
+              <div className="text-xs text-zinc-400 mb-1">{cell!.label}</div>
               <div className="font-mono text-[13px] font-semibold text-zinc-100">
                 {cell!.value}
               </div>

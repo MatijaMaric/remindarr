@@ -59,9 +59,7 @@ export default function BadgesCard({ achievements, mode }: BadgesCardProps) {
   return (
     <DossierCard>
       <div className="flex items-baseline justify-between mb-3">
-        <Kicker color="zinc" className="mb-0">
-          Badges
-        </Kicker>
+        <Kicker className="mb-0">Badges</Kicker>
         <span className="text-[11px] text-zinc-500 font-mono">
           {earned.length} / {achievements.length} earned
         </span>

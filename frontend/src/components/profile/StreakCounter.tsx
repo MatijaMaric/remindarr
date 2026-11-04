@@ -26,7 +26,7 @@ export default function StreakCounter({ streak, variant }: StreakCounterProps) {
   if (variant === "sidebar") {
     return (
       <DossierCard>
-        <Kicker color="zinc">Streak</Kicker>
+        <Kicker>Streak</Kicker>
         <StreakDisplay streak={streak} />
         {streak.longestStreak > 0 && (
           <p className="text-xs text-zinc-500 font-mono mt-1.5">

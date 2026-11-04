@@ -322,9 +322,7 @@ function FilterField({
 
   return (
     <div ref={ref} className="relative min-w-0">
-      <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.15em] text-zinc-500 mb-1.5">
-        {label}
-      </div>
+      <div className="text-xs font-medium text-zinc-500 mb-1.5">{label}</div>
       <button
         type="button"
         aria-expanded={open}

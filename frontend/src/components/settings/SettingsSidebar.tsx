@@ -50,7 +50,7 @@ export function SettingsSidebar({
 
       {/* Desktop: sidebar */}
       <aside className="hidden lg:block">
-        <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400 px-3.5 pb-2.5">
+        <div className="text-xs font-medium text-zinc-400 px-3.5 pb-2.5">
           {t("settings.sections")}
         </div>
         <nav
@@ -88,9 +88,7 @@ export function SettingsSidebar({
         </nav>
         {buildInfo && (
           <Card padding="none" className="mt-6 p-3.5 rounded-[10px]">
-            <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400 mb-2">
-              Build
-            </div>
+            <div className="text-xs font-medium text-zinc-400 mb-2">Build</div>
             <div className="font-mono text-xs text-zinc-300 leading-relaxed">
               {buildInfo}
             </div>

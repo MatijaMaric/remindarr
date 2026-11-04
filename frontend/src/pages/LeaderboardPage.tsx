@@ -103,9 +103,7 @@ export default function LeaderboardPage() {
 
   const header = (
     <div>
-      <div className="font-mono text-[11px] uppercase tracking-[0.15em] text-amber-400 font-semibold mb-1">
-        Leaderboard
-      </div>
+      <div className="text-xs text-zinc-300 font-medium mb-1">Leaderboard</div>
       <h1 className="text-2xl font-extrabold tracking-tight">Leaderboard</h1>
       <p className="text-zinc-400 text-sm mt-1">Among people you follow</p>
     </div>

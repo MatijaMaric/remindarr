@@ -24,9 +24,7 @@ function MoreGroup({
 }) {
   return (
     <div className="mb-4">
-      <div className="px-5 pb-2 font-mono text-[10px] uppercase tracking-[0.15em] text-zinc-400 font-semibold">
-        {label}
-      </div>
+      <div className="px-5 pb-2 text-xs text-zinc-400 font-medium">{label}</div>
       <Card radius="2xl" padding="none" className="mx-4 overflow-hidden">
         {children}
       </Card>

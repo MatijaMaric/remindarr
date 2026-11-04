@@ -24,7 +24,7 @@ function MemberSinceKicker({ memberSince }: { memberSince: string | null }) {
     month: "long",
   });
   return (
-    <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-400 mb-2.5">
+    <div className="text-xs font-medium text-zinc-300 mb-2.5">
       {t("userProfile.memberSinceKicker", { date: formatted })}
     </div>
   );
@@ -193,7 +193,7 @@ export default function ProfileHero({
                 <div className="text-[18px] font-extrabold text-white leading-tight">
                   {followerCount}
                 </div>
-                <div className="font-mono text-[9px] font-semibold uppercase tracking-[0.15em] text-zinc-400">
+                <div className="text-xs font-medium text-zinc-400">
                   {t("userProfile.followers")}
                 </div>
               </div>
@@ -202,7 +202,7 @@ export default function ProfileHero({
                 <div className="text-[18px] font-extrabold text-white leading-tight">
                   {followingCount}
                 </div>
-                <div className="font-mono text-[9px] font-semibold uppercase tracking-[0.15em] text-zinc-400">
+                <div className="text-xs font-medium text-zinc-400">
                   {t("userProfile.following")}
                 </div>
               </div>

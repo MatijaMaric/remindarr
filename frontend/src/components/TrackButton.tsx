@@ -141,7 +141,7 @@ export default function TrackButton({
         title={tracked ? undefined : t("track.hint")}
         className={`min-h-8 inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
           tracked
-            ? "bg-amber-500 text-zinc-950 hover:bg-red-500"
+            ? "bg-amber-400/10 text-amber-300 hover:bg-red-500 hover:text-white"
             : "bg-zinc-800 text-zinc-400 hover:bg-amber-500 hover:text-zinc-950"
         } disabled:opacity-50`}
       >
