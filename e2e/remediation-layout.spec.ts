@@ -21,7 +21,12 @@ const title = {
 
 class ReviewPage extends BasePage {
   async open(path: string) {
-    await this.goto(path);
+    // ponytail: Firefox intermittently aborts goto right after a viewport
+    // change (NS_BINDING_ABORTED); one retry, investigate if it persists.
+    await this.goto(path).catch((err: unknown) => {
+      if (!String(err).includes("NS_BINDING_ABORTED")) throw err;
+      return this.goto(path);
+    });
   }
   async assertFits(locator: Locator) {
     await expect(locator).toBeVisible();
@@ -35,6 +40,11 @@ class ReviewPage extends BasePage {
 
 async function setup(page: Page) {
   await page.route("**/api/**", (route) => route.fulfill({ json: {} }));
+  // Firefox/WebKit report Notification.permission "default", which shows the
+  // push prompt above every page; Chromium headless reports "denied".
+  await page.addInitScript(() =>
+    localStorage.setItem("notification-prompt-dismissed", "1"),
+  );
   await mockLoggedIn(page);
   await page.route("**/api/auth/passkey/list-user-passkeys", (route) =>
     route.fulfill({ json: [] }),
@@ -159,6 +169,7 @@ test("header, compact rows and selection actions fit at phone, tablet and deskto
         page.getByRole("link", { name: "More navigation options" }),
       );
       await page.getByRole("link", { name: "More navigation options" }).click();
+      await expect(page).toHaveURL(/\/more$/);
       await review.assertFits(page.getByRole("link", { name: /Settings/ }));
       await review.assertFits(
         page.getByRole("button", { name: /Sign out|Log out/i }),
@@ -364,4 +375,185 @@ test("light Movie, Tracked, Calendar and Settings remain readable on narrow phon
       expect(results.violations, `${width}px ${path}`).toEqual([]);
     }
   }
+});
+
+// ── #1172: safe areas, text scaling, density, toasts and large libraries ──
+// Runs in every project from playwright.remediation.config.ts (Chromium,
+// Firefox, WebKit and phone emulation). Chromium-only steps use CDP to emulate
+// physical safe-area insets and the browser's default font size setting.
+
+const CORE_ROUTES = [
+  "/tracked",
+  "/calendar?view=agenda",
+  "/settings?tab=subscriptions",
+  `/title/${title.id}`,
+];
+
+async function useDensity(page: Page, density: string) {
+  await page.route("**/api/user/settings/appearance", (route) =>
+    route.fulfill({
+      json: {
+        themeVariant: "dark",
+        accentColor: "amber",
+        density,
+        reduceMotion: 0,
+        highContrast: 0,
+        hideEpisodeSpoilers: 0,
+        autoplayTrailers: 0,
+      },
+    }),
+  );
+}
+
+async function expectNoHorizontalScroll(page: Page, label: string) {
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  );
+  expect(overflow, label).toBeLessThanOrEqual(1);
+}
+
+function bottomOf(box: { y: number; height: number } | null) {
+  return box!.y + box!.height;
+}
+
+test("core routes reflow at 320px with 200% text in every density", async ({
+  page,
+}) => {
+  // 320 CSS px is 1280px at 400% zoom (WCAG 1.4.10 reflow).
+  await page.setViewportSize({ width: 320, height: 640 });
+  const review = new ReviewPage(page);
+  for (const density of ["comfortable", "cozy", "compact"]) {
+    await useDensity(page, density);
+    for (const path of CORE_ROUTES) {
+      await review.open(path);
+      await expect(page.locator("html")).toHaveAttribute(
+        "data-density",
+        density,
+      );
+      await expect(page.getByRole("main")).not.toContainText("Loading...");
+      await page.evaluate(() => {
+        document.documentElement.style.fontSize = "200%";
+      });
+      await expectNoHorizontalScroll(page, `${density} ${path}`);
+      const nav = page.getByRole("navigation", { name: "Mobile navigation" });
+      for (const link of await nav.getByRole("link").all()) {
+        await review.assertFits(link);
+        const box = (await link.boundingBox())!;
+        // WCAG 2.2 2.5.8 minimum target size.
+        expect(box.height, `${density} ${path}`).toBeGreaterThanOrEqual(24);
+        expect(box.width, `${density} ${path}`).toBeGreaterThanOrEqual(24);
+      }
+    }
+  }
+});
+
+test("density scales from the browser's default font size instead of replacing it", async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "Default font size needs CDP");
+  const cdp = await page.context().newCDPSession(page);
+  // Equivalent of choosing "Very large" font size in browser settings.
+  await cdp.send("Page.setFontSizes", { fontSizes: { standard: 32 } });
+  const review = new ReviewPage(page);
+  for (const [density, px] of [
+    ["comfortable", 32],
+    ["cozy", 29],
+    ["compact", 26],
+  ] as const) {
+    await useDensity(page, density);
+    await review.open("/tracked");
+    await expect(page.locator("html")).toHaveAttribute("data-density", density);
+    expect(
+      await page.evaluate(() =>
+        parseFloat(getComputedStyle(document.documentElement).fontSize),
+      ),
+    ).toBeCloseTo(px, 0);
+    await expectNoHorizontalScroll(page, density);
+  }
+});
+
+test("mobile navigation clears the home-indicator safe area", async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== "chromium", "Safe-area emulation needs CDP");
+  const cdp = await page.context().newCDPSession(page);
+  // iPhone-style insets: notch on top, home indicator at the bottom.
+  await cdp.send("Emulation.setSafeAreaInsetsOverride", {
+    insets: { top: 47, bottom: 34, left: 0, right: 0 },
+  });
+  const review = new ReviewPage(page);
+  await review.open("/tracked");
+  const nav = page.getByRole("navigation", { name: "Mobile navigation" });
+  await expect(nav).toBeVisible();
+  const height = page.viewportSize()!.height;
+  expect(bottomOf(await nav.boundingBox())).toBeLessThanOrEqual(height - 34);
+});
+
+test("toasts never cover the mobile navigation or the desktop corner", async ({
+  page,
+}) => {
+  await page.route("**/api/watched/**", (route) =>
+    route.fulfill({ status: 500, json: { error: "boom" } }),
+  );
+  const review = new ReviewPage(page);
+  for (const width of [320, 390, 768, 1280]) {
+    await page.setViewportSize({ width, height: 844 });
+    await review.open("/calendar?view=agenda");
+    await page
+      .getByRole("button", { name: "Mark as watched", exact: true })
+      .first()
+      .click();
+    const toast = page.getByRole("listitem").filter({
+      hasText: "Failed to update watched status — please try again",
+    });
+    await expect(toast.first()).toBeVisible();
+    const nav = page.getByRole("navigation", { name: "Mobile navigation" });
+    // Polling waits out the slide-in animation.
+    const limit =
+      width < 1280 ? (await nav.boundingBox())!.y : page.viewportSize()!.height;
+    await expect
+      .poll(async () => bottomOf(await toast.first().boundingBox()), {
+        message: `${width}px`,
+      })
+      .toBeLessThanOrEqual(limit);
+    if (width >= 1280) await expect(nav).toBeHidden();
+  }
+});
+
+test("a 500-title library renders and scrolls without layout overflow", async ({
+  page,
+}) => {
+  const many = Array.from({ length: 500 }, (_, i) => ({
+    ...title,
+    id: `tv-tt${1_000_000 + i}`,
+    title: `Library title number ${i}`,
+  }));
+  await page.route("**/api/track", (route) =>
+    route.fulfill({ json: { titles: many, count: many.length } }),
+  );
+  const review = new ReviewPage(page);
+  const started = Date.now();
+  await review.open("/tracked");
+  await expect(
+    page.getByRole("link", { name: "Library title number 0", exact: true }),
+  ).toBeVisible();
+  const renderMs = Date.now() - started;
+  const nodes = await page.evaluate(
+    () => document.querySelectorAll("*").length,
+  );
+  test.info().annotations.push({
+    type: "large-library",
+    description: `500 titles: first row after ${renderMs}ms, ${nodes} DOM nodes`,
+  });
+  // Generous ceiling: catches pathological regressions, not a perf budget.
+  expect(renderMs).toBeLessThan(10_000);
+  await expectNoHorizontalScroll(page, "500 titles");
+  const last = page.getByRole("link", {
+    name: "Library title number 499",
+    exact: true,
+  });
+  await last.scrollIntoViewIfNeeded();
+  await review.assertFits(last);
 });

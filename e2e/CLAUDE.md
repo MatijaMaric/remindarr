@@ -38,6 +38,17 @@ Helpers shared across specs: `e2e/helpers.ts`.
 | `search.spec.ts`        | CI-skipped | Deemed flaky/redundant |
 | `tracking.spec.ts`      | CI-skipped | Deemed flaky/redundant |
 
+## Layout / device suite
+
+`remediation-layout.spec.ts` runs against the production build with every API mocked
+(`bun run test:e2e:remediation`, config `playwright.remediation.config.ts`). Projects:
+chromium, firefox, webkit (desktop engines at 390px) plus mobile-chrome (Pixel 7) and
+mobile-safari (iPhone 13) emulation. It covers 320px reflow at 200% text in every density,
+WCAG 2.5.8 target size on the mobile nav, toast/nav overlap, and a 500-title library.
+Chromium-only steps use CDP for safe-area insets (`Emulation.setSafeAreaInsetsOverride`)
+and the browser default font size (`Page.setFontSizes`). CI runs it in `core-journey.yml`.
+Emulation is not device certification: physical phones and screen readers are still manual.
+
 ## Running locally
 
 ```bash

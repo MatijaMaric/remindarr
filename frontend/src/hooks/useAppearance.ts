@@ -80,7 +80,7 @@ export function useAppearance(): {
     let cancelled = false;
     getAppearanceSettings()
       .then((data) => {
-        if (!cancelled) applyAndSet(data);
+        if (!cancelled) applyAndSet({ ...DEFAULTS, ...data });
       })
       .catch(() => {});
     return () => {
