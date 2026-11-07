@@ -25,6 +25,7 @@ import { navLinkClass } from "./nav-utils";
 import { usePushSubscriptionSync } from "./hooks/usePushSubscriptionSync";
 import { useKeyboardShortcut } from "./hooks/useKeyboardShortcut";
 import { useTheme } from "./hooks/useTheme";
+import { useAppearance } from "./hooks/useAppearance";
 import { lazyWithRetry } from "./lib/lazyWithRetry";
 
 const HomeRoute = lazyWithRetry(() => import("./routes/HomeRoute"));
@@ -106,6 +107,9 @@ export default function App() {
   usePushSubscriptionSync();
 
   const { theme } = useTheme();
+  // Density, accent, motion and contrast apply on every route, not only after
+  // the Appearance settings tab has loaded.
+  useAppearance();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   useKeyboardShortcut("?", () => setShortcutsOpen((v) => !v));
   useKeyboardShortcut("/", () =>
@@ -593,6 +597,8 @@ export default function App() {
       <Toaster
         theme={theme === "light" ? "light" : "dark"}
         position="bottom-center"
+        offset={{ bottom: "var(--bottom-nav-clearance)" }}
+        mobileOffset={{ bottom: "var(--bottom-nav-clearance)" }}
         richColors
       />
       <KeyboardShortcutsModal

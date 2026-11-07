@@ -7,6 +7,18 @@
 
 :root {
   --radius: 0.5rem;
+  /* Space above BottomTabBar for toasts and banners: 18px offset + nav height
+     (2.25rem text/padding + 24px icon/border) + 12px gap. rem keeps it clear
+     at larger text sizes; env() keeps it clear of the home indicator. */
+  --bottom-nav-clearance: calc(
+    54px + 2.25rem + env(safe-area-inset-bottom, 0px)
+  );
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --bottom-nav-clearance: 1rem;
+  }
 }
 
 .dark {
@@ -189,12 +201,14 @@
   --color-amber-600: #75755a;
 }
 
-/* Density: scale root font-size so spacing/sizing rooted in rem flexes uniformly. */
+/* Density: scale root font-size so spacing/sizing rooted in rem flexes uniformly.
+   Percentages (14.5px / 13px at the 16px default) keep the user's browser
+   font-size preference instead of replacing it with a fixed pixel size. */
 :root[data-density="cozy"] {
-  font-size: 14.5px;
+  font-size: 90.625%;
 }
 :root[data-density="compact"] {
-  font-size: 13px;
+  font-size: 81.25%;
 }
 
 /* Reduce motion */
@@ -257,6 +271,7 @@
 .theme-light .text-zinc-500 {
   color: #63636e; /* Maintain 4.5:1 even on the darker zinc-800 card surface. */
 }
+.theme-light .text-amber-300,
 .theme-light .text-amber-400,
 .theme-light .text-amber-500 {
   color: color-mix(in srgb, var(--color-amber-400) 45%, #000);

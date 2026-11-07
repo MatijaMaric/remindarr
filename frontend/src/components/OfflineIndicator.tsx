@@ -50,7 +50,7 @@ export default function OfflineIndicator() {
   return (
     <div
       role="status"
-      className="fixed bottom-[calc(100px+env(safe-area-inset-bottom,0px))] xl:bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-1 rounded-xl bg-yellow-500/90 px-4 py-2.5 text-sm font-medium text-black shadow-lg backdrop-blur max-w-xs w-max"
+      className="fixed bottom-(--bottom-nav-clearance) left-1/2 -translate-x-1/2 z-50 flex flex-col gap-1 rounded-xl bg-yellow-500/90 px-4 py-2.5 text-sm font-medium text-black shadow-lg backdrop-blur max-w-xs w-max"
     >
       <div>
         {isOnline && sessionStatus !== "offline"
