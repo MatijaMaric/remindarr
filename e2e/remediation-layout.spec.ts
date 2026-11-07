@@ -506,7 +506,7 @@ test("toasts never cover the mobile navigation or the desktop corner", async ({
       .first()
       .click();
     const toast = page.getByRole("listitem").filter({
-      hasText: "Failed to update watched status — please try again",
+      hasText: "Failed to update watched status",
     });
     await expect(toast.first()).toBeVisible();
     const nav = page.getByRole("navigation", { name: "Mobile navigation" });
