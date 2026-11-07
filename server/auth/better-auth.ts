@@ -234,6 +234,7 @@ export function createAuth(
     );
   }
 
+  const baseURL = CONFIG.BASE_URL || `http://localhost:${CONFIG.PORT}`;
   const auth = betterAuth({
     database: drizzleAdapter(db, {
       provider: "sqlite",
@@ -246,8 +247,12 @@ export function createAuth(
       },
     }),
     secret,
-    baseURL: CONFIG.BASE_URL || `http://localhost:${CONFIG.PORT}`,
+    baseURL,
     basePath: "/api/auth",
+    // A cancelled IdP prompt, expired/unknown state or failed token exchange
+    // redirects here. LoginPage renders `?error=`; better-auth's default is a
+    // bare /api/auth/error page with no way back into the app.
+    onAPIError: { errorURL: `${baseURL}/login` },
     trustedOrigins: [
       ...(CONFIG.CORS_ORIGIN
         ? CONFIG.CORS_ORIGIN.split(",")

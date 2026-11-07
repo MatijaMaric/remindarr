@@ -1,4 +1,11 @@
-import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  expect,
+  setSystemTime,
+  spyOn,
+  test,
+} from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { CONFIG } from "../config";
 import { createNotifier, createUser, getNotifierById } from "../db/repository";
@@ -111,6 +118,48 @@ for (const runtime of ["Bun", "portable"] as const) {
     });
   }
 }
+
+test("real clock: only the notifier whose local time has reached notify_time is delivered", async () => {
+  // 2026-10-02T20:00Z = 09:00 Sat in Auckland (NZDT, UTC+13) and
+  // 13:00 Fri in Los Angeles (PDT, UTC-7), before its 14:00 slot.
+  // No spy on the time utils.
+  setSystemTime(new Date("2026-10-02T20:00:00Z"));
+  try {
+    const payload = {
+      date: "",
+      episodes: [],
+      movies: [
+        { title: "TZ release", releaseYear: 2026, posterUrl: null, offers: [] },
+      ],
+    };
+    spies.push(
+      spyOn(content, "buildNotificationContent").mockResolvedValue(payload),
+    );
+    const user = await createUser("tz_test", "unused-test-hash");
+    const make = (path: string, tz: string, time: string) =>
+      createNotifier(
+        user,
+        "webhook",
+        tz,
+        { url: `${origin}${path}` },
+        time,
+        tz,
+        "daily",
+      );
+    const nz = await make("/nz", "Pacific/Auckland", "09:00");
+    const la = await make("/la", "America/Los_Angeles", "14:00");
+    await registerNotificationJobs();
+    await getHandler("send-notifications")!({} as never);
+
+    expect(received.map((r) => r.path)).toEqual(["/nz"]);
+    expect((await getNotifierById(nz, user))?.last_sent_date).toBe(
+      "2026-10-03",
+    );
+    expect((await getNotifierById(la, user))?.last_sent_date).toBeNull();
+  } finally {
+    setSystemTime();
+  }
+});
 
 test("an operator-approved Plex receiver rejects expired credentials, survives unavailability and recovers", async () => {
   status = 401;

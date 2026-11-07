@@ -665,8 +665,47 @@ describe("OIDC callback flow", () => {
       ),
     );
 
-    // Should not succeed
-    expect(res.status).not.toBe(200);
+    // Unknown/expired state lands back on the app login page with an error
+    expect(res.status).toBe(302);
+    const location = new URL(res.headers.get("location") ?? "");
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("error")).toBeTruthy();
+  });
+
+  test("callback after the user cancels at the IdP returns to /login with the IdP error", async () => {
+    fetchSpy.mockImplementation(makeMockFetch({ sub: "x", name: "X" }));
+    const auth = makeAuth();
+    const authorizeRes = await auth.handler(
+      new Request("http://localhost:3000/api/auth/sign-in/social", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: "pocketid",
+          callbackURL: "http://localhost:3000/",
+        }),
+      }),
+    );
+    const { url } = (await authorizeRes.json()) as { url: string };
+    const state = new URL(url).searchParams.get("state");
+    const cookie = (authorizeRes.headers.getSetCookie?.() ?? [])
+      .map((c) => c.split(";")[0])
+      .join("; ");
+
+    const res = await auth.handler(
+      new Request(
+        `http://localhost:3000/api/auth/callback/pocketid?error=access_denied&error_description=User+cancelled&state=${state}`,
+        { headers: { Cookie: cookie } },
+      ),
+    );
+
+    expect(res.status).toBe(302);
+    const location = new URL(res.headers.get("location") ?? "");
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("error")).toBe("access_denied");
+    expect(res.headers.getSetCookie?.().join(";") ?? "").not.toContain(
+      "session_token=",
+    );
+    expect(await getDb().select().from(users).all()).toHaveLength(0);
   });
 
   test("callback with failed token exchange returns an error response", async () => {
