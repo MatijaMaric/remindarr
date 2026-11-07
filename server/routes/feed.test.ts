@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from "bun:test";
+import { describe, it, expect, beforeEach, afterAll, spyOn } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { makeParsedTitle } from "../test-utils/fixtures";
@@ -8,7 +8,9 @@ import {
   getSessionWithUser,
   upsertTitles,
   trackTitle,
+  upsertEpisodes,
 } from "../db/repository";
+import * as tracing from "../tracing";
 import { requireAuth } from "../middleware/auth";
 import { initCache } from "../cache";
 import { MemoryCache } from "../cache/memory";
@@ -127,6 +129,57 @@ describe("GET /feed/calendar.ics", () => {
     const body = await feedRes.text();
     expect(body).toContain("Future Movie");
     expect(body).toContain(`remindarr-movie-movie-future@remindarr`);
+  });
+
+  it("does not fetch streaming offers when building the feed (#1345)", async () => {
+    const tokenRes = await app.request("/feed/token/regenerate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const { token } = (await tokenRes.json()) as { token: string };
+
+    const airDate = new Date();
+    airDate.setDate(airDate.getDate() + 3);
+    await upsertTitles([
+      makeParsedTitle({
+        id: "show-feed",
+        objectType: "SHOW",
+        title: "Feed Show",
+      }),
+    ]);
+    await trackTitle("show-feed", userId);
+    await upsertEpisodes([
+      {
+        title_id: "show-feed",
+        season_number: 1,
+        episode_number: 1,
+        name: "Pilot",
+        overview: null,
+        air_date: airDate.toISOString().slice(0, 10),
+        still_path: null,
+      },
+    ]);
+
+    const ops: string[] = [];
+    const traceSpy = spyOn(tracing, "traceDbQuery").mockImplementation(((
+      op: string,
+      fn: () => unknown,
+    ) => {
+      ops.push(op);
+      return fn();
+    }) as typeof tracing.traceDbQuery);
+    try {
+      for (const feed of ["calendar", "episodes"]) {
+        const res = await app.request(`/feed/${feed}.ics?token=${token}`);
+        expect(res.status).toBe(200);
+        expect(await res.text()).toContain("Feed Show S01E01");
+      }
+    } finally {
+      traceSpy.mockRestore();
+    }
+    expect(ops).toContain("getEpisodesByDateRange");
+    expect(ops).not.toContain("getOffersForTitles");
+    expect(ops).not.toContain("getPlexOffersForUser");
   });
 
   it("serves the cached body on repeat requests within the TTL", async () => {

@@ -130,7 +130,7 @@ app.get("/calendar.ics", async (c) => {
   const endDate = addDays(today, 90);
 
   const [episodes, movies] = await Promise.all([
-    getEpisodesByDateRange(today, endDate, user.id),
+    getEpisodesByDateRange(today, endDate, user.id, { withOffers: false }),
     getUpcomingTrackedMovies(user.id, today, endDate),
   ]);
 
@@ -163,7 +163,9 @@ app.get("/episodes.ics", async (c) => {
   const today = new Date().toISOString().slice(0, 10);
   const endDate = addDays(today, 90);
 
-  const episodes = await getEpisodesByDateRange(today, endDate, user.id);
+  const episodes = await getEpisodesByDateRange(today, endDate, user.id, {
+    withOffers: false,
+  });
 
   const lines: string[] = [
     ...buildIcalHeader("Remindarr – Episodes"),
