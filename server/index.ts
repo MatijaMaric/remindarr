@@ -39,6 +39,7 @@ import detailsRoutes from "./routes/details";
 import notifierRoutes from "./routes/notifiers";
 import integrationRoutes from "./routes/integrations";
 import importRoutes from "./routes/import";
+import accountRoutes from "./routes/account";
 import profileRoutes from "./routes/profile";
 import socialRoutes from "./routes/social";
 import ratingsRoutes from "./routes/ratings";
@@ -425,6 +426,18 @@ const importRateLimiter = rateLimiter({
 app.use("/api/import/*", importRateLimiter, requireAuth);
 app.use("/api/import", importRateLimiter, requireAuth);
 app.route("/api/import", importRoutes);
+
+// Account export is heavy; one per user per hour (keyed after requireAuth).
+const accountExportRateLimiter = rateLimiter({
+  store: rateLimitStore,
+  scope: "account-export",
+  limit: 1,
+  windowMs: 60 * 60_000,
+  keyGenerator: (c) => c.get("user")?.id ?? "anonymous",
+});
+app.use("/api/account/*", writeRateLimiter, requireAuth);
+app.use("/api/account/export", accountExportRateLimiter);
+app.route("/api/account", accountRoutes);
 
 app.use("/api/stats/*", requireAuth);
 app.use("/api/stats", requireAuth);

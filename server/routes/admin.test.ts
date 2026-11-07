@@ -690,3 +690,63 @@ describe("PUT /admin/settings — OIDC reload callback error handling", () => {
     expect(called).toBe(true);
   });
 });
+
+describe("PUT /admin/users/:id/password", () => {
+  const platform = {
+    hashPassword: async (p: string) => `hashed:${p}`,
+    verifyPassword: async (p: string, h: string) => h === `hashed:${p}`,
+  };
+
+  function withPlatform() {
+    const a = new Hono<AppEnv>();
+    a.use("*", async (c, next) => {
+      c.set("auth", createMockAuth() as any);
+      c.set("platform", platform as any);
+      await next();
+    });
+    a.use("/admin/*", requireAuth);
+    a.use("/admin/*", requireAdmin);
+    a.route("/admin", adminApp);
+    return a;
+  }
+
+  function reset(id: string, body: unknown) {
+    return withPlatform().request(`/admin/users/${id}/password`, {
+      method: "PUT",
+      headers: { Cookie: adminCookie, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  }
+
+  it("rejects a password shorter than 8 characters", async () => {
+    const id = await createUser("locked", "old-hash");
+    const res = await reset(id, { password: "short" });
+    expect(res.status).toBe(400);
+    expect((await res.json()).issues).toBeInstanceOf(Array);
+  });
+
+  it("sets a new password and signs the user out everywhere", async () => {
+    const id = await createUser("locked", "old-hash");
+    const userToken = await createSession(id);
+
+    const res = await reset(id, { password: "new-password-1" });
+    expect(res.status).toBe(200);
+
+    const { getCredentialPasswordHash } =
+      await import("../db/repository/account-data");
+    expect(await getCredentialPasswordHash(id)).toBe("hashed:new-password-1");
+    expect(await getSessionWithUser(userToken)).toBeNull();
+  });
+
+  it("refuses users without a local password", async () => {
+    const id = await createUser("sso", null, "SSO", "oidc", "sub-1");
+    const res = await reset(id, { password: "new-password-1" });
+    expect(res.status).toBe(400);
+  });
+
+  it("refuses the acting admin's own account", async () => {
+    const me = await getSessionWithUser(adminCookie.split("=")[1]);
+    const res = await reset(me!.id, { password: "new-password-1" });
+    expect(res.status).toBe(400);
+  });
+});

@@ -287,3 +287,43 @@ describe("AdminUsersPage", () => {
     });
   });
 });
+
+describe("AdminUsersPage — reset password (#461)", () => {
+  test("sets a new password for a local user", async () => {
+    getAdminUsersSpy.mockResolvedValue(mockUsersResponse);
+    const resetSpy = spyOn(api, "resetAdminUserPassword").mockResolvedValue({
+      message: "ok",
+    });
+    try {
+      render(<AdminUsersPage />, { wrapper: Wrapper });
+
+      const buttons = await screen.findAllByTitle("Reset password");
+      fireEvent.click(buttons[0]);
+
+      const input = await screen.findByLabelText(
+        "New password (at least 8 characters)",
+      );
+      fireEvent.change(input, { target: { value: "temporary-pass" } });
+      fireEvent.submit(input.closest("form")!);
+
+      await waitFor(() =>
+        expect(resetSpy).toHaveBeenCalledWith("u1", "temporary-pass"),
+      );
+    } finally {
+      resetSpy.mockRestore();
+    }
+  });
+
+  test("hides the action for SSO-only users", async () => {
+    getAdminUsersSpy.mockResolvedValue({
+      ...mockUsersResponse,
+      users: mockUsersResponse.users.map((u) => ({
+        ...u,
+        auth_provider: "oidc",
+      })),
+    });
+    render(<AdminUsersPage />, { wrapper: Wrapper });
+    await screen.findByText("alice");
+    expect(screen.queryAllByTitle("Reset password")).toHaveLength(0);
+  });
+});

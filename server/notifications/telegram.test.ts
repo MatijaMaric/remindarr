@@ -242,4 +242,36 @@ describe("TelegramProvider.send", () => {
     const body = JSON.parse(fetchCalls[0].options.body as string);
     expect(body.text).not.toContain("New badges");
   });
+
+  it("renders the message in the recipient's language (German)", async () => {
+    await telegram.send(config, {
+      ...sampleContent,
+      locale: "de",
+      streamingAlerts: [
+        {
+          titleId: "tt1",
+          title: "Inception",
+          posterUrl: null,
+          providerName: "Netflix",
+          kind: "arrival",
+        },
+      ],
+    });
+    const body = JSON.parse(fetchCalls[0].options.body as string);
+    expect(body.text).toContain(
+      "<b>📺 Remindarr — 1 Folge und 1 Film und 1 jetzt im Stream heute (2026-03-12)</b>",
+    );
+    expect(body.text).toContain(
+      "🔔 <b>Inception</b> — jetzt bei <i>Netflix</i>",
+    );
+    expect(body.text).not.toContain("now on");
+  });
+
+  it("keeps English output when locale is unset", async () => {
+    await telegram.send(config, sampleContent);
+    const body = JSON.parse(fetchCalls[0].options.body as string);
+    expect(body.text).toContain(
+      "<b>📺 Remindarr — 1 episode and 1 movie today (2026-03-12)</b>",
+    );
+  });
 });

@@ -24,6 +24,7 @@ import {
   SButton,
   SInput,
   SLabel,
+  SHint,
 } from "../../components/settings/kit";
 import { cn } from "@/lib/utils";
 
@@ -955,6 +956,105 @@ function SocialSection() {
   );
 }
 
+function AccountDataSection() {
+  const { user, logout } = useAuth();
+  const { t } = useTranslation();
+  const exporting = useAsyncError();
+  const deleting = useAsyncError();
+  const [showDelete, setShowDelete] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const hasPassword = user?.auth_provider === "local";
+
+  async function handleDelete(e: React.FormEvent) {
+    e.preventDefault();
+    const result = await deleting.run(() =>
+      api.requestAccountDeletion({
+        confirm,
+        ...(hasPassword ? { password } : {}),
+      }),
+    );
+    if (!result) return;
+    toast.success(t("settings.account.data.deleteScheduled"));
+    // Every session was revoked server-side; clear the local one too.
+    await logout().catch(() => {});
+  }
+
+  return (
+    <SCard
+      title={t("settings.account.data.title")}
+      subtitle={t("settings.account.data.subtitle")}
+    >
+      <div className="space-y-3.5">
+        <SHint>{t("settings.account.data.exportScope")}</SHint>
+        <SButton
+          variant="ghost"
+          disabled={exporting.pending}
+          onClick={() => exporting.run(() => api.exportAccountData())}
+        >
+          {exporting.pending
+            ? t("settings.account.data.downloading")
+            : t("settings.account.data.download")}
+        </SButton>
+        <SDivider />
+        {!showDelete ? (
+          <SButton danger onClick={() => setShowDelete(true)}>
+            {t("settings.account.data.delete")}
+          </SButton>
+        ) : (
+          <form onSubmit={handleDelete} className="space-y-3.5 max-w-[640px]">
+            <SHint kind="danger">
+              {t("settings.account.data.deleteWarning", { days: 30 })}
+            </SHint>
+            {!hasPassword && (
+              <SHint>{t("settings.account.data.reauthHint")}</SHint>
+            )}
+            {deleting.error && (
+              <SMessage kind="error">{deleting.error}</SMessage>
+            )}
+            {hasPassword && (
+              <SFormRow label={t("profile.currentPassword")}>
+                <SInput
+                  type="password"
+                  value={password}
+                  onChange={setPassword}
+                  autoComplete="current-password"
+                  required
+                />
+              </SFormRow>
+            )}
+            <SFormRow
+              label={t("settings.account.data.confirmLabel", {
+                username: user?.username ?? "",
+              })}
+            >
+              <SInput
+                value={confirm}
+                onChange={setConfirm}
+                autoComplete="off"
+                mono
+                required
+              />
+            </SFormRow>
+            <div className="flex gap-2">
+              <SButton
+                type="submit"
+                danger
+                disabled={deleting.pending || confirm !== user?.username}
+              >
+                {t("settings.account.data.confirmDelete")}
+              </SButton>
+              <SButton variant="outline" onClick={() => setShowDelete(false)}>
+                {t("common.cancel")}
+              </SButton>
+            </div>
+          </form>
+        )}
+      </div>
+    </SCard>
+  );
+}
+
 export default function AccountTab() {
   return (
     <>
@@ -964,6 +1064,7 @@ export default function AccountTab() {
       <ProfileVisibilitySection />
       <ActivityStreamSection />
       <SocialSection />
+      <AccountDataSection />
     </>
   );
 }

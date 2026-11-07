@@ -44,7 +44,14 @@
         "provider": "Anmeldung",
         "joined": "Beigetreten",
         "actions": "Aktionen"
-      }
+      },
+      "resetPassword": "Passwort zurücksetzen",
+      "resetPasswordTitle": "Passwort für {{username}} zurücksetzen",
+      "resetPasswordHelp": "Lege nach Prüfung der Identität ein neues Passwort fest und teile es über einen vertrauenswürdigen Kanal. Der Nutzer wird überall abgemeldet und sollte das Passwort in den Kontoeinstellungen ändern.",
+      "newPassword": "Neues Passwort (mindestens 8 Zeichen)",
+      "resetPasswordConfirm": "Passwort festlegen",
+      "resetPasswordDone": "Passwort zurückgesetzt. Der Nutzer wurde überall abgemeldet.",
+      "resetPasswordFailed": "Passwort konnte nicht zurückgesetzt werden"
     }
   },
   "legal": {
@@ -326,7 +333,7 @@
     "signInWithPasskey": "Mit Passkey anmelden",
     "passkeyFailed": "Anmeldung mit Passkey fehlgeschlagen",
     "recoveryTitle": "Passwort vergessen?",
-    "recoveryHelp": "Diese Instanz bietet keine Passwortzurücksetzung per E-Mail. Kontaktiere den Administrator, um deine Identität zu bestätigen und dein lokales Konto wiederherzustellen. Falls du einen Passkey oder Single Sign-on verwendet hast, versuche diese Anmeldung oben."
+    "recoveryHelp": "Diese Instanz bietet keine Passwortzurücksetzung per E-Mail. Kontaktiere den Administrator, um deine Identität zu bestätigen und dein lokales Konto wiederherzustellen. Falls du einen Passkey oder Single Sign-on verwendet hast, versuche diese Anmeldung oben. Ein Administrator kann dir über die Nutzerliste ein neues Passwort festlegen."
   },
   "profile": {
     "title": "Profil",
@@ -847,7 +854,20 @@
       "socialTitle": "Soziales",
       "socialSubtitle": "Lade Freunde zu deiner Remindarr-Instanz ein. Sie erhalten einen eingeschränkten Registrierungslink.",
       "socialHint": "Einladungscodes auf der Einladungsseite verwalten",
-      "passkeyNameLabel": "Passkey-Name"
+      "passkeyNameLabel": "Passkey-Name",
+      "data": {
+        "title": "Deine Daten",
+        "subtitle": "Lade alles herunter, was zu deinem Konto gespeichert ist, oder lösche das Konto.",
+        "exportScope": "Der Download ist eine ZIP-Datei mit deinem Profil und deinen Einstellungen (profile.json) und einer CSV-Datei pro Kategorie: Merkliste und Notizen, gesehene Titel und Folgen, Verlauf, Bewertungen, Tags, angeheftete Titel, eigene Kopien, Empfehlungen, Kommentare, Follows und Erfolge. Passwörter, Passkeys, Freigabelinks sowie Zugangsdaten von Benachrichtigungen und Integrationen sind nicht enthalten.",
+        "download": "Meine Daten herunterladen",
+        "downloading": "Download wird vorbereitet…",
+        "delete": "Konto löschen…",
+        "deleteWarning": "Dein Konto wird überall abgemeldet und nach {{days}} Tagen endgültig gelöscht – zusammen mit Merkliste, Verlauf, Bewertungen und allem anderen. Meldest du dich vorher wieder an, wird die Löschung abgebrochen. Lade zuerst deine Daten herunter, wenn du eine Kopie möchtest.",
+        "reauthHint": "Dein Konto hat kein Passwort, daher musst du dich in den letzten 10 Minuten angemeldet haben. Wird die Löschung abgelehnt, melde dich ab und wieder an.",
+        "confirmLabel": "Gib zur Bestätigung {{username}} ein",
+        "confirmDelete": "Mein Konto löschen",
+        "deleteScheduled": "Dein Konto ist zur Löschung vorgemerkt und du wurdest abgemeldet."
+      }
     },
     "activityStream": {
       "title": "Aktivitäten",

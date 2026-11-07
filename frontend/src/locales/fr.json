@@ -44,7 +44,14 @@
         "provider": "Connexion",
         "joined": "Inscription",
         "actions": "Actions"
-      }
+      },
+      "resetPassword": "Réinitialiser le mot de passe",
+      "resetPasswordTitle": "Réinitialiser le mot de passe de {{username}}",
+      "resetPasswordHelp": "Définissez un nouveau mot de passe après avoir vérifié l’identité de l’utilisateur, puis transmettez-le par un canal de confiance. Il est déconnecté partout et devrait le changer dans les réglages du compte.",
+      "newPassword": "Nouveau mot de passe (8 caractères minimum)",
+      "resetPasswordConfirm": "Définir le mot de passe",
+      "resetPasswordDone": "Mot de passe réinitialisé. L’utilisateur a été déconnecté partout.",
+      "resetPasswordFailed": "Impossible de réinitialiser le mot de passe"
     }
   },
   "legal": {
@@ -334,7 +341,7 @@
     "signInWithPasskey": "Se connecter avec une clé d'accès",
     "passkeyFailed": "Échec de la connexion avec la clé d'accès",
     "recoveryTitle": "Mot de passe oublié ?",
-    "recoveryHelp": "Cette instance ne propose pas de réinitialisation par e-mail. Contactez son administrateur pour vérifier votre identité et récupérer votre compte local. Si vous utilisiez une clé d’accès ou une connexion unique, essayez cette méthode ci-dessus."
+    "recoveryHelp": "Cette instance ne propose pas de réinitialisation par e-mail. Contactez son administrateur pour vérifier votre identité et récupérer votre compte local. Si vous utilisiez une clé d’accès ou une connexion unique, essayez cette méthode ci-dessus. Un administrateur peut vous définir un nouveau mot de passe depuis la liste des utilisateurs."
   },
   "profile": {
     "title": "Profil",
@@ -863,7 +870,20 @@
       "socialTitle": "Social",
       "socialSubtitle": "Invitez vos amis sur votre instance Remindarr. Ils recevront un lien d'inscription limité.",
       "socialHint": "Gérez les codes d'invitation sur la page Invitations",
-      "passkeyNameLabel": "Nom de la clé"
+      "passkeyNameLabel": "Nom de la clé",
+      "data": {
+        "title": "Vos données",
+        "subtitle": "Téléchargez tout ce qui est enregistré pour votre compte, ou supprimez le compte.",
+        "exportScope": "Le téléchargement est un fichier zip contenant votre profil et vos réglages (profile.json) et un CSV par catégorie : liste de suivi et notes, titres et épisodes vus, historique, notes attribuées, tags, épingles, copies possédées, recommandations, commentaires, abonnements et succès. Les mots de passe, clés d’accès, liens de partage et identifiants des notifications ou intégrations ne sont pas inclus.",
+        "download": "Télécharger mes données",
+        "downloading": "Préparation du téléchargement…",
+        "delete": "Supprimer le compte…",
+        "deleteWarning": "Votre compte sera déconnecté partout et supprimé définitivement après {{days}} jours, avec votre liste, votre historique, vos notes et tout le reste. Vous reconnecter avant annule la suppression. Téléchargez d’abord vos données si vous souhaitez en garder une copie.",
+        "reauthHint": "Votre compte n’a pas de mot de passe : vous devez vous être connecté au cours des 10 dernières minutes. Si la suppression est refusée, déconnectez-vous puis reconnectez-vous.",
+        "confirmLabel": "Saisissez {{username}} pour confirmer",
+        "confirmDelete": "Supprimer mon compte",
+        "deleteScheduled": "Votre compte est programmé pour suppression et vous avez été déconnecté."
+      }
     },
     "activityStream": {
       "title": "Flux d'activité",

@@ -855,7 +855,7 @@ function GridCalendar({
       if (context?.snapshots) {
         for (const [key, data] of context.snapshots) qc.setQueryData(key, data);
       }
-      toast.error("Failed to update watched status — please try again");
+      toast.error(t("episodes.watchedError"));
     },
     onSettled: () => {
       void invalidateLibrary(qc);
@@ -891,7 +891,7 @@ function GridCalendar({
       if (context?.snapshots) {
         for (const [key, data] of context.snapshots) qc.setQueryData(key, data);
       }
-      toast.error("Failed to update watched status — please try again");
+      toast.error(t("episodes.watchedError"));
     },
     onSettled: () => {
       void invalidateLibrary(qc);
@@ -926,7 +926,7 @@ function GridCalendar({
       if (context?.snapshots) {
         for (const [key, data] of context.snapshots) qc.setQueryData(key, data);
       }
-      toast.error("Failed to update watched status — please try again");
+      toast.error(t("episodes.watchedError"));
     },
     onSettled: () => {
       void invalidateLibrary(qc);

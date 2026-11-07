@@ -1,3 +1,4 @@
+import { getTranslator } from "./i18n";
 import type { NotificationEpisode, NotificationPersonCredit } from "./types";
 
 /**
@@ -33,7 +34,13 @@ export function formatProviderNames(
 }
 
 /** "Tom Hanks: The Movie (2027) as Captain" — one line per New credit. */
-export function formatPersonCredit(pc: NotificationPersonCredit): string {
+export function formatPersonCredit(
+  pc: NotificationPersonCredit,
+  locale?: string | null,
+): string {
   const year = pc.releaseDate?.slice(0, 4);
-  return `${pc.personName}: ${pc.title}${year ? ` (${year})` : ""}${pc.role ? ` as ${pc.role}` : ""}`;
+  const credit = `${pc.personName}: ${pc.title}${year ? ` (${year})` : ""}`;
+  return pc.role
+    ? getTranslator(locale).t("creditRole", { credit, role: pc.role })
+    : credit;
 }

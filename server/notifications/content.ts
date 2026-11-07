@@ -7,6 +7,8 @@ import {
   listPersonCreditAlerts,
   type PersonCreditAlert,
 } from "../db/repository/person-follows";
+import { getTranslator } from "./i18n";
+import { getUserLocale } from "./user-locale";
 import type {
   NotificationContent,
   NotificationEpisode,
@@ -71,28 +73,30 @@ function mapMovies(rawMovies: RawMovie[], now: Date): NotificationMovie[] {
 }
 
 /**
- * Formats a human-readable "leaving" copy for departure alerts.
+ * Formats a human-readable "leaving" copy for departure alerts, in the
+ * recipient's language (English by default).
  * Examples:
  *   formatLeavingCopy("Netflix", null)          → "Leaving Netflix soon"
  *   formatLeavingCopy("Netflix", "2025-06-01")  → "Leaving Netflix on Jun 1, 2025"
+ *   formatLeavingCopy("Netflix", "2025-06-01", "de") → "Ab 1. Juni 2025 nicht mehr bei Netflix"
  */
 export function formatLeavingCopy(
   providerName: string,
   leavingAt: string | null | undefined,
+  locale?: string | null,
 ): string {
-  if (!leavingAt) return `Leaving ${providerName} soon`;
+  const tr = getTranslator(locale);
+  const soon = tr.t("leavingSoon", { provider: providerName });
+  if (!leavingAt) return soon;
   try {
     const date = new Date(leavingAt);
-    if (isNaN(date.getTime())) return `Leaving ${providerName} soon`;
-    const formatted = date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      timeZone: "UTC",
+    if (isNaN(date.getTime())) return soon;
+    return tr.t("leavingOn", {
+      provider: providerName,
+      date: tr.formatDate(date),
     });
-    return `Leaving ${providerName} on ${formatted}`;
   } catch {
-    return `Leaving ${providerName} soon`;
+    return soon;
   }
 }
 
@@ -115,7 +119,8 @@ export async function buildNotificationContent(
   const rawMovies = await getTrackedMoviesByReleaseDate(date, userId);
   const movies = mapMovies(rawMovies, now);
 
-  return { episodes, movies, date };
+  const locale = await getUserLocale(userId);
+  return { episodes, movies, date, ...(locale ? { locale } : {}) };
 }
 
 /**
@@ -141,7 +146,13 @@ export async function buildWeeklyDigestContent(
   );
   const movies = mapMovies(rawMovies, now);
 
-  return { episodes, movies, date: startDate };
+  const locale = await getUserLocale(userId);
+  return {
+    episodes,
+    movies,
+    date: startDate,
+    ...(locale ? { locale } : {}),
+  };
 }
 
 /**

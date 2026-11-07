@@ -281,17 +281,37 @@ export async function getShelves(signal?: AbortSignal): Promise<{
   return fetchJson("/track/shelves", { signal });
 }
 
-export async function exportWatchlist(): Promise<void> {
-  const res = await fetchBlob("/track/export");
+async function downloadFile(path: string, fallbackName: string) {
+  const res = await fetchBlob(path);
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   const disposition = res.headers.get("Content-Disposition") || "";
   const match = disposition.match(/filename="([^"]+)"/);
   a.href = url;
-  a.download = match ? match[1] : "watchlist.json";
+  a.download = match ? match[1] : fallbackName;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+export async function exportWatchlist(): Promise<void> {
+  await downloadFile("/track/export", "watchlist.json");
+}
+
+/** Full account export: a zip of profile.json plus one CSV per data category. */
+export async function exportAccountData(): Promise<void> {
+  await downloadFile("/account/export", "remindarr-export.zip");
+}
+
+/** Schedules account deletion; signing in again during the grace period cancels it. */
+export async function requestAccountDeletion(body: {
+  confirm: string;
+  password?: string;
+}): Promise<{ purgeAfter: string }> {
+  return fetchJson("/account/delete", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export async function importWatchlist(
@@ -1498,6 +1518,17 @@ export async function unbanAdminUser(
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),
+  });
+}
+
+/** Admin-assisted recovery: set a new password and sign the user out everywhere. */
+export async function resetAdminUserPassword(
+  userId: string,
+  password: string,
+): Promise<{ message: string }> {
+  return fetchJson(`/admin/users/${encodeURIComponent(userId)}/password`, {
+    method: "PUT",
+    body: JSON.stringify({ password }),
   });
 }
 

@@ -227,6 +227,8 @@ export const users = sqliteTable(
     onlyMineFilter: integer("only_mine_filter").notNull().default(0),
     advisoryLevel: text("advisory_level").notNull().default("none"),
     advisoryAllowlist: text("advisory_allowlist").notNull().default("[]"),
+    // Set when the user asks to delete their account; purged after the grace period.
+    deletionRequestedAt: text("deletion_requested_at"),
   },
   (table) => [
     uniqueIndex("users_auth_provider_subject").on(

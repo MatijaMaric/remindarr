@@ -61,6 +61,7 @@ async function buildPreviewContent(
         },
       ],
       movies: [],
+      ...(content.locale ? { locale: content.locale } : {}),
     };
   }
 

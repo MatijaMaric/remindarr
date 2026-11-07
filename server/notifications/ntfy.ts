@@ -6,6 +6,7 @@ import {
   groupEpisodesByShow,
 } from "./format";
 import { formatLeavingCopy } from "./content";
+import { getTranslator } from "./i18n";
 import type { NotificationContent, NotificationProvider } from "./types";
 import { deliveryError } from "./types";
 
@@ -65,7 +66,7 @@ export class NtfyProvider implements NotificationProvider {
 
     const headers: Record<string, string> = {
       "Content-Type": "text/plain",
-      Title: title,
+      Title: encodeHeaderValue(title),
       Priority: "default",
       Tags: "tv,movie",
     };
@@ -96,23 +97,16 @@ export class NtfyProvider implements NotificationProvider {
       personCredits = [],
     } = content;
     const parts: string[] = [];
-    if (episodes.length > 0)
-      parts.push(
-        `${episodes.length} episode${episodes.length !== 1 ? "s" : ""}`,
-      );
-    if (movies.length > 0)
-      parts.push(`${movies.length} movie${movies.length !== 1 ? "s" : ""}`);
+    const tr = getTranslator(content.locale);
+    if (episodes.length > 0) parts.push(tr.count("episodes", episodes.length));
+    if (movies.length > 0) parts.push(tr.count("movies", movies.length));
     if (streamingAlerts.length > 0)
-      parts.push(`${streamingAlerts.length} now streaming`);
+      parts.push(tr.count("nowStreamingCount", streamingAlerts.length));
     if (achievementsEarned.length > 0)
-      parts.push(
-        `${achievementsEarned.length} new badge${achievementsEarned.length !== 1 ? "s" : ""}`,
-      );
+      parts.push(tr.count("newBadges", achievementsEarned.length));
     if (personCredits.length > 0)
-      parts.push(
-        `${personCredits.length} new credit${personCredits.length !== 1 ? "s" : ""}`,
-      );
-    return `Remindarr — ${parts.join(" and ")}`;
+      parts.push(tr.count("newCredits", personCredits.length));
+    return `Remindarr — ${tr.join(parts)}`;
   }
 
   private buildMessage(content: NotificationContent): string {
@@ -121,6 +115,7 @@ export class NtfyProvider implements NotificationProvider {
       achievementsEarned = [],
       personCredits = [],
     } = content;
+    const tr = getTranslator(content.locale);
     const lines: string[] = [];
 
     const showMap = groupEpisodesByShow(content.episodes);
@@ -147,16 +142,18 @@ export class NtfyProvider implements NotificationProvider {
     for (const alert of streamingAlerts) {
       if (alert.kind === "departure") {
         lines.push(
-          `${alert.title} — ${formatLeavingCopy(alert.providerName, alert.leavingAt)}`,
+          `${alert.title} — ${formatLeavingCopy(alert.providerName, alert.leavingAt, tr.lang)}`,
         );
       } else {
-        lines.push(`${alert.title} — now on ${alert.providerName}`);
+        lines.push(
+          `${alert.title} — ${tr.t("nowOn", { provider: alert.providerName })}`,
+        );
       }
     }
 
     if (achievementsEarned.length > 0) {
       lines.push("");
-      lines.push("🏆 New badges:");
+      lines.push(`🏆 ${tr.t("newBadgesHeading")}`);
       for (const ae of achievementsEarned) {
         lines.push(`${ae.title} +${ae.points} XP — ${ae.description}`);
       }
@@ -164,12 +161,25 @@ export class NtfyProvider implements NotificationProvider {
 
     if (personCredits.length > 0) {
       lines.push("");
-      lines.push("⭐ New from people you follow:");
+      lines.push(`⭐ ${tr.t("newFromFollowed")}:`);
       for (const pc of personCredits) {
-        lines.push(formatPersonCredit(pc));
+        lines.push(formatPersonCredit(pc, tr.lang));
       }
     }
 
     return lines.join("\n");
   }
+}
+
+/**
+ * HTTP header values must be Latin-1 (fetch throws on "—" or Japanese text),
+ * so non-Latin-1 titles are sent as an RFC 2047 encoded-word, which ntfy
+ * decodes. Plain Latin-1 values pass through unchanged.
+ */
+export function encodeHeaderValue(value: string): string {
+  if ([...value].every((ch) => ch.charCodeAt(0) <= 0xff)) return value;
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return `=?UTF-8?B?${btoa(binary)}?=`;
 }

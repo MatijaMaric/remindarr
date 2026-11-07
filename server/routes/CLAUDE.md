@@ -78,6 +78,7 @@ test("happy path — minimal realistic body", async () => {
 | `feed.ts`                | Public `.ics` calendar feed (token-authenticated) + token management         |
 | `stats.ts`               | User statistics + Year in Review                                             |
 | `user-settings.ts`       | Per-user settings (homepage layout, etc.)                                    |
+| `account.ts`             | Full account export (zip) + self-service deletion with 30-day grace period   |
 | `jobs.ts` / `jobs-cf.ts` | Job stats + manual trigger (Bun / CF variants)                               |
 | `metrics.ts`             | Prometheus metrics                                                           |
 | `health.ts`              | Health check                                                                 |
@@ -128,6 +129,8 @@ All routes are under `/api` except `/metrics`.
 - `GET/POST /api/recommendations`
 - `GET/POST/DELETE /api/invitations`
 - `GET/POST/DELETE /api/feed/token`
+- `GET /api/account/export` (rate-limited: 1/hour/user) — zip of profile.json + one CSV per data table
+- `POST /api/account/delete` — password (or fresh sign-in) + typed username; purged after 30 days, sign-in cancels
 
 ### Admin only
 
@@ -137,6 +140,7 @@ and is disabled when that operator setting is empty. See
 
 - `GET/PUT /api/admin/settings`
 - `GET/PATCH /api/admin/users`
+- `PUT /api/admin/users/:id/password` — admin-assisted recovery for local accounts; revokes sessions
 - `GET /api/jobs`, `POST /api/jobs/:name`
 - `POST /api/sync` (rate-limited: 5/min)
 - `POST /api/episodes/sync` (rate-limited: 5/min, shared with `/api/sync`)

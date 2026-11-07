@@ -47,6 +47,8 @@ export interface NotificationContent {
   streamingAlerts?: NotificationStreamingAlert[];
   achievementsEarned?: NotificationAchievementEarned[];
   personCredits?: NotificationPersonCredit[];
+  /** Recipient's UI language (users.locale, BCP 47). Providers default to English. */
+  locale?: string | null;
 }
 
 export interface NotificationProvider {

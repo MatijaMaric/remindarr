@@ -44,7 +44,14 @@
         "provider": "Autenticação",
         "joined": "Cadastro",
         "actions": "Ações"
-      }
+      },
+      "resetPassword": "Repor palavra-passe",
+      "resetPasswordTitle": "Repor a palavra-passe de {{username}}",
+      "resetPasswordHelp": "Defina uma nova palavra-passe depois de verificar a identidade do utilizador e partilhe-a por um canal de confiança. A sessão dele é terminada em todo o lado e deve alterá-la nas definições da conta.",
+      "newPassword": "Nova palavra-passe (mínimo 8 caracteres)",
+      "resetPasswordConfirm": "Definir palavra-passe",
+      "resetPasswordDone": "Palavra-passe reposta. O utilizador terminou sessão em todo o lado.",
+      "resetPasswordFailed": "Não foi possível repor a palavra-passe"
     }
   },
   "legal": {
@@ -334,7 +341,7 @@
     "signInWithPasskey": "Entrar com chave de acesso",
     "passkeyFailed": "Falha ao entrar com a chave de acesso",
     "recoveryTitle": "Esqueceu-se da palavra-passe?",
-    "recoveryHelp": "Esta instância não permite repor palavras-passe por e-mail. Contacte o administrador para verificar a sua identidade e recuperar a conta local. Se usava uma chave de acesso ou início de sessão único, experimente esse método acima."
+    "recoveryHelp": "Esta instância não permite repor palavras-passe por e-mail. Contacte o administrador para verificar a sua identidade e recuperar a conta local. Se usava uma chave de acesso ou início de sessão único, experimente esse método acima. Um administrador pode definir-lhe uma nova palavra-passe a partir da lista de utilizadores."
   },
   "profile": {
     "title": "Perfil",
@@ -863,7 +870,20 @@
       "socialTitle": "Social",
       "socialSubtitle": "Convide amigos para a sua instância do Remindarr. Eles receberão um link de cadastro limitado.",
       "socialHint": "Gerencie os códigos de convite na página Convidar",
-      "passkeyNameLabel": "Nome da chave"
+      "passkeyNameLabel": "Nome da chave",
+      "data": {
+        "title": "Os seus dados",
+        "subtitle": "Transfira tudo o que está guardado na sua conta ou elimine a conta.",
+        "exportScope": "A transferência é um ficheiro zip com o seu perfil e definições (profile.json) e um CSV por categoria: lista e notas, títulos e episódios vistos, histórico, avaliações, etiquetas, fixados, cópias próprias, recomendações, comentários, seguimentos e conquistas. Não inclui palavras-passe, chaves de acesso, ligações de partilha nem credenciais de notificações ou integrações.",
+        "download": "Transferir os meus dados",
+        "downloading": "A preparar a transferência…",
+        "delete": "Eliminar conta…",
+        "deleteWarning": "A sua conta terá a sessão terminada em todo o lado e será eliminada permanentemente após {{days}} dias, juntamente com a lista, o histórico, as avaliações e tudo o resto. Iniciar sessão novamente antes disso cancela a eliminação. Transfira primeiro os seus dados se quiser uma cópia.",
+        "reauthHint": "A sua conta não tem palavra-passe, por isso tem de ter iniciado sessão nos últimos 10 minutos. Se a eliminação for recusada, termine sessão e inicie-a novamente.",
+        "confirmLabel": "Escreva {{username}} para confirmar",
+        "confirmDelete": "Eliminar a minha conta",
+        "deleteScheduled": "A sua conta foi agendada para eliminação e a sessão foi terminada."
+      }
     },
     "activityStream": {
       "title": "Atividade",

@@ -1,9 +1,33 @@
 import * as outbound from "../lib/outbound";
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
-import { NtfyProvider } from "./ntfy";
+import { NtfyProvider, encodeHeaderValue } from "./ntfy";
 import type { NotificationContent } from "./types";
 
 const ntfy = new NtfyProvider();
+
+/** Decodes an RFC 2047 "=?UTF-8?B?...?=" header back to text (as ntfy does). */
+function decodeHeader(value: string): string {
+  const m = /^=\?UTF-8\?B\?(.+)\?=$/.exec(value);
+  if (!m) return value;
+  return new TextDecoder().decode(
+    Uint8Array.from(atob(m[1]), (c) => c.charCodeAt(0)),
+  );
+}
+
+describe("encodeHeaderValue", () => {
+  it("passes Latin-1 values through unchanged", () => {
+    expect(encodeHeaderValue("Neue Folgen für dich")).toBe(
+      "Neue Folgen für dich",
+    );
+  });
+
+  it("RFC 2047-encodes values fetch would reject", () => {
+    const encoded = encodeHeaderValue("Remindarr — エピソード2件");
+    expect(encoded).toMatch(/^=\?UTF-8\?B\?[A-Za-z0-9+/=]+\?=$/);
+    expect(() => new Headers({ Title: encoded })).not.toThrow();
+    expect(decodeHeader(encoded)).toBe("Remindarr — エピソード2件");
+  });
+});
 
 describe("NtfyProvider.validateConfig", () => {
   it("accepts valid topic URL", () => {
@@ -107,7 +131,7 @@ describe("NtfyProvider.send", () => {
   it("sets Title and Tags headers", async () => {
     await ntfy.send({ url: "https://ntfy.sh/my-topic" }, sampleContent);
     const headers = fetchCalls[0].options.headers as Record<string, string>;
-    expect(headers["Title"]).toContain("Remindarr");
+    expect(decodeHeader(headers["Title"])).toContain("Remindarr");
     expect(headers["Tags"]).toContain("tv");
   });
 
@@ -160,7 +184,7 @@ describe("NtfyProvider.send", () => {
     await ntfy.send({ url: "https://ntfy.sh/my-topic" }, alertContent);
     expect(fetchCalls).toHaveLength(1);
     const headers = fetchCalls[0].options.headers as Record<string, string>;
-    expect(headers["Title"]).toContain("now streaming");
+    expect(decodeHeader(headers["Title"])).toContain("now streaming");
     expect(fetchCalls[0].options.body as string).toContain("Inception");
     expect(fetchCalls[0].options.body as string).toContain("Netflix");
   });
@@ -236,5 +260,35 @@ describe("NtfyProvider.send", () => {
     expect(fetchCalls).toHaveLength(1);
     const body = fetchCalls[0].options.body as string;
     expect(body).not.toContain("New badges");
+  });
+
+  it("renders title and body in the recipient's language (German)", async () => {
+    await ntfy.send(
+      { url: "https://ntfy.sh/my-topic" },
+      {
+        ...sampleContent,
+        locale: "de-DE",
+        streamingAlerts: [
+          {
+            titleId: "tt1",
+            title: "Inception",
+            posterUrl: null,
+            providerName: "Netflix",
+            kind: "departure",
+            leavingAt: "2025-06-01",
+          },
+        ],
+      },
+    );
+    const headers = fetchCalls[0].options.headers as Record<string, string>;
+    expect(decodeHeader(headers["Title"])).toBe(
+      "Remindarr — 1 Folge und 1 Film und 1 jetzt im Stream",
+    );
+    expect(() => new Headers(headers)).not.toThrow();
+    const body = fetchCalls[0].options.body as string;
+    expect(body).toContain(
+      "Inception — Ab 1. Juni 2025 nicht mehr bei Netflix",
+    );
+    expect(body).not.toContain("Leaving");
   });
 });

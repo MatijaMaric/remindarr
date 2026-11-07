@@ -100,6 +100,8 @@ import feedRoutes from "./routes/feed";
 import kioskRoutes from "./routes/kiosk";
 import shareRoutes from "./routes/share";
 import importRoutes from "./routes/import";
+import accountRoutes from "./routes/account";
+import { purgeDeletedAccounts } from "./db/repository/account-data";
 import upNextRoutes from "./routes/up-next";
 import moviesRoutes from "./routes/movies";
 import overlapRoutes from "./routes/overlap";
@@ -577,6 +579,18 @@ function createApp(env: Env) {
   app.use("/api/import", importRateLimiter, requireAuth);
   app.route("/api/import", importRoutes);
 
+  // Account export is heavy; one per user per hour (keyed after requireAuth).
+  const accountExportRateLimiter = rateLimiter({
+    store: rateLimitStore,
+    scope: "account-export",
+    limit: 1,
+    windowMs: 60 * 60_000,
+    keyGenerator: (c) => c.get("user")?.id ?? "anonymous",
+  });
+  app.use("/api/account/*", writeRateLimiter, requireAuth);
+  app.use("/api/account/export", accountExportRateLimiter);
+  app.route("/api/account", accountRoutes);
+
   app.use("/api/stats/*", requireAuth);
   app.use("/api/stats", requireAuth);
   app.route("/api/stats", statsRoutes);
@@ -951,6 +965,10 @@ export const handler = {
               // Daily cleanup — moved out of JobQueueDO alarm to avoid the 30-second
               // DO alarm hard limit (#726). This handler has no such limit.
               await deleteExpiredSessions();
+              const purged = await purgeDeletedAccounts();
+              if (purged > 0) {
+                logger.info("Purged deleted accounts", { purged });
+              }
               const cleaned = await cleanupOld(cfEnv, 30);
               if (cleaned > 0) {
                 logger.info("Daily cleanup pruned old jobs", { cleaned });

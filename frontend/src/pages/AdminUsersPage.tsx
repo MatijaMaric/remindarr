@@ -8,6 +8,7 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -56,6 +57,8 @@ export default function AdminUsersPage() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [banReason, setBanReason] = useState("");
   const [banTarget, setBanTarget] = useState<string | null>(null);
+  const [resetTarget, setResetTarget] = useState<AdminUser | null>(null);
+  const [newPassword, setNewPassword] = useState("");
 
   // Reset to page 1 when search/filter changes
   useEffect(() => {
@@ -102,6 +105,22 @@ export default function AdminUsersPage() {
     onSuccess: () => setConfirmDelete(null),
     onError: () => toast.error("Failed to delete user"),
     onSettled: () => void qc.invalidateQueries({ queryKey: ["admin-users"] }),
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: ({ userId, password }: { userId: string; password: string }) =>
+      api.resetAdminUserPassword(userId, password),
+    onSuccess: () => {
+      toast.success(t("admin.users.resetPasswordDone"));
+      setResetTarget(null);
+      setNewPassword("");
+    },
+    onError: (err: unknown) =>
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : t("admin.users.resetPasswordFailed"),
+      ),
   });
 
   function handleRoleToggle(user: AdminUser) {
@@ -212,6 +231,63 @@ export default function AdminUsersPage() {
               {t("admin.cancel")}
             </AlertDialogClose>
           </div>
+        </AlertDialogPopup>
+      </AlertDialog>
+
+      {/* Reset password modal */}
+      <AlertDialog
+        open={resetTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResetTarget(null);
+            setNewPassword("");
+          }
+        }}
+      >
+        <AlertDialogPopup className="max-w-sm space-y-4 bg-zinc-900 border-white/[0.08]">
+          <AlertDialogTitle className="text-base font-semibold text-white">
+            {t("admin.users.resetPasswordTitle", {
+              username: resetTarget?.username ?? "",
+            })}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("admin.users.resetPasswordHelp")}
+          </AlertDialogDescription>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (resetTarget)
+                resetPasswordMutation.mutate({
+                  userId: resetTarget.id,
+                  password: newPassword,
+                });
+            }}
+          >
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              aria-label={t("admin.users.newPassword")}
+              placeholder={t("admin.users.newPassword")}
+              autoComplete="new-password"
+              minLength={8}
+              required
+              className="w-full bg-zinc-800 border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+            />
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={resetPasswordMutation.isPending}
+                className="flex-1 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 text-sm font-medium rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {t("admin.users.resetPasswordConfirm")}
+              </button>
+              <AlertDialogClose className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-lg transition-colors cursor-pointer">
+                {t("admin.cancel")}
+              </AlertDialogClose>
+            </div>
+          </form>
         </AlertDialogPopup>
       </AlertDialog>
 
@@ -362,6 +438,20 @@ export default function AdminUsersPage() {
                               className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
                             >
                               <ShieldOff size={14} />
+                            </button>
+                          )}
+                          {/* Reset password (local accounts only) */}
+                          {user.auth_provider === "local" && (
+                            <button
+                              onClick={() => {
+                                setResetTarget(user);
+                                setNewPassword("");
+                              }}
+                              title={t("admin.users.resetPassword")}
+                              aria-label={t("admin.users.resetPassword")}
+                              className="p-1.5 rounded-lg text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                            >
+                              <KeyRound size={14} />
                             </button>
                           )}
                           {/* Delete */}
