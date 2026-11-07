@@ -2,6 +2,7 @@ import * as outbound from "../lib/outbound";
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
 import { DiscordProvider } from "./discord";
 import type { NotificationContent } from "./types";
+import { PermanentDeliveryError } from "./types";
 
 const discord = new DiscordProvider();
 
@@ -131,6 +132,21 @@ describe("DiscordProvider.send", () => {
         sampleContent,
       ),
     ).rejects.toThrow("Discord webhook failed");
+  });
+
+  it("throws PermanentDeliveryError when the webhook was deleted (404)", async () => {
+    fetchSpy.mockImplementation(
+      async () => new Response("Unknown Webhook", { status: 404 }),
+    );
+
+    const err = await discord
+      .send(
+        { webhookUrl: "https://discord.com/api/webhooks/123/abc" },
+        sampleContent,
+      )
+      .catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(PermanentDeliveryError);
+    expect((err as Error).message).toBe("Discord webhook failed (404)");
   });
 
   it("sends New credits even when nothing else is due", async () => {

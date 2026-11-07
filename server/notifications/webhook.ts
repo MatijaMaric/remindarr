@@ -2,6 +2,7 @@ import { traceHttp } from "../tracing";
 import { integrationFetch } from "../lib/outbound";
 import { groupEpisodesByShow } from "./format";
 import type { NotificationContent, NotificationProvider } from "./types";
+import { deliveryError } from "./types";
 
 export class WebhookProvider implements NotificationProvider {
   readonly name = "webhook";
@@ -64,7 +65,7 @@ export class WebhookProvider implements NotificationProvider {
       });
 
       if (!response.ok) {
-        throw new Error(`Webhook request failed (${response.status})`);
+        throw deliveryError("Webhook request failed", response.status);
       }
     });
   }

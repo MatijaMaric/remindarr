@@ -404,6 +404,7 @@ import {
   renderMetrics,
 } from "../metrics";
 import Sentry from "../sentry";
+import { PermanentDeliveryError } from "../notifications/types";
 import {
   insertPersonCreditAlerts,
   listPersonCreditAlerts,
@@ -583,6 +584,50 @@ describe("notificationsSentTotal counter", () => {
       'notifications_sent_total{kind="daily",outcome="success",provider="discord"} 1',
     );
   });
+
+  for (const [label, error, enabled] of [
+    [
+      "disables",
+      new PermanentDeliveryError("Discord webhook failed (404)"),
+      false,
+    ],
+    ["keeps", new Error("Discord webhook failed (500)"), true],
+  ] as const) {
+    it(`${label} the notifier after a ${enabled ? "retryable" : "permanent"} delivery failure (#1351)`, async () => {
+      const { time: testTime } = nowUtc();
+      buildContentSpy.mockResolvedValue(fakeContent);
+      recordDeliverySpy.mockResolvedValue(undefined);
+      getProviderSpy.mockReturnValue({
+        name: "discord",
+        send: async () => {
+          throw error;
+        },
+        validateConfig: () => ({ valid: true }),
+      });
+      const id = await createNotifier(
+        metricsUserId,
+        "discord",
+        "Dead",
+        { webhookUrl: "https://discord.com/api/webhooks/1/a" },
+        testTime,
+        "UTC",
+      );
+      const consoleErrorSpy = spyOn(console, "error").mockImplementation(
+        () => {},
+      );
+      try {
+        enqueueJob("send-notifications");
+        await processJobs();
+        const lines = consoleErrorSpy.mock.calls.map((c) => String(c[0]));
+        expect(
+          lines.some((l) => l.includes('"Failed to send notification"')),
+        ).toBe(enabled);
+      } finally {
+        consoleErrorSpy.mockRestore();
+      }
+      expect((await getNotifierById(id, metricsUserId))?.enabled).toBe(enabled);
+    });
+  }
 
   it("increments counter with outcome=failure when provider.send throws on daily dispatch", async () => {
     const { time: testTime } = nowUtc();

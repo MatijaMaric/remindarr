@@ -8,6 +8,7 @@ import {
 } from "./format";
 import { formatLeavingCopy } from "./content";
 import type { NotificationContent, NotificationProvider } from "./types";
+import { deliveryError } from "./types";
 
 interface DiscordEmbed {
   title?: string;
@@ -60,7 +61,7 @@ export class DiscordProvider implements NotificationProvider {
       });
 
       if (!response.ok) {
-        throw new Error(`Discord webhook failed (${response.status})`);
+        throw deliveryError("Discord webhook failed", response.status);
       }
     });
   }

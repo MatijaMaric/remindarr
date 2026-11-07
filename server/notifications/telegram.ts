@@ -7,6 +7,7 @@ import {
 } from "./format";
 import { formatLeavingCopy } from "./content";
 import type { NotificationContent, NotificationProvider } from "./types";
+import { deliveryError } from "./types";
 
 const TELEGRAM_API = "https://api.telegram.org";
 
@@ -74,7 +75,7 @@ export class TelegramProvider implements NotificationProvider {
       });
 
       if (!response.ok) {
-        throw new Error(`Telegram API error (${response.status})`);
+        throw deliveryError("Telegram API error", response.status);
       }
     });
   }
