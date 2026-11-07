@@ -7,6 +7,7 @@ import {
 } from "./format";
 import { formatLeavingCopy } from "./content";
 import type { NotificationContent, NotificationProvider } from "./types";
+import { deliveryError } from "./types";
 
 export class NtfyProvider implements NotificationProvider {
   readonly name = "ntfy";
@@ -81,7 +82,7 @@ export class NtfyProvider implements NotificationProvider {
       });
 
       if (!response.ok) {
-        throw new Error(`Ntfy request failed (${response.status})`);
+        throw deliveryError("Ntfy request failed", response.status);
       }
     });
   }

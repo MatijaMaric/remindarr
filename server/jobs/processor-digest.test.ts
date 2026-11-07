@@ -20,6 +20,7 @@ import {
 import * as timeUtils from "./time-utils";
 import * as registry from "../notifications/registry";
 import * as content from "../notifications/content";
+import { PermanentDeliveryError } from "../notifications/types";
 import { handlers, processPendingJobs } from "./processor";
 import { checkStreamingAlerts } from "./check-streaming-alerts";
 import {
@@ -109,6 +110,31 @@ for (const execution of ["D1 queue", "DO shared handler"] as const) {
         ).toBe("episode_air");
       });
     }
+
+    it("disables a notifier on a permanent delivery failure, keeps it on a retryable one (#1351)", async () => {
+      const dead = await notifier("daily");
+      const flaky = await notifier("daily");
+      send.mockImplementation(async (config: Record<string, string>) => {
+        throw config.which === "dead"
+          ? new PermanentDeliveryError("Discord webhook failed (404)")
+          : new Error("Discord webhook failed (500)");
+      });
+      await getDb()
+        .update(notifiers)
+        .set({ config: JSON.stringify({ which: "dead" }) })
+        .where(eq(notifiers.id, dead));
+      await dispatch();
+      const enabled = async (id: string) =>
+        (
+          await getDb()
+            .select({ enabled: notifiers.enabled })
+            .from(notifiers)
+            .where(eq(notifiers.id, id))
+            .get()
+        )?.enabled;
+      expect(await enabled(dead)).toBe(0);
+      expect(await enabled(flaky)).toBe(1);
+    });
 
     it("sends and caches seven-day content on the configured local weekday", async () => {
       const weekly = spyOn(content, "buildWeeklyDigestContent");

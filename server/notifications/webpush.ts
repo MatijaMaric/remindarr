@@ -4,11 +4,12 @@ import { formatPersonCredit, groupEpisodesByShow } from "./format";
 import { getVapidKeys } from "./vapid";
 import { formatLeavingCopy } from "./content";
 import type { NotificationContent, NotificationProvider } from "./types";
+import { PermanentDeliveryError } from "./types";
 import { integrationFetch } from "../lib/outbound";
 
 const log = logger.child({ module: "webpush" });
 
-export class SubscriptionExpiredError extends Error {
+export class SubscriptionExpiredError extends PermanentDeliveryError {
   constructor(endpoint: string) {
     super(`Push subscription expired: ${endpoint.slice(0, 60)}`);
     this.name = "SubscriptionExpiredError";

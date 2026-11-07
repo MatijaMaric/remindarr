@@ -7,6 +7,7 @@ import {
 } from "./format";
 import { formatLeavingCopy } from "./content";
 import type { NotificationContent, NotificationProvider } from "./types";
+import { deliveryError } from "./types";
 
 export class GotifyProvider implements NotificationProvider {
   readonly name = "gotify";
@@ -72,7 +73,7 @@ export class GotifyProvider implements NotificationProvider {
       });
 
       if (!response.ok) {
-        throw new Error(`Gotify request failed (${response.status})`);
+        throw deliveryError("Gotify request failed", response.status);
       }
     });
   }

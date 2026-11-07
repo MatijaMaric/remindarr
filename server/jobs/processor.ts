@@ -42,7 +42,7 @@ import {
   buildWeeklyDigestContent,
 } from "../notifications/content";
 import { deletePersonCreditAlerts } from "../db/repository/person-follows";
-import { SubscriptionExpiredError } from "../notifications/webpush";
+import { PermanentDeliveryError } from "../notifications/types";
 import { getCurrentTimeInTimezone, nextRetryAt } from "./time-utils";
 import {
   listEarnedSince,
@@ -338,9 +338,13 @@ async function handleSendNotifications(): Promise<void> {
         userId: notifier.user_id,
       });
     } catch (err) {
-      if (err instanceof SubscriptionExpiredError) {
-        log.warn("Push subscription expired, disabling notifier", {
+      // Dead endpoint / revoked credentials: retrying every tick only logs
+      // the same error again (#1351), so disable until the user fixes it.
+      if (err instanceof PermanentDeliveryError) {
+        log.warn("Permanent delivery failure, disabling notifier", {
+          provider: notifier.provider,
           notifierId: notifier.id,
+          reason: err.message,
         });
         await disableNotifier(notifier.id);
         continue;

@@ -17,7 +17,7 @@ import { buildNotificationContent } from "../notifications/content";
 import type { NotificationContent } from "../notifications/types";
 import { refreshNotificationSchedule } from "../jobs/schedule";
 import { getVapidPublicKey } from "../notifications/vapid";
-import { SubscriptionExpiredError } from "../notifications/webpush";
+import { PermanentDeliveryError } from "../notifications/types";
 import Sentry from "../sentry";
 import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
@@ -385,7 +385,7 @@ app.post("/:id/test", zValidator("param", idParamSchema), async (c) => {
         "Delivery failed. Check the destination, credentials and operator outbound policy.",
       eventKind: "test",
     });
-    if (!(err instanceof SubscriptionExpiredError)) {
+    if (!(err instanceof PermanentDeliveryError)) {
       Sentry.captureException(err);
     }
     return c.json({
