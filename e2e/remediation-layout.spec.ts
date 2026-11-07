@@ -21,12 +21,7 @@ const title = {
 
 class ReviewPage extends BasePage {
   async open(path: string) {
-    // ponytail: Firefox intermittently aborts goto right after a viewport
-    // change (NS_BINDING_ABORTED); one retry, investigate if it persists.
-    await this.goto(path).catch((err: unknown) => {
-      if (!String(err).includes("NS_BINDING_ABORTED")) throw err;
-      return this.goto(path);
-    });
+    await this.goto(path);
   }
   async assertFits(locator: Locator) {
     await expect(locator).toBeVisible();
@@ -174,6 +169,10 @@ test("header, compact rows and selection actions fit at phone, tablet and deskto
       await review.assertFits(
         page.getByRole("button", { name: /Sign out|Log out/i }),
       );
+      // /more redirects to /reels once the viewport is no longer mobile, which
+      // would race the next iteration's goto after the resize.
+      await page.goBack();
+      await expect(page).toHaveURL(/\/tracked$/);
     } else {
       const nav = page.getByRole("navigation", { name: "Main navigation" });
       await review.assertFits(nav.getByRole("link", { name: "Settings" }));
