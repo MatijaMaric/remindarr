@@ -33,7 +33,7 @@ export default function BottomTabBar() {
   if (UNAUTHENTICATED_ROUTES.includes(location.pathname)) return null;
 
   const tabClass = (isActive: boolean) =>
-    `flex flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
+    `flex min-w-0 flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
       isActive ? "text-amber-400" : "text-zinc-400"
     }`;
 
@@ -51,7 +51,7 @@ export default function BottomTabBar() {
               className={({ isActive }) => tabClass(isActive)}
             >
               <Home size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-xs font-semibold tracking-[0.02em]">
+              <span className="max-w-full truncate text-xs font-semibold tracking-[0.02em]">
                 {t("bottomNav.home")}
               </span>
             </NavLink>
@@ -61,7 +61,7 @@ export default function BottomTabBar() {
               className={({ isActive }) => tabClass(isActive)}
             >
               <Search size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-xs font-semibold tracking-[0.02em]">
+              <span className="max-w-full truncate text-xs font-semibold tracking-[0.02em]">
                 {t("bottomNav.browse")}
               </span>
             </NavLink>
@@ -71,7 +71,7 @@ export default function BottomTabBar() {
               className={({ isActive }) => tabClass(isActive)}
             >
               <CalendarDays size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-xs font-semibold tracking-[0.02em]">
+              <span className="max-w-full truncate text-xs font-semibold tracking-[0.02em]">
                 {t("bottomNav.calendar")}
               </span>
             </NavLink>
@@ -81,7 +81,7 @@ export default function BottomTabBar() {
               className={({ isActive }) => tabClass(isActive)}
             >
               <Bookmark size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-xs font-semibold tracking-[0.02em]">
+              <span className="max-w-full truncate text-xs font-semibold tracking-[0.02em]">
                 {t("bottomNav.tracked")}
               </span>
             </NavLink>
@@ -105,7 +105,7 @@ export default function BottomTabBar() {
                   </span>
                 )}
               </div>
-              <span className="text-xs font-semibold tracking-[0.02em]">
+              <span className="max-w-full truncate text-xs font-semibold tracking-[0.02em]">
                 {t("bottomNav.more")}
               </span>
             </NavLink>
@@ -117,7 +117,7 @@ export default function BottomTabBar() {
               className={({ isActive }) => tabClass(isActive)}
             >
               <Search size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-xs font-semibold tracking-[0.02em]">
+              <span className="max-w-full truncate text-xs font-semibold tracking-[0.02em]">
                 {t("bottomNav.browse")}
               </span>
             </NavLink>
@@ -127,7 +127,7 @@ export default function BottomTabBar() {
               className={({ isActive }) => tabClass(isActive)}
             >
               <LogIn size={ICON_SIZE} aria-hidden="true" />
-              <span className="text-xs font-semibold tracking-[0.02em]">
+              <span className="max-w-full truncate text-xs font-semibold tracking-[0.02em]">
                 {t("bottomNav.signIn")}
               </span>
             </NavLink>

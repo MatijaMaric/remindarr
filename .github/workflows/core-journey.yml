@@ -25,6 +25,9 @@ jobs:
       - run: bunx playwright install --with-deps chromium firefox webkit
       - run: bun run build
       - run: bunx playwright test -c playwright.core.config.ts
+      # Mocked-API layout suite: Chromium/Firefox/WebKit + phone emulation,
+      # 200% text, densities, safe-area insets and toast clearance (#1172).
+      - run: bunx playwright test -c playwright.remediation.config.ts
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

@@ -10,7 +10,7 @@ import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import "./i18n";
-import { resetApiMock } from "./test-utils/apiMock";
+import { apiMock, resetApiMock } from "./test-utils/apiMock";
 import { AuthContext } from "./context/AuthContext";
 import App from "./App";
 
@@ -131,5 +131,21 @@ describe("App search trigger", () => {
         name: "Search titles or paste IMDB link",
       }),
     ).toBeNull();
+  });
+});
+
+describe("App appearance", () => {
+  it("applies the saved density on any route, not only on Settings", async () => {
+    apiMock.getAppearanceSettings.mockImplementation(async () => ({
+      density: "compact",
+    }));
+    renderApp("/login", loggedInAuth);
+    await waitFor(() =>
+      expect(document.documentElement.getAttribute("data-density")).toBe(
+        "compact",
+      ),
+    );
+    // Missing server fields fall back to defaults instead of "undefined".
+    expect(document.documentElement.getAttribute("data-accent")).toBe("amber");
   });
 });
