@@ -136,6 +136,8 @@ export async function getEpisodesByDateRange(
   startDate: string,
   endDate: string,
   userId?: string,
+  // ICS feeds never render offers; skipping them saves sequential D1 round-trips (#1345)
+  { withOffers = true }: { withOffers?: boolean } = {},
 ) {
   return traceDbQuery("getEpisodesByDateRange", async () => {
     const db = getDb();
@@ -176,10 +178,12 @@ export async function getEpisodesByDateRange(
       .orderBy(asc(episodes.airDate), asc(titles.title))
       .all();
 
-    const offersByTitle = await getOffersWithPlex(
-      [...new Set(rows.map((r) => r.title_id))],
-      userId,
-    );
+    const offersByTitle = withOffers
+      ? await getOffersWithPlex(
+          [...new Set(rows.map((r) => r.title_id))],
+          userId,
+        )
+      : new Map<string, never[]>();
     return rows.map((row) => ({
       ...row,
       is_watched: !!row.is_watched,
