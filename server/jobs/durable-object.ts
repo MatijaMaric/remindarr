@@ -178,9 +178,10 @@ export class JobQueueDO {
   }
 
   /**
-   * Move past-due cron schedule rows to their next fire time without running
-   * callbacks. Prevents Alarms constructor BCW from dispatching long jobs when
-   * ensureAlarms() is first called after a hibernation (#1073).
+   * Move past-due schedule rows out of the "due" window without running
+   * callbacks (cron → next fire time, one-shot → +1s). Prevents Alarms
+   * constructor BCW from dispatching long jobs when ensureAlarms() is first
+   * called after a hibernation (#1073, #1352).
    */
   private catchUpDueCronSchedules(): void {
     this.ensureActorAlarmsTable();
@@ -208,6 +209,15 @@ export class JobQueueDO {
         // Invalid cron — leave row alone.
       }
     }
+    // One-shot drain/retry rows can't be skipped like cron ticks, so push them
+    // 1s out: the constructor's BCW dispatch becomes a no-op and the next (warm)
+    // alarm runs them. Running a long job inside BCW reset the DO mid-callback
+    // ("Connection closed", failed `DELETE FROM _actor_alarms`) — #1352.
+    this.ctx.storage.sql.exec(
+      `UPDATE _actor_alarms SET time = ? WHERE type != 'cron' AND time <= ?`,
+      nowSec + 1,
+      nowSec,
+    );
   }
 
   // ─── Schema bootstrap ────────────────────────────────────────────────────

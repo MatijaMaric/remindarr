@@ -1384,6 +1384,46 @@ describe("JobQueueDO", () => {
     expect(tickRes.status).toBe(200);
     expect(handlerRuns).toBe(1);
   });
+
+  it("cold DO does not run a due delayed runJob inside Alarms BCW (#1352)", async () => {
+    let handlerRuns = 0;
+    processorModule.handlers["sync-titles"] = async () => {
+      handlerRuns++;
+    };
+
+    // Pending row + its 1s drain alarm, then make the drain row due (hibernated past it).
+    await do_.enqueue("sync-titles", null);
+    state.rawDb
+      .prepare(
+        "UPDATE _actor_alarms SET time = 0 WHERE type = 'delayed' AND callback = 'runJob'",
+      )
+      .run();
+
+    // Cold wake via /enqueue → rearmIfPending → ensureAlarms → Alarms BCW.
+    const cold = new JobQueueDO(state as any, fakeEnv as any);
+    const res = await cold.fetch(
+      new Request("https://do/enqueue", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "sync-titles" }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    await new Promise((r) => setTimeout(r, 10)); // Alarms' BCW is fire-and-forget
+    expect(handlerRuns).toBe(0);
+
+    // The drain row was deferred, not dropped: the next alarm still runs it.
+    const delayed = state.rawDb
+      .prepare("SELECT time FROM _actor_alarms WHERE type = 'delayed'")
+      .all() as Array<{ time: number }>;
+    expect(delayed.length).toBe(1);
+    expect(delayed[0].time).toBeGreaterThan(Math.floor(Date.now() / 1000) - 1);
+    state.rawDb
+      .prepare("UPDATE _actor_alarms SET time = 0 WHERE type = 'delayed'")
+      .run();
+    await cold.alarm();
+    expect(handlerRuns).toBe(1);
+  });
 });
 
 // Restore module-level spies after all tests so they don't leak into later test files on Linux CI.
