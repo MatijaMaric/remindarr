@@ -626,7 +626,7 @@ function AgendaCalendarImpl({
           ),
         })),
       );
-      toast.error("Failed to update watched status — please try again");
+      toast.error(t("episodes.watchedError"));
     }
   };
 

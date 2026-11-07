@@ -54,7 +54,7 @@ export function formatRuntime(minutes: number | null | undefined): string {
 
 export function formatCurrency(value: number): string {
   if (!value) return "—";
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat(undefined, {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 0,

@@ -258,7 +258,6 @@ export default function CategoryBrowse({
         <>
           <TitleList
             titles={visibleTitles}
-            emptyMessage="No titles found."
             showProviderBadge={showProviderBadge}
             showRating={showRating}
             applyContentAdvisory
