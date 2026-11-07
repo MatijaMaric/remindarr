@@ -14,14 +14,14 @@ Playwright config: `playwright.config.ts` (root). Three browser projects: chromi
 
 ## Fixtures (`e2e/fixtures/`)
 
-| File                 | Purpose                                              |
-| -------------------- | ---------------------------------------------------- |
-| `auth.ts`            | Playwright fixtures for logged-in user sessions      |
-| `constants.ts`       | Shared constants (URLs, credentials, timeouts)       |
-| `global-setup.ts`    | DB wipe, mock servers, app start                     |
-| `global-teardown.ts` | Clean shutdown                                       |
-| `mock-oidc.ts`       | In-process OIDC provider mock (avoids real IdP)      |
-| `mock-webhook.ts`    | In-process webhook receiver for notification testing |
+| File                 | Purpose                                                                                                        |
+| -------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `auth.ts`            | Playwright fixtures for logged-in user sessions                                                                |
+| `constants.ts`       | Shared constants (URLs, credentials, timeouts)                                                                 |
+| `global-setup.ts`    | DB wipe, mock servers, app start                                                                               |
+| `global-teardown.ts` | Clean shutdown                                                                                                 |
+| `mock-oidc.ts`       | OIDC provider mock (avoids real IdP); `POST /__test/deny-next` makes the next authorize return `access_denied` |
+| `mock-webhook.ts`    | In-process webhook receiver for notification testing                                                           |
 
 Helpers shared across specs: `e2e/helpers.ts`.
 

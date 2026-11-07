@@ -7,6 +7,7 @@
  *   POST /token          — issues access_token + id_token (RS256 JWT)
  *   GET  /userinfo       — returns the claims for the last-issued token
  *   GET  /jwks           — JWKS with the public half of the signing key
+ *   POST /__test/deny-next — next /authorize returns error=access_denied
  *
  * Playwright runs this under plain Node in globalSetup, so it uses node:http
  * and node:url rather than Bun-specific APIs.
@@ -83,10 +84,12 @@ export async function startMockOidcServer(
     lastCode: string | null;
     lastRedirectUri: string | null;
     nonce: string | null;
+    denyNext: boolean;
   } = {
     lastCode: null,
     lastRedirectUri: null,
     nonce: null,
+    denyNext: false,
   };
 
   const buildClaims = () => ({
@@ -147,12 +150,31 @@ export async function startMockOidcServer(
         return sendJson(res, 200, { keys: [publicJwk] });
       }
 
+      // Test control: the next /authorize behaves as if the user hit "Cancel".
+      if (req.method === "POST" && pathname === "/__test/deny-next") {
+        state.denyNext = true;
+        res.statusCode = 204;
+        res.end();
+        return;
+      }
+
       if (req.method === "GET" && pathname === "/authorize") {
         const redirectUri = url.searchParams.get("redirect_uri");
         const authState = url.searchParams.get("state") ?? "";
         if (!redirectUri) {
           res.statusCode = 400;
           res.end("Missing redirect_uri");
+          return;
+        }
+        if (state.denyNext) {
+          state.denyNext = false;
+          const redirect = new URL(redirectUri);
+          redirect.searchParams.set("error", "access_denied");
+          redirect.searchParams.set("error_description", "User cancelled");
+          if (authState) redirect.searchParams.set("state", authState);
+          res.statusCode = 302;
+          res.setHeader("Location", redirect.toString());
+          res.end();
           return;
         }
         const code = `mock-code-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

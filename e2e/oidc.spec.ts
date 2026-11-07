@@ -1,6 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { MOCK_OIDC_URL, OIDC_PROVIDER_ID } from "./fixtures/constants";
 
 test.describe("OIDC login flow", () => {
+  // The mock IdP's deny-next switch is shared state.
+  test.describe.configure({ mode: "serial" });
   // Conditional UI + virtual authenticators + social login all behave most
   // consistently on chromium. We only need the coverage once.
   test.skip(
@@ -50,5 +53,38 @@ test.describe("OIDC login flow", () => {
       "expected get-session to return a non-null session body",
     ).not.toBeNull();
     expect(body?.user?.id).toBeTruthy();
+  });
+
+  test("cancelling at the IdP returns to /login with an error and no session", async ({
+    page,
+    request,
+  }) => {
+    // Arm the mock IdP: the next /authorize answers error=access_denied.
+    const armed = await request.post(`${MOCK_OIDC_URL}/__test/deny-next`);
+    expect(armed.status()).toBe(204);
+
+    await page.goto("/login");
+    await page
+      .getByRole("button", { name: /sign in with openid connect/i })
+      .click();
+
+    await expect(page).toHaveURL(/\/login\?.*error=access_denied/, {
+      timeout: 30_000,
+    });
+    await expect(page.getByText(/access_denied/)).toBeVisible();
+    const session = await page.request.get("/api/auth/get-session");
+    expect(await session.json().catch(() => null)).toBeNull();
+  });
+
+  test("an expired or unknown callback state returns to /login with an error", async ({
+    page,
+  }) => {
+    await page.goto(
+      `/api/auth/oauth2/callback/${OIDC_PROVIDER_ID}?code=stale-code&state=expired-state`,
+    );
+    await expect(page).toHaveURL(/\/login\?.*error=/, { timeout: 30_000 });
+    await expect(page.getByText(/login failed/i)).toBeVisible();
+    const session = await page.request.get("/api/auth/get-session");
+    expect(await session.json().catch(() => null)).toBeNull();
   });
 });

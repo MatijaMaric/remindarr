@@ -88,4 +88,41 @@ test.describe("Passkey signup + login", () => {
 
     await cdp.send("WebAuthn.removeVirtualAuthenticator", { authenticatorId });
   });
+
+  test("a cancelled passkey ceremony leaves the user on /login without a session", async ({
+    page,
+  }) => {
+    // An authenticator holding no credential makes navigator.credentials.get
+    // reject with NotAllowedError — the same error a user dismissing the
+    // native prompt produces.
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("WebAuthn.enable", { enableUI: false });
+    const { authenticatorId } = await cdp.send(
+      "WebAuthn.addVirtualAuthenticator",
+      {
+        options: {
+          protocol: "ctap2",
+          transport: "internal",
+          hasResidentKey: true,
+          hasUserVerification: true,
+          isUserVerified: true,
+        },
+      },
+    );
+
+    await page.goto("/login");
+    const passkeyButton = page.getByRole("button", {
+      name: /sign in with passkey/i,
+    });
+    await expect(passkeyButton).toBeVisible({ timeout: 15_000 });
+    await passkeyButton.click();
+
+    // The button re-enables once the ceremony settles; cancellation is silent.
+    await expect(passkeyButton).toBeEnabled({ timeout: 30_000 });
+    await expect(page).toHaveURL(/\/login/);
+    const session = await page.request.get("/api/auth/get-session");
+    expect(await session.json().catch(() => null)).toBeNull();
+
+    await cdp.send("WebAuthn.removeVirtualAuthenticator", { authenticatorId });
+  });
 });

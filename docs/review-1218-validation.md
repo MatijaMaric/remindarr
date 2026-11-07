@@ -70,6 +70,28 @@ accounts, notification destinations or Plex libraries are used.
   physical-network certification. Do not close those validation issues based
   only on this suite.
 
+## #1173 follow-up (2026-11-07)
+
+Automated:
+
+- **Defect fixed:** a cancelled IdP prompt, expired/unknown OIDC state or a
+  failed callback redirected to better-auth's bare `/api/auth/error` page.
+  `onAPIError.errorURL` now sends the browser to `/login?error=…`, which
+  LoginPage already renders. Server tests assert the redirect and that no user
+  or session is created; `e2e/oidc.spec.ts` covers IdP cancellation (mock IdP
+  `POST /__test/deny-next`) and an expired/unknown callback state.
+- `e2e/passkey.spec.ts` covers a cancelled passkey ceremony (NotAllowedError
+  from a virtual authenticator with no credential): user stays on `/login`,
+  no session.
+- `delivery.integration.test.ts` adds a real-clock timezone case: at one UTC
+  instant only the notifier whose local time reached `notify_time` is delivered.
+
+Still manual (cannot be certified from CI): physical authenticators and native
+cancel dialogs on Safari/Firefox/mobile; a real IdP (e.g. Pocket ID) with a
+disposable identity; deployed Cloudflare/D1 delivery to a real notifier;
+real Plex connect/disconnect against a disposable account/library; offline
+replay across a physical network interruption and browser restart.
+
 ## Dependency audit
 
 `bun audit --json` from the original frozen install reported 39 package entries
