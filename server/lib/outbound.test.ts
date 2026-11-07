@@ -82,6 +82,37 @@ test("mixed public/private DNS is rejected even for an allowed origin", async ()
   ).rejects.toThrow("public addresses");
 });
 
+test("CNAME chain entries in DNS answers do not reject a public push service (#1350)", async () => {
+  spies.push(
+    spyOn(dns, "resolve4").mockResolvedValue([
+      "mozilla.map.fastly.net.",
+      "151.101.1.91",
+    ]),
+  );
+  spies.push(spyOn(dns, "resolve6").mockResolvedValue([]));
+  expect(
+    (
+      await checkOutboundDestination(
+        "https://updates.push.services.mozilla.com/wpush/v2/abc",
+      )
+    ).origin,
+  ).toBe("https://updates.push.services.mozilla.com");
+});
+
+test("an answer holding only CNAMEs, or a CNAME to a private address, is rejected", async () => {
+  const resolve4 = spyOn(dns, "resolve4").mockResolvedValue([
+    "internal.example.",
+  ]);
+  spies.push(resolve4, spyOn(dns, "resolve6").mockResolvedValue([]));
+  await expect(
+    checkOutboundDestination("https://fcm.googleapis.com/fcm/send/x"),
+  ).rejects.toThrow("public addresses");
+  resolve4.mockResolvedValue(["internal.example.", "10.0.0.5"]);
+  await expect(
+    checkOutboundDestination("https://fcm.googleapis.com/fcm/send/x"),
+  ).rejects.toThrow("public addresses");
+});
+
 test("redirects never forward secrets and oversized bodies are cancelled", async () => {
   CONFIG.OUTBOUND_PRIVATE_ORIGINS = "http://127.0.0.1:4322";
   const fetchSpy = spyOn(globalThis, "fetch").mockResolvedValue(

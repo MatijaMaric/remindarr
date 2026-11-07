@@ -94,7 +94,12 @@ export async function checkOutboundDestination(input: string): Promise<URL> {
           resolve4(hostname).catch(() => [] as string[]),
           resolve6(hostname).catch(() => [] as string[]),
         ])
-      ).flat();
+      )
+        .flat()
+        // workerd's node:dns (before cloudflare/workerd#7890) also returned the
+        // CNAME chain, e.g. "mozilla.map.fastly.net.". Those are names, not
+        // addresses; the A/AAAA records they lead to are what gets checked.
+        .filter((address) => isIP(address));
   if (!addresses.length || addresses.some((address) => !publicAddress(address)))
     throw new Error(
       "Integration destination does not resolve exclusively to public addresses",
