@@ -44,7 +44,14 @@
         "provider": "Autenticación",
         "joined": "Registro",
         "actions": "Acciones"
-      }
+      },
+      "resetPassword": "Restablecer contraseña",
+      "resetPasswordTitle": "Restablecer la contraseña de {{username}}",
+      "resetPasswordHelp": "Establece una contraseña nueva tras verificar la identidad del usuario y compártela por un canal de confianza. Se cerrarán todas sus sesiones y debería cambiarla en los ajustes de la cuenta.",
+      "newPassword": "Contraseña nueva (mínimo 8 caracteres)",
+      "resetPasswordConfirm": "Establecer contraseña",
+      "resetPasswordDone": "Contraseña restablecida. Se han cerrado todas las sesiones del usuario.",
+      "resetPasswordFailed": "No se pudo restablecer la contraseña"
     }
   },
   "legal": {
@@ -334,7 +341,7 @@
     "signInWithPasskey": "Iniciar sesión con llave de acceso",
     "passkeyFailed": "No se pudo iniciar sesión con la llave de acceso",
     "recoveryTitle": "¿Has olvidado tu contraseña?",
-    "recoveryHelp": "Esta instancia no permite restablecer contraseñas por correo. Contacta con su administrador para verificar tu identidad y recuperar tu cuenta local. Si usabas una clave de acceso o inicio de sesión único, prueba ese método arriba."
+    "recoveryHelp": "Esta instancia no permite restablecer contraseñas por correo. Contacta con su administrador para verificar tu identidad y recuperar tu cuenta local. Si usabas una clave de acceso o inicio de sesión único, prueba ese método arriba. Un administrador puede establecerte una contraseña nueva desde la lista de usuarios."
   },
   "profile": {
     "title": "Perfil",
@@ -863,7 +870,20 @@
       "socialTitle": "Social",
       "socialSubtitle": "Invita a tus amigos a tu instancia de Remindarr. Recibirán un enlace de registro limitado.",
       "socialHint": "Gestiona los códigos de invitación en la página Invitar",
-      "passkeyNameLabel": "Nombre de la llave"
+      "passkeyNameLabel": "Nombre de la llave",
+      "data": {
+        "title": "Tus datos",
+        "subtitle": "Descarga todo lo que se guarda en tu cuenta o elimina la cuenta.",
+        "exportScope": "La descarga es un archivo zip con tu perfil y ajustes (profile.json) y un CSV por categoría: lista de seguimiento y notas, títulos y episodios vistos, historial, valoraciones, etiquetas, fijados, copias propias, recomendaciones, comentarios, seguimientos y logros. No incluye contraseñas, claves de acceso, enlaces compartidos ni credenciales de notificadores o integraciones.",
+        "download": "Descargar mis datos",
+        "downloading": "Preparando la descarga…",
+        "delete": "Eliminar cuenta…",
+        "deleteWarning": "Se cerrará la sesión de tu cuenta en todas partes y se eliminará de forma permanente pasados {{days}} días, junto con tu lista, historial, valoraciones y todo lo demás. Si vuelves a iniciar sesión antes, la eliminación se cancela. Descarga tus datos primero si quieres una copia.",
+        "reauthHint": "Tu cuenta no tiene contraseña, así que debes haber iniciado sesión en los últimos 10 minutos. Si se rechaza la eliminación, cierra sesión y vuelve a iniciarla.",
+        "confirmLabel": "Escribe {{username}} para confirmar",
+        "confirmDelete": "Eliminar mi cuenta",
+        "deleteScheduled": "Tu cuenta está programada para eliminarse y se ha cerrado tu sesión."
+      }
     },
     "activityStream": {
       "title": "Actividad",

@@ -7,6 +7,7 @@ import {
 } from "../db/repository";
 import { getProvider } from "../notifications/registry";
 import type { NotificationContent } from "../notifications/types";
+import { getUserLocale } from "../notifications/user-locale";
 import { getDb, tracked } from "../db/schema";
 import { and, eq } from "drizzle-orm";
 import { notificationsSentTotal } from "../metrics";
@@ -31,9 +32,10 @@ export async function handleReleaseReminder(payload: unknown): Promise<void> {
 
   log.info("Processing release reminder", { userId, titleId });
 
-  const [titleRow, notifierRows] = await Promise.all([
+  const [titleRow, notifierRows, locale] = await Promise.all([
     getTitleById(titleId),
     getNotifiersByUser(userId),
+    getUserLocale(userId),
   ]);
 
   if (!titleRow) {
@@ -65,6 +67,7 @@ export async function handleReleaseReminder(payload: unknown): Promise<void> {
       },
     ],
     date: titleRow.release_date ?? new Date().toISOString().slice(0, 10),
+    ...(locale ? { locale } : {}),
   };
 
   let succeeded = 0;

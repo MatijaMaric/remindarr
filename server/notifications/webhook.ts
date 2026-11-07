@@ -1,6 +1,7 @@
 import { traceHttp } from "../tracing";
 import { integrationFetch } from "../lib/outbound";
 import { groupEpisodesByShow } from "./format";
+import { getTranslator } from "./i18n";
 import type { NotificationContent, NotificationProvider } from "./types";
 
 export class WebhookProvider implements NotificationProvider {
@@ -100,7 +101,7 @@ export class WebhookProvider implements NotificationProvider {
     return {
       source: "remindarr",
       date,
-      title: `Remindarr — ${total} new release${total !== 1 ? "s" : ""}`,
+      title: `Remindarr — ${getTranslator(content.locale).count("newReleases", total)}`,
       summary: summaryLines.join(", "),
       episodes: episodes.map((ep) => ({
         show: ep.showTitle,

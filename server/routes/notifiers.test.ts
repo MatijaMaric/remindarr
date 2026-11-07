@@ -279,6 +279,36 @@ describe("POST /notifiers/:id/test", () => {
     expect(body.message).toBe("Test notification sent");
   });
 
+  it("sends the sample test notification in the user's language", async () => {
+    const notifier = await createDiscordNotifier();
+    const { getDb, users } = await import("../db/schema");
+    const { eq } = await import("drizzle-orm");
+    await getDb()
+      .update(users)
+      .set({ locale: "de" })
+      .where(eq(users.id, userId))
+      .run();
+
+    let sentLocale: string | undefined;
+    const mockProvider = {
+      name: "discord",
+      validateConfig: () => ({ valid: true }),
+      send: async (_config: unknown, content: { locale?: string }) => {
+        sentLocale = content.locale;
+      },
+    };
+    spies.push(
+      spyOn(registry, "getProvider").mockReturnValue(mockProvider as any),
+    );
+
+    const res = await app.request(`/notifiers/${notifier.id}/test`, {
+      method: "POST",
+      headers: headers(),
+    });
+    expect((await res.json()).success).toBe(true);
+    expect(sentLocale).toBe("de");
+  });
+
   it("returns 200 with success:false when send throws", async () => {
     const notifier = await createDiscordNotifier();
 

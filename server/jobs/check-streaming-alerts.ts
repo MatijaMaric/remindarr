@@ -11,6 +11,7 @@ import {
   markStreamingDelivered,
 } from "../db/repository";
 import { getProvider } from "../notifications/registry";
+import { getUserLocales } from "../notifications/user-locale";
 import { notificationsSentTotal } from "../metrics";
 
 const log = logger.child({ module: "streaming-alerts" });
@@ -45,7 +46,10 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
   // Fetch notifiers once for the union of all tracking users instead of
   // once per (title, user) pair
   const allUserIds = [...new Set([...trackersByTitle.values()].flat())];
-  const notifiersByUser = await getStreamingAlertNotifiersForUsers(allUserIds);
+  const [notifiersByUser, localesByUser] = await Promise.all([
+    getStreamingAlertNotifiersForUsers(allUserIds),
+    getUserLocales(allUserIds),
+  ]);
 
   for (const [titleId, userIds] of trackersByTitle) {
     const titleOffers = offersByTitle.get(titleId) ?? [];
@@ -103,7 +107,9 @@ export async function checkStreamingAlerts(titleIds: string[]): Promise<void> {
         let allDelivered = true;
 
         if (userNotifiers.length > 0) {
+          const locale = localesByUser.get(userId);
           const content = {
+            ...(locale ? { locale } : {}),
             episodes: [] as never[],
             movies: [] as never[],
             date: today,

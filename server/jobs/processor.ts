@@ -10,6 +10,7 @@ import { CONFIG } from "../config";
 import { logger } from "../logger";
 import Sentry from "../sentry";
 import { upsertTitles, deleteExpiredSessions } from "../db/repository";
+import { purgeDeletedAccounts } from "../db/repository/account-data";
 import {
   getDueNotifiers,
   getDistinctNotifierTimezones,
@@ -489,6 +490,7 @@ async function handleSyncDeepLinks(): Promise<void> {
 
 async function handleCleanup() {
   await deleteExpiredSessions();
+  await purgeDeletedAccounts();
   await cleanupOldJobs(30);
 }
 

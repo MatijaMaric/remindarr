@@ -13,6 +13,7 @@ import {
   markStreamingDelivered,
 } from "../db/repository";
 import { getProvider } from "../notifications/registry";
+import { getUserLocales } from "../notifications/user-locale";
 
 const log = logger.child({ module: "check-streaming-departures" });
 
@@ -117,11 +118,13 @@ export async function checkStreamingDepartures(
 
   const candidateUserIdList = [...allCandidateUserIds];
   const titleIdsToNotify = [...candidatesByTitle.keys()];
-  const [settingsByUser, titlesById, notifiersByUser] = await Promise.all([
-    getDepartureSettingsForUsers(candidateUserIdList),
-    getTitleLabels(titleIdsToNotify),
-    getStreamingAlertNotifiersForUsers(candidateUserIdList),
-  ]);
+  const [settingsByUser, titlesById, notifiersByUser, localesByUser] =
+    await Promise.all([
+      getDepartureSettingsForUsers(candidateUserIdList),
+      getTitleLabels(titleIdsToNotify),
+      getStreamingAlertNotifiersForUsers(candidateUserIdList),
+      getUserLocales(candidateUserIdList),
+    ]);
 
   for (const titleId of titleIdsToNotify) {
     const byUser = departedByTitle.get(titleId)!;
@@ -191,7 +194,9 @@ export async function checkStreamingDepartures(
         );
         let allDelivered = true;
         if (userNotifiers.length > 0) {
+          const locale = localesByUser.get(userId);
           const content = {
+            ...(locale ? { locale } : {}),
             episodes: [] as never[],
             movies: [] as never[],
             date: today,

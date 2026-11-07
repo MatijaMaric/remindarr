@@ -3,6 +3,7 @@ import { logger } from "../logger";
 import { formatPersonCredit, groupEpisodesByShow } from "./format";
 import { getVapidKeys } from "./vapid";
 import { formatLeavingCopy } from "./content";
+import { getTranslator } from "./i18n";
 import type { NotificationContent, NotificationProvider } from "./types";
 import { integrationFetch } from "../lib/outbound";
 
@@ -120,6 +121,7 @@ export class WebPushProvider implements NotificationProvider {
       achievementsEarned = [],
       personCredits = [],
     } = content;
+    const tr = getTranslator(content.locale);
     const totalCount =
       episodes.length +
       movies.length +
@@ -149,10 +151,12 @@ export class WebPushProvider implements NotificationProvider {
     for (const alert of streamingAlerts) {
       if (alert.kind === "departure") {
         lines.push(
-          `${alert.title} — ${formatLeavingCopy(alert.providerName, alert.leavingAt)}`,
+          `${alert.title} — ${formatLeavingCopy(alert.providerName, alert.leavingAt, tr.lang)}`,
         );
       } else {
-        lines.push(`${alert.title} — now on ${alert.providerName}`);
+        lines.push(
+          `${alert.title} — ${tr.t("nowOn", { provider: alert.providerName })}`,
+        );
       }
     }
 
@@ -163,13 +167,13 @@ export class WebPushProvider implements NotificationProvider {
     }
 
     for (const pc of personCredits) {
-      lines.push(`⭐ ${formatPersonCredit(pc)}`);
+      lines.push(`⭐ ${formatPersonCredit(pc, tr.lang)}`);
     }
 
     const titleSuffix =
       achievementsEarned.length > 0 && totalCount === 0
-        ? `${achievementsEarned.length} new badge${achievementsEarned.length !== 1 ? "s" : ""}`
-        : `${totalCount} new release${totalCount !== 1 ? "s" : ""}`;
+        ? tr.count("newBadges", achievementsEarned.length)
+        : tr.count("newReleases", totalCount);
 
     return {
       title: `Remindarr — ${titleSuffix}`,

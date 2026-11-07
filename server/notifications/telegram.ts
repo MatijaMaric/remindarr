@@ -6,6 +6,7 @@ import {
   groupEpisodesByShow,
 } from "./format";
 import { formatLeavingCopy } from "./content";
+import { getTranslator } from "./i18n";
 import type { NotificationContent, NotificationProvider } from "./types";
 
 const TELEGRAM_API = "https://api.telegram.org";
@@ -89,25 +90,18 @@ export class TelegramProvider implements NotificationProvider {
       personCredits = [],
     } = content;
     const parts: string[] = [];
-    if (episodes.length > 0)
-      parts.push(
-        `${episodes.length} episode${episodes.length !== 1 ? "s" : ""}`,
-      );
-    if (movies.length > 0)
-      parts.push(`${movies.length} movie${movies.length !== 1 ? "s" : ""}`);
+    const tr = getTranslator(content.locale);
+    if (episodes.length > 0) parts.push(tr.count("episodes", episodes.length));
+    if (movies.length > 0) parts.push(tr.count("movies", movies.length));
     if (streamingAlerts.length > 0)
-      parts.push(`${streamingAlerts.length} now streaming`);
+      parts.push(tr.count("nowStreamingCount", streamingAlerts.length));
     if (achievementsEarned.length > 0)
-      parts.push(
-        `${achievementsEarned.length} new badge${achievementsEarned.length !== 1 ? "s" : ""}`,
-      );
+      parts.push(tr.count("newBadges", achievementsEarned.length));
     if (personCredits.length > 0)
-      parts.push(
-        `${personCredits.length} new credit${personCredits.length !== 1 ? "s" : ""}`,
-      );
+      parts.push(tr.count("newCredits", personCredits.length));
 
     const lines: string[] = [
-      `<b>📺 Remindarr — ${parts.join(" and ")} today (${date})</b>`,
+      `<b>📺 Remindarr — ${escapeHtml(tr.t("todaySummary", { items: tr.join(parts), date }))}</b>`,
       "",
     ];
 
@@ -136,20 +130,24 @@ export class TelegramProvider implements NotificationProvider {
 
     for (const alert of streamingAlerts) {
       if (alert.kind === "departure") {
-        const copy = formatLeavingCopy(alert.providerName, alert.leavingAt);
+        const copy = formatLeavingCopy(
+          alert.providerName,
+          alert.leavingAt,
+          tr.lang,
+        );
         lines.push(
           `🔕 <b>${escapeHtml(alert.title)}</b> — ${escapeHtml(copy)}`,
         );
       } else {
         lines.push(
-          `🔔 <b>${escapeHtml(alert.title)}</b> — now on <i>${escapeHtml(alert.providerName)}</i>`,
+          `🔔 <b>${escapeHtml(alert.title)}</b> — ${tr.t("nowOn", { provider: `<i>${escapeHtml(alert.providerName)}</i>` })}`,
         );
       }
     }
 
     if (achievementsEarned.length > 0) {
       lines.push("");
-      lines.push("<b>🏆 New badges:</b>");
+      lines.push(`<b>🏆 ${escapeHtml(tr.t("newBadgesHeading"))}</b>`);
       for (const ae of achievementsEarned) {
         lines.push(
           `🎖 <b>${escapeHtml(ae.title)}</b> +${ae.points} XP — <i>${escapeHtml(ae.description)}</i>`,
@@ -159,9 +157,9 @@ export class TelegramProvider implements NotificationProvider {
 
     if (personCredits.length > 0) {
       lines.push("");
-      lines.push("<b>⭐ New from people you follow:</b>");
+      lines.push(`<b>⭐ ${escapeHtml(tr.t("newFromFollowed"))}:</b>`);
       for (const pc of personCredits) {
-        lines.push(`🎭 ${escapeHtml(formatPersonCredit(pc))}`);
+        lines.push(`🎭 ${escapeHtml(formatPersonCredit(pc, tr.lang))}`);
       }
     }
 

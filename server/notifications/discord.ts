@@ -7,6 +7,7 @@ import {
   groupEpisodesByShow,
 } from "./format";
 import { formatLeavingCopy } from "./content";
+import { getTranslator } from "./i18n";
 import type { NotificationContent, NotificationProvider } from "./types";
 
 interface DiscordEmbed {
@@ -75,6 +76,7 @@ export class DiscordProvider implements NotificationProvider {
       achievementsEarned = [],
       personCredits = [],
     } = content;
+    const tr = getTranslator(content.locale);
 
     if (
       episodes.length === 0 &&
@@ -88,12 +90,10 @@ export class DiscordProvider implements NotificationProvider {
     // Header embed
     const parts: string[] = [];
     if (episodes.length > 0) {
-      parts.push(
-        `${episodes.length} episode${episodes.length !== 1 ? "s" : ""}`,
-      );
+      parts.push(tr.count("episodes", episodes.length));
     }
     if (movies.length > 0) {
-      parts.push(`${movies.length} movie${movies.length !== 1 ? "s" : ""}`);
+      parts.push(tr.count("movies", movies.length));
     }
 
     const arrivalAlerts = streamingAlerts.filter((a) => a.kind === "arrival");
@@ -104,19 +104,15 @@ export class DiscordProvider implements NotificationProvider {
     if (streamingAlerts.length > 0 || parts.length > 0) {
       const descParts: string[] = [];
       if (parts.length > 0)
-        descParts.push(`${parts.join(" and ")} releasing today`);
+        descParts.push(tr.t("releasingToday", { items: tr.join(parts) }));
       if (arrivalAlerts.length > 0) {
-        descParts.push(
-          `${arrivalAlerts.length} title${arrivalAlerts.length !== 1 ? "s" : ""} now streaming`,
-        );
+        descParts.push(tr.count("titlesNowStreaming", arrivalAlerts.length));
       }
       if (departureAlerts.length > 0) {
-        descParts.push(
-          `${departureAlerts.length} title${departureAlerts.length !== 1 ? "s" : ""} leaving soon`,
-        );
+        descParts.push(tr.count("titlesLeavingSoon", departureAlerts.length));
       }
       embeds.push({
-        title: `📺 Releases for ${date}`,
+        title: `📺 ${tr.t("releasesFor", { date })}`,
         description: descParts.join(" · "),
         color: EMBED_COLOR,
       });
@@ -148,7 +144,7 @@ export class DiscordProvider implements NotificationProvider {
       }
 
       if (providers) {
-        embed.footer = { text: `Available on: ${providers}` };
+        embed.footer = { text: tr.t("availableOn", { providers }) };
       }
 
       embeds.push(embed);
@@ -160,8 +156,8 @@ export class DiscordProvider implements NotificationProvider {
       const embed: DiscordEmbed = {
         title: movie.title,
         description: movie.releaseYear
-          ? `Movie (${movie.releaseYear})`
-          : "Movie",
+          ? tr.t("movieYear", { year: movie.releaseYear })
+          : tr.t("movie"),
         color: EMBED_COLOR,
       };
 
@@ -172,7 +168,7 @@ export class DiscordProvider implements NotificationProvider {
       }
 
       if (providers) {
-        embed.footer = { text: `Available on: ${providers}` };
+        embed.footer = { text: tr.t("availableOn", { providers }) };
       }
 
       embeds.push(embed);
@@ -182,8 +178,8 @@ export class DiscordProvider implements NotificationProvider {
     for (const alert of streamingAlerts) {
       const description =
         alert.kind === "departure"
-          ? formatLeavingCopy(alert.providerName, alert.leavingAt)
-          : `Now available on **${alert.providerName}**`;
+          ? formatLeavingCopy(alert.providerName, alert.leavingAt, tr.lang)
+          : tr.t("nowAvailableOn", { provider: `**${alert.providerName}**` });
       const embed: DiscordEmbed = {
         title: `🎬 ${alert.title}`,
         description,
@@ -205,7 +201,7 @@ export class DiscordProvider implements NotificationProvider {
         inline: false,
       }));
       embeds.push({
-        title: "🏆 New badges earned",
+        title: `🏆 ${tr.t("newBadgesEarned")}`,
         color: 0xf59e0b, // amber-500
         fields,
       });
@@ -213,8 +209,10 @@ export class DiscordProvider implements NotificationProvider {
 
     if (personCredits.length > 0) {
       embeds.push({
-        title: "⭐ New from people you follow",
-        description: personCredits.map(formatPersonCredit).join("\n"),
+        title: `⭐ ${tr.t("newFromFollowed")}`,
+        description: personCredits
+          .map((pc) => formatPersonCredit(pc, tr.lang))
+          .join("\n"),
         color: EMBED_COLOR,
       });
     }

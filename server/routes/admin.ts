@@ -16,7 +16,12 @@ import {
   unbanUser,
   deleteUser,
   updateUserAdmin,
+  updateUserPassword,
 } from "../db/repository";
+import {
+  getCredentialPasswordHash,
+  revokeUserSessions,
+} from "../db/repository/account-data";
 import { CONFIG } from "../config";
 import type { AppEnv } from "../types";
 import { ok } from "./response";
@@ -51,6 +56,11 @@ const updateSettingsSchema = z
 
 const updateRoleSchema = z.object({
   role: z.enum(["admin", "user"]),
+});
+
+// Matches better-auth's default minPasswordLength used by sign-up.
+const resetPasswordSchema = z.object({
+  password: z.string().min(8).max(256),
 });
 
 const banUserSchema = z.object({
@@ -469,6 +479,46 @@ app.get("/logs", zValidator("query", logsQuerySchema), async (c) => {
   const entries = getRecentLogs(limit, level as LogLevel | undefined, module);
   return ok(c, { entries, count: entries.length });
 });
+
+// PUT /api/admin/users/:id/password  { password }
+// Administrator-assisted recovery for a locked-out local account (#461):
+// sets a new password and signs the user out everywhere.
+app.put(
+  "/users/:id/password",
+  zValidator("param", userIdParam),
+  zValidator("json", resetPasswordSchema),
+  async (c) => {
+    const { id } = c.req.valid("param");
+    const { password } = c.req.valid("json");
+    const actingUser = c.get("user")!;
+
+    if (id === actingUser.id) {
+      return c.json(
+        { error: "Change your own password from Account settings" },
+        400,
+      );
+    }
+    const target = await getUserById(id);
+    if (!target) return c.json({ error: "User not found" }, 404);
+    if (!(await getCredentialPasswordHash(id))) {
+      return c.json(
+        { error: "This user signs in with SSO or a passkey, not a password" },
+        400,
+      );
+    }
+    const platform = c.get("platform");
+    if (!platform)
+      return c.json({ error: "Password hashing unavailable" }, 500);
+
+    await updateUserPassword(id, await platform.hashPassword(password));
+    await revokeUserSessions(id);
+    log.info("Password reset by admin", {
+      targetUserId: id,
+      by: actingUser.id,
+    });
+    return ok(c, { message: "Password reset" });
+  },
+);
 
 // DELETE /api/admin/users/:id
 app.delete("/users/:id", zValidator("param", userIdParam), async (c) => {

@@ -284,3 +284,49 @@ describe("AccountTab", () => {
     });
   });
 });
+
+describe("AccountTab — your data", () => {
+  it("downloads the full account export", async () => {
+    const exportSpy = spyOn(api, "exportAccountData").mockResolvedValue();
+    spies.push(exportSpy);
+    render(<AccountTab />, { wrapper: wrapper(newTestClient()) });
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Download my data" }),
+    );
+    await waitFor(() => expect(exportSpy).toHaveBeenCalledTimes(1));
+  });
+
+  it("deletes only after the password and exact username are entered", async () => {
+    const deleteSpy = spyOn(api, "requestAccountDeletion").mockResolvedValue({
+      purgeAfter: "2026-12-07T00:00:00.000Z",
+    });
+    spies.push(deleteSpy);
+    const logout = (AuthContextModule.useAuth() as { logout: () => unknown })
+      .logout;
+    render(<AccountTab />, { wrapper: wrapper(newTestClient()) });
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Delete account…" }),
+    );
+    const submit = screen.getByRole("button", { name: "Delete my account" });
+    expect((submit as HTMLButtonElement).disabled).toBe(true);
+
+    const form = submit.closest("form")!;
+    const [password, confirm] = Array.from(form.querySelectorAll("input"));
+    fireEvent.change(password, { target: { value: "pw" } });
+    fireEvent.change(confirm, { target: { value: "testuse" } });
+    expect((submit as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(confirm, { target: { value: "testuser" } });
+    expect((submit as HTMLButtonElement).disabled).toBe(false);
+
+    fireEvent.submit(form);
+    await waitFor(() =>
+      expect(deleteSpy).toHaveBeenCalledWith({
+        confirm: "testuser",
+        password: "pw",
+      }),
+    );
+    await waitFor(() => expect(logout).toHaveBeenCalled());
+  });
+});

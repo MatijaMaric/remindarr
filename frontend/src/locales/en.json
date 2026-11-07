@@ -44,7 +44,14 @@
         "provider": "Auth",
         "joined": "Joined",
         "actions": "Actions"
-      }
+      },
+      "resetPassword": "Reset password",
+      "resetPasswordTitle": "Reset password for {{username}}",
+      "resetPasswordHelp": "Set a new password after verifying the user's identity, then share it with them over a trusted channel. They are signed out everywhere and should change it from Account settings.",
+      "newPassword": "New password (at least 8 characters)",
+      "resetPasswordConfirm": "Set password",
+      "resetPasswordDone": "Password reset. The user has been signed out everywhere.",
+      "resetPasswordFailed": "Failed to reset password"
     }
   },
   "legal": {
@@ -326,7 +333,7 @@
     "signInWithPasskey": "Sign in with Passkey",
     "passkeyFailed": "Passkey sign-in failed",
     "recoveryTitle": "Forgot your password?",
-    "recoveryHelp": "This instance does not offer email password resets. Contact your instance administrator to verify your identity and recover your local account. If you previously used a passkey or single sign-on, try that sign-in method above."
+    "recoveryHelp": "This instance does not offer email password resets. Contact your instance administrator to verify your identity and recover your local account. If you previously used a passkey or single sign-on, try that sign-in method above. An administrator can set a new password for you from the user list."
   },
   "profile": {
     "title": "Profile",
@@ -847,7 +854,20 @@
       "socialTitle": "Social",
       "socialSubtitle": "Invite friends to your Remindarr instance. They'll get a limited signup link.",
       "socialHint": "Manage invite codes on the Invite page",
-      "passkeyNameLabel": "Passkey name"
+      "passkeyNameLabel": "Passkey name",
+      "data": {
+        "title": "Your data",
+        "subtitle": "Download everything stored for your account, or delete the account.",
+        "exportScope": "The download is a zip file with your profile and settings (profile.json) and one CSV per category: watchlist and notes, watched titles and episodes, watch history, ratings, tags, pins, owned copies, recommendations, comments, follows and achievements. Passwords, passkeys, share links and notifier or integration credentials are not included.",
+        "download": "Download my data",
+        "downloading": "Preparing download…",
+        "delete": "Delete account…",
+        "deleteWarning": "Your account will be signed out everywhere and permanently deleted after {{days}} days, together with your watchlist, history, ratings and everything else. Signing in again before then cancels the deletion. Download your data first if you want a copy.",
+        "reauthHint": "Your account has no password, so you must have signed in within the last 10 minutes. If deletion is refused, sign out and sign in again first.",
+        "confirmLabel": "Type {{username}} to confirm",
+        "confirmDelete": "Delete my account",
+        "deleteScheduled": "Your account is scheduled for deletion and you have been signed out."
+      }
     },
     "activityStream": {
       "title": "Activity stream",

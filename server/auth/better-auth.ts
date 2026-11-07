@@ -6,6 +6,7 @@ import { passkey as passkeyPlugin } from "@better-auth/passkey";
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
 import { CONFIG } from "../config";
 import { getOidcConfig, isOidcConfigured } from "../db/repository";
+import { cancelAccountDeletion } from "../db/repository/account-data";
 import {
   users,
   account,
@@ -334,6 +335,13 @@ export function createAuth(
       session: {
         create: {
           after: async (sess) => {
+            // Signing in during the deletion grace period keeps the account.
+            if (await cancelAccountDeletion(sess.userId)) {
+              log.info("Account deletion cancelled by sign-in", {
+                userId: sess.userId,
+              });
+            }
+
             // Sync admin role for returning OIDC users
             if (pendingNoncesByAccountId.size === 0) return;
 

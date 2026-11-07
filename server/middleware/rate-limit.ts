@@ -25,6 +25,7 @@ export interface RateLimitStore {
 interface TokenBucket {
   tokens: number;
   lastRefill: number;
+  windowMs: number;
 }
 
 export class MemoryRateLimitStore implements RateLimitStore {
@@ -35,9 +36,11 @@ export class MemoryRateLimitStore implements RateLimitStore {
     this.cleanupTimer = setInterval(() => {
       const now = Date.now();
       for (const [k, bucket] of this.buckets) {
-        // Remove buckets that have been inactive for 2× the longest possible window.
-        // We don't know windowMs per bucket, so use a generous 5-minute threshold.
-        if (now - bucket.lastRefill > 5 * 60 * 1000) {
+        // A bucket idle for a full window has refilled, so it equals a fresh one.
+        if (
+          now - bucket.lastRefill >
+          Math.max(bucket.windowMs, 5 * 60 * 1000)
+        ) {
           this.buckets.delete(k);
         }
       }
@@ -56,7 +59,7 @@ export class MemoryRateLimitStore implements RateLimitStore {
   ): Promise<{ allowed: boolean; retryAfterMs: number }> {
     let bucket = this.buckets.get(key);
     if (!bucket) {
-      bucket = { tokens: limit, lastRefill: now };
+      bucket = { tokens: limit, lastRefill: now, windowMs };
       this.buckets.set(key, bucket);
     }
 
