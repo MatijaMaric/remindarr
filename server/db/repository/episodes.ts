@@ -1,4 +1,4 @@
-import { eq, and, sql, gte, lt, lte, asc, inArray } from "drizzle-orm";
+import { eq, and, sql, gte, lt, asc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
 import { titles, episodes, tracked, watchedEpisodes } from "../schema";
 import { traceDbQuery } from "../../tracing";
@@ -223,27 +223,19 @@ type UnwatchedEpisodeQueryRow = {
  * Core implementation: fetches unwatched episodes and returns them alongside
  * the lastWatchedByTitle map so callers can reuse it without a second query.
  *
- * Per-title aired/watched totals are aggregated once and joined. `opts.limit`
- * keeps the first N titles in the recency sort (up-next). `opts.perTitleLimit`
- * caps episodes per show; counts stay the full-show totals.
+ * Per-title aired/watched totals are aggregated once and joined. Episodes are
+ * capped at MAX_UNWATCHED_PER_TITLE per show; counts stay the full-show totals.
  */
 export async function getUnwatchedEpisodesWithMeta(
   userId: string,
   timezone = "UTC",
-  opts?: { limit?: number; perTitleLimit?: number },
 ) {
   return traceDbQuery("getUnwatchedEpisodesWithMeta", async () => {
     const db = getDb();
     const today = localDateForTimezone(timezone);
-    const perTitleLimit = Math.min(
-      opts?.perTitleLimit ?? MAX_UNWATCHED_PER_TITLE,
-      MAX_UNWATCHED_PER_TITLE,
-    );
-    const titleLimitSql =
-      opts?.limit != null ? sql`AND title_rank <= ${opts.limit}` : sql``;
 
     // Counts are per title, not per episode. Window rank keeps the earliest
-    // unwatched episodes and (when asked) the first N titles by recency.
+    // unwatched episodes of each show.
     const rows = await db.all<UnwatchedEpisodeQueryRow>(sql`
       WITH title_counts AS (
         SELECT
@@ -294,14 +286,7 @@ export async function getUnwatchedEpisodesWithMeta(
           ROW_NUMBER() OVER (
             PARTITION BY e.title_id
             ORDER BY e.season_number ASC, e.episode_number ASC
-          ) AS rn,
-          DENSE_RANK() OVER (
-            ORDER BY
-              CASE WHEN lw.last_watched_at IS NULL THEN 1 ELSE 0 END ASC,
-              lw.last_watched_at DESC,
-              ti.title ASC,
-              e.title_id ASC
-          ) AS title_rank
+          ) AS rn
         FROM episodes e
         INNER JOIN titles ti ON ti.id = e.title_id
         INNER JOIN tracked t ON t.title_id = ti.id AND t.user_id = ${userId}
@@ -320,8 +305,7 @@ export async function getUnwatchedEpisodesWithMeta(
         backdrop_url, age_certification, total_episodes, watched_episodes_count,
         unwatched_count
       FROM ranked
-      WHERE rn <= ${perTitleLimit}
-      ${titleLimitSql}
+      WHERE rn <= ${MAX_UNWATCHED_PER_TITLE}
       ORDER BY
         CASE WHEN last_watched_at IS NULL THEN 1 ELSE 0 END ASC,
         last_watched_at DESC,
@@ -332,15 +316,14 @@ export async function getUnwatchedEpisodesWithMeta(
       LIMIT ${MAX_UNWATCHED_EPISODES}
     `);
 
-    const hitPerTitleCap =
-      perTitleLimit === MAX_UNWATCHED_PER_TITLE &&
-      rows.some((row) => Number(row.unwatched_count) > MAX_UNWATCHED_PER_TITLE);
+    const hitPerTitleCap = rows.some(
+      (row) => Number(row.unwatched_count) > MAX_UNWATCHED_PER_TITLE,
+    );
     if (hitPerTitleCap || rows.length >= MAX_UNWATCHED_EPISODES) {
       log.warn("getUnwatchedEpisodesWithMeta hit cap; result truncated", {
         userId,
-        perTitleLimit,
+        perTitleLimit: MAX_UNWATCHED_PER_TITLE,
         globalLimit: MAX_UNWATCHED_EPISODES,
-        titleLimit: opts?.limit ?? null,
       });
     }
 
@@ -396,122 +379,9 @@ export async function getUnwatchedEpisodes(userId: string, timezone = "UTC") {
 }
 
 /**
- * Returns the earliest unwatched aired episode (by season then episode number)
- * for a given show and user. Used by the Up Next queue to surface the specific
- * next episode to watch.
- */
-export async function getNextUnwatchedEpisode(
-  userId: string,
-  titleId: string,
-  timezone = "UTC",
-) {
-  return traceDbQuery("getNextUnwatchedEpisode", async () => {
-    const db = getDb();
-    const today = localDateForTimezone(timezone);
-
-    const row = await db
-      .select({
-        id: episodes.id,
-        title_id: episodes.titleId,
-        season_number: episodes.seasonNumber,
-        episode_number: episodes.episodeNumber,
-        name: episodes.name,
-        air_date: episodes.airDate,
-      })
-      .from(episodes)
-      .innerJoin(
-        tracked,
-        and(eq(tracked.titleId, episodes.titleId), eq(tracked.userId, userId)),
-      )
-      .where(
-        and(
-          eq(episodes.titleId, titleId),
-          lte(episodes.airDate, today),
-          sql`NOT EXISTS(
-            SELECT 1 FROM watched_episodes we
-            WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
-          )`,
-        ),
-      )
-      .orderBy(asc(episodes.seasonNumber), asc(episodes.episodeNumber))
-      .limit(1)
-      .get();
-
-    return row ?? null;
-  });
-}
-
-export type NextUnwatchedEpisodeRow = {
-  id: number;
-  title_id: string;
-  season_number: number;
-  episode_number: number;
-  name: string | null;
-  air_date: string | null;
-};
-
-/**
- * Batch variant of getNextUnwatchedEpisode. Returns a Map<titleId, row> for
- * all requested titles in a single query using ROW_NUMBER() window function.
- * Eliminates the N+1 pattern in the Up Next route.
- */
-export async function getNextUnwatchedEpisodesForTitles(
-  userId: string,
-  titleIds: string[],
-  timezone = "UTC",
-): Promise<Map<string, NextUnwatchedEpisodeRow>> {
-  return traceDbQuery("getNextUnwatchedEpisodesForTitles", async () => {
-    if (titleIds.length === 0) return new Map();
-
-    const db = getDb();
-    const today = localDateForTimezone(timezone);
-
-    // Build a comma-separated list of quoted title IDs for the IN clause.
-    // We use sql.join to safely parameterise each value.
-    const titleIdList = sql.join(
-      titleIds.map((id) => sql`${id}`),
-      sql`, `,
-    );
-
-    const rows = await db.all<NextUnwatchedEpisodeRow>(sql`
-      SELECT id, title_id, season_number, episode_number, name, air_date
-      FROM (
-        SELECT
-          e.id,
-          e.title_id,
-          e.season_number,
-          e.episode_number,
-          e.name,
-          e.air_date,
-          ROW_NUMBER() OVER (
-            PARTITION BY e.title_id
-            ORDER BY e.season_number ASC, e.episode_number ASC
-          ) AS rn
-        FROM episodes e
-        INNER JOIN tracked t ON t.title_id = e.title_id AND t.user_id = ${userId}
-        WHERE e.title_id IN (${titleIdList})
-          AND e.air_date IS NOT NULL
-          AND e.air_date <= ${today}
-          AND NOT EXISTS (
-            SELECT 1 FROM watched_episodes we
-            WHERE we.episode_id = e.id AND we.user_id = ${userId}
-          )
-      )
-      WHERE rn = 1
-    `);
-
-    const result = new Map<string, NextUnwatchedEpisodeRow>();
-    for (const row of rows) {
-      result.set(row.title_id, row);
-    }
-    return result;
-  });
-}
-
-/**
  * Returns a Map<titleId, Date> of the most recent watched_at timestamp per
- * show for the given user. Used by Up Next to sort in-progress shows by
- * recency (most recently watched first).
+ * show for the given user. Used to sort unwatched episodes by recency (most
+ * recently watched show first).
  */
 export async function getLastWatchedAtPerShow(
   userId: string,

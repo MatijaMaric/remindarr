@@ -102,7 +102,6 @@ import shareRoutes from "./routes/share";
 import importRoutes from "./routes/import";
 import accountRoutes from "./routes/account";
 import { purgeDeletedAccounts } from "./db/repository/account-data";
-import upNextRoutes from "./routes/up-next";
 import moviesRoutes from "./routes/movies";
 import overlapRoutes from "./routes/overlap";
 import achievementsRoutes, {
@@ -598,11 +597,6 @@ function createApp(env: Env) {
   // Movie tracking surfaces
   app.use("/api/movies/*", requireAuth);
   app.route("/api/movies", moviesRoutes);
-
-  // Up Next smart queue
-  app.use("/api/up-next/*", requireAuth);
-  app.use("/api/up-next", requireAuth);
-  app.route("/api/up-next", upNextRoutes);
 
   // Overlap / "what to watch together" (requires auth)
   app.use("/api/overlap/*", requireAuth);
