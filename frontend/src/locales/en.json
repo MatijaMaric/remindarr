@@ -118,10 +118,7 @@
     "welcomeTitle": "Welcome to Remindarr",
     "welcomeMessage": "Sign in to see your upcoming episodes.",
     "upNext": {
-      "title": "Up Next",
-      "empty": "Nothing queued — track a show to start your queue",
-      "inProgress": "In Progress",
-      "newEpisodes": "New Episodes"
+      "title": "Up Next"
     },
     "unwatched": "Unwatched",
     "reels": "Reels",
@@ -132,23 +129,14 @@
     "episodesRemaining_one": "{{count}} episode remaining",
     "episodesRemaining_other": "{{count}} episodes remaining",
     "today": "Today",
-    "noEpisodes": "No upcoming episodes for your tracked shows.",
-    "noEpisodesToday": "No episodes airing today.",
     "comingUp": "Coming Up",
     "recommendedForYou": "Recommended for You",
     "seeAll": "See all",
     "airingSoon": {
-      "title": "Airing Soon",
-      "empty": "No upcoming episodes from tracked shows"
-    },
-    "shelves": {
-      "kicker": "My Lists",
-      "continueWatching": "Continue Watching",
-      "startWatching": "Start Watching"
+      "title": "Airing Soon"
     },
     "kickers": {
       "browse": "Browse",
-      "upNext": "Up next",
       "fromFriends": "From friends",
       "airingTonight": "Airing tonight",
       "thisWeek": "This week",
@@ -162,8 +150,7 @@
     "calendar": "Calendar",
     "errors": {
       "watchedStatus": "Failed to update watched status — please try again",
-      "markEpisodes": "Failed to mark episodes as watched — please try again",
-      "markEpisode": "Failed to mark episode as watched — please try again"
+      "markEpisodes": "Failed to mark episodes as watched — please try again"
     }
   },
   "tracked": {
@@ -792,8 +779,7 @@
       "showSection": "Show section",
       "hideSection": "Hide section",
       "sections": {
-        "up_next": "Up Next",
-        "unwatched": "Unwatched Episodes",
+        "unwatched": "Up Next",
         "movies_to_watch": "Movies to Watch",
         "recommendations": "Recommended for You",
         "today": "Today's Episodes",
@@ -801,7 +787,8 @@
         "upcoming_movies": "Upcoming Movies",
         "airing_soon": "Airing Soon",
         "friends_loved": "Friends Loved This Week",
-        "streak": "Daily Streak"
+        "streak": "Daily Streak",
+        "trending": "Trending Now"
       }
     },
     "crowdedWeek": {

@@ -12,8 +12,8 @@ import { BasePage } from "./base-page";
  *   different `MobileFeedHome` component is shown and may redirect to `/reels`.
  *   Tests that use this POM should set viewport to 1280x720.
  * - The authenticated home fetches several endpoints in parallel (episodes,
- *   recommendations, homepage-layout, up-next, friends-loved, streak, movies,
- *   shelves). All must be mocked to avoid network calls.
+ *   recommendations, homepage-layout, friends-loved, streak, movies). All
+ *   must be mocked to avoid network calls.
  */
 export class HomePage extends BasePage {
   async gotoHome(): Promise<void> {
@@ -42,7 +42,6 @@ export class HomePage extends BasePage {
           homepage_layout: [
             { id: "today", enabled: true },
             { id: "upcoming", enabled: true },
-            { id: "up_next", enabled: true },
             { id: "friends_loved", enabled: true },
             { id: "movies_to_watch", enabled: true },
             { id: "upcoming_movies", enabled: true },
@@ -50,10 +49,6 @@ export class HomePage extends BasePage {
           ],
         },
       }),
-    );
-    // Real URL: /api/up-next?limit=12
-    await this.page.route("**/api/up-next**", (route) =>
-      route.fulfill({ json: { items: [] } }),
     );
     // Real URL: /api/social/friends-loved?limit=20
     await this.page.route("**/api/social/friends-loved**", (route) =>
@@ -66,12 +61,6 @@ export class HomePage extends BasePage {
     // Real URL: /api/movies/tracking
     await this.page.route("**/api/movies/tracking**", (route) =>
       route.fulfill({ json: { to_watch: [], upcoming: [] } }),
-    );
-    // Real URL: /api/track/shelves
-    await this.page.route("**/api/track/shelves**", (route) =>
-      route.fulfill({
-        json: { continue_watching: [], start_watching: [] },
-      }),
     );
     // FirstSetup GETs /api/track. An unmocked 401 dispatches auth:unauthorized
     // and replaces the signed-in home with the landing page. A non-empty
@@ -105,7 +94,7 @@ export class HomePage extends BasePage {
     await this.page.route("**/api/recommendations/count**", (route) =>
       route.fulfill({ json: { count: 0 } }),
     );
-    // SuggestedForYouRow is always rendered at the bottom of HomePage and
+    // SuggestedForYouRow renders when the "suggested" layout section is on and
     // calls /api/suggestions. Without this mock it returns 401 from the real
     // backend (fake userId), firing auth:unauthorized and logging the user out.
     await this.page.route("**/api/suggestions**", (route) =>

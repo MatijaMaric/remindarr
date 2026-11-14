@@ -24,11 +24,9 @@ real DB state is needed to confirm the session-gated branch renders.
   - `GET **/api/episodes/upcoming` → `{ today: [], upcoming: [], unwatched: [] }`
   - `GET **/api/recommendations**` → `{ recommendations: [], count: 0 }`
   - `GET **/api/homepage-layout**` → omit or return the default layout
-  - `GET **/api/up-next**` → `{ items: [] }`
   - `GET **/api/friends-loved**` → `{ items: [] }`
   - `GET **/api/streak**` → `null`
   - `GET **/api/movies/tracking**` → `{ to_watch: [], upcoming: [] }`
-  - `GET **/api/track/shelves**` → `{ continue_watching: [], start_watching: [] }`
 - Viewport is set to desktop width (≥ 640 px) to avoid the mobile redirect to `/reels`.
 
 **Steps**:
@@ -112,19 +110,21 @@ the "Coming Up" / "This week" section. Stubbing the endpoint keeps the air dates
 
 ---
 
-## TC-04: Empty state — no tracked titles
+## TC-04: Empty sections are hidden
 
 **Priority**: P1
 **Backend**: Mock
 
-**Why mock**: Confirms the empty-state message is shown when all episode lists are empty.
-A real account with no tracked titles would also work, but mocking is faster and avoids
-DB setup.
+**Why mock**: Confirms a section with nothing to show renders nothing at all — no
+header and no empty-state line. Mocking is faster than arranging a real account with
+upcoming episodes but none today.
 
 **Preconditions**:
 
 - `mockLoggedIn(page)` called.
-- `GET **/api/episodes/upcoming` returns `{ today: [], upcoming: [], unwatched: [] }`.
+- `GET **/api/episodes/upcoming` returns
+  `{ today: [], upcoming: [MOCK_UPCOMING_EPISODE], unwatched: [] }`. The upcoming
+  episode gives the page something to render, so the check runs after load.
 - All other home data endpoints return empty/null responses.
 - Viewport is desktop width (≥ 640 px).
 
@@ -132,14 +132,12 @@ DB setup.
 
 1. Set up mocks as described in preconditions.
 2. Navigate to `/`.
-3. Wait for the main content area to appear.
+3. Wait for the "Coming Up" heading.
 
 **Expected**:
 
-- The "Today" section (kicker "Airing tonight") is present in the layout.
-- Within that section, the empty-state text is shown — `getByText(/no episodes/i)` or
-  the translated equivalent (e.g. "No episodes today").
-- No episode cards are rendered.
+- The "Today" section (kicker "Airing tonight") is not rendered.
+- No "no episodes" empty-state text is rendered.
 - No JavaScript error is thrown (error banner absent).
 
 ---

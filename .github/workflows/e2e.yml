@@ -64,7 +64,6 @@ jobs:
             e2e/signup.spec.ts \
             e2e/stats.spec.ts \
             e2e/title-detail.spec.ts \
-            e2e/up-next.spec.ts \
             e2e/user-overlap.spec.ts \
             e2e/watched-ratings.spec.ts
         env:

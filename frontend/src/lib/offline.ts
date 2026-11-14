@@ -102,7 +102,6 @@ export async function rememberSession(
 function readable(url: string) {
   return (
     url === "/track" ||
-    url === "/track/shelves" ||
     url.startsWith("/calendar?") ||
     url.startsWith("/details/")
   );

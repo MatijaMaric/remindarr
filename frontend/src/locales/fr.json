@@ -119,10 +119,7 @@
     "welcomeTitle": "Bienvenue sur Remindarr",
     "welcomeMessage": "Connectez-vous pour voir vos prochains épisodes.",
     "upNext": {
-      "title": "À suivre",
-      "empty": "Rien en file d'attente : suivez une série pour commencer",
-      "inProgress": "En cours",
-      "newEpisodes": "Nouveaux épisodes"
+      "title": "À suivre"
     },
     "unwatched": "Non vus",
     "reels": "Reels",
@@ -134,23 +131,14 @@
     "episodesRemaining_many": "{{count}} épisodes restants",
     "episodesRemaining_other": "{{count}} épisodes restants",
     "today": "Aujourd'hui",
-    "noEpisodes": "Aucun épisode à venir pour vos séries suivies.",
-    "noEpisodesToday": "Aucun épisode diffusé aujourd'hui.",
     "comingUp": "À venir",
     "recommendedForYou": "Recommandé pour vous",
     "seeAll": "Tout voir",
     "airingSoon": {
-      "title": "Bientôt diffusé",
-      "empty": "Aucun épisode à venir de vos séries suivies"
-    },
-    "shelves": {
-      "kicker": "Mes listes",
-      "continueWatching": "Reprendre",
-      "startWatching": "Commencer"
+      "title": "Bientôt diffusé"
     },
     "kickers": {
       "browse": "Explorer",
-      "upNext": "À suivre",
       "fromFriends": "De vos amis",
       "airingTonight": "Ce soir",
       "thisWeek": "Cette semaine",
@@ -164,8 +152,7 @@
     "calendar": "Calendrier",
     "errors": {
       "watchedStatus": "Impossible de mettre à jour le statut vu. Veuillez réessayer",
-      "markEpisodes": "Impossible de marquer les épisodes comme vus. Veuillez réessayer",
-      "markEpisode": "Impossible de marquer l'épisode comme vu. Veuillez réessayer"
+      "markEpisodes": "Impossible de marquer les épisodes comme vus. Veuillez réessayer"
     }
   },
   "tracked": {
@@ -808,8 +795,7 @@
       "showSection": "Afficher la section",
       "hideSection": "Masquer la section",
       "sections": {
-        "up_next": "À suivre",
-        "unwatched": "Épisodes non vus",
+        "unwatched": "À suivre",
         "movies_to_watch": "Films à voir",
         "recommendations": "Recommandé pour vous",
         "today": "Épisodes du jour",
@@ -817,7 +803,8 @@
         "upcoming_movies": "Films à venir",
         "airing_soon": "Bientôt diffusé",
         "friends_loved": "Coups de cœur de vos amis cette semaine",
-        "streak": "Série quotidienne"
+        "streak": "Série quotidienne",
+        "trending": "Tendances"
       }
     },
     "crowdedWeek": {

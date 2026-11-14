@@ -21,15 +21,11 @@ function TitleCardItem({ title }: { title: TrendingTitle }) {
         imageAlt={title.title}
         title={title.title}
         titleClamp={2}
-        badge={
-          title.isTracked
-            ? { label: "Tracking", tone: "accent", position: "top-left" }
-            : {
-                label: title.objectType === "MOVIE" ? "Movie" : "TV",
-                tone: "neutral",
-                position: "top-left",
-              }
-        }
+        badge={{
+          label: title.objectType === "MOVIE" ? "Movie" : "TV",
+          tone: "neutral",
+          position: "top-left",
+        }}
       />
     </div>
   );
@@ -43,7 +39,7 @@ function PersonCardItem({ person }: { person: TrendingPerson }) {
   return (
     <Link
       to={`/person/${person.id}`}
-      className="group w-32 flex-shrink-0 text-center"
+      className="group w-32 flex-shrink-0 self-center text-center"
       style={{ scrollSnapAlign: "start" }}
     >
       <div className="mx-auto mb-2 h-28 w-28 overflow-hidden rounded-full bg-muted transition-all group-hover:ring-2 group-hover:ring-primary">
@@ -72,17 +68,21 @@ function PersonCardItem({ person }: { person: TrendingPerson }) {
   );
 }
 
-function GroupHeading({ children }: { children: React.ReactNode }) {
-  return <h3 className="mb-2 text-xs text-muted-foreground">{children}</h3>;
-}
-
 export default function TrendingSection({
   movies,
   shows,
   people,
   isLoading = false,
 }: TrendingSectionProps) {
-  const hasAny = movies.length > 0 || shows.length > 0 || people.length > 0;
+  // One row: movies and shows interleaved by rank, then people. Titles the
+  // viewer already tracks are left out, since home lists those in its own rows.
+  const titles = Array.from(
+    { length: Math.max(movies.length, shows.length) },
+    (_, i) => [movies[i], shows[i]],
+  )
+    .flat()
+    .filter((t) => t && !t.isTracked);
+  const hasAny = titles.length > 0 || people.length > 0;
 
   // Non-blocking loading placeholder (FR-009). Rendered alongside other home
   // sections — it never delays them.
@@ -105,8 +105,7 @@ export default function TrendingSection({
     );
   }
 
-  // Hide the whole section when there is nothing to show (FR-008 fail-soft /
-  // FR-013 empty groups).
+  // Hide the whole section when there is nothing to show (FR-008 fail-soft).
   if (!hasAny) return null;
 
   return (
@@ -115,38 +114,14 @@ export default function TrendingSection({
         <Kicker>Trending</Kicker>
         <h2 className="text-xl font-bold tracking-[-0.01em]">Trending Now</h2>
       </div>
-      <div className="space-y-6">
-        {movies.length > 0 && (
-          <div>
-            <GroupHeading>Movies</GroupHeading>
-            <FullBleedCarousel>
-              {movies.map((m) => (
-                <TitleCardItem key={m.id} title={m} />
-              ))}
-            </FullBleedCarousel>
-          </div>
-        )}
-        {shows.length > 0 && (
-          <div>
-            <GroupHeading>TV Shows</GroupHeading>
-            <FullBleedCarousel>
-              {shows.map((s) => (
-                <TitleCardItem key={s.id} title={s} />
-              ))}
-            </FullBleedCarousel>
-          </div>
-        )}
-        {people.length > 0 && (
-          <div>
-            <GroupHeading>People</GroupHeading>
-            <FullBleedCarousel>
-              {people.map((p) => (
-                <PersonCardItem key={p.id} person={p} />
-              ))}
-            </FullBleedCarousel>
-          </div>
-        )}
-      </div>
+      <FullBleedCarousel>
+        {titles.map((t) => (
+          <TitleCardItem key={t.id} title={t} />
+        ))}
+        {people.map((p) => (
+          <PersonCardItem key={p.id} person={p} />
+        ))}
+      </FullBleedCarousel>
     </section>
   );
 }

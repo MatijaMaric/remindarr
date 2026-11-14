@@ -943,7 +943,6 @@ export interface TrendingSnapshot {
 
 export type HomepageSectionId =
   | "trending"
-  | "up_next"
   | "unwatched"
   | "recommendations"
   | "today"
@@ -952,7 +951,8 @@ export type HomepageSectionId =
   | "friends_loved"
   | "streak"
   | "movies_to_watch"
-  | "upcoming_movies";
+  | "upcoming_movies"
+  | "suggested";
 
 export interface HomepageSection {
   id: HomepageSectionId;
@@ -961,8 +961,6 @@ export interface HomepageSection {
 
 export const DEFAULT_HOMEPAGE_LAYOUT: HomepageSection[] = [
   { id: "streak", enabled: true },
-  { id: "trending", enabled: true },
-  { id: "up_next", enabled: true },
   { id: "unwatched", enabled: true },
   { id: "movies_to_watch", enabled: true },
   { id: "recommendations", enabled: true },
@@ -971,6 +969,8 @@ export const DEFAULT_HOMEPAGE_LAYOUT: HomepageSection[] = [
   { id: "upcoming_movies", enabled: true },
   { id: "airing_soon", enabled: false },
   { id: "friends_loved", enabled: true },
+  { id: "trending", enabled: true },
+  { id: "suggested", enabled: true },
 ];
 
 export interface FriendsLovedItem {

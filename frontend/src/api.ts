@@ -274,13 +274,6 @@ export async function getTrackedTitles(signal?: AbortSignal): Promise<{
   return fetchJson("/track", { signal });
 }
 
-export async function getShelves(signal?: AbortSignal): Promise<{
-  continue_watching: Title[];
-  start_watching: Title[];
-}> {
-  return fetchJson("/track/shelves", { signal });
-}
-
 async function downloadFile(path: string, fallbackName: string) {
   const res = await fetchBlob(path);
   const blob = await res.blob();
@@ -1712,32 +1705,6 @@ export async function bulkTrackAction(payload: {
     method: "POST",
     body: JSON.stringify(payload),
   });
-}
-
-// ─── Up Next ───────────────────────────────────────────────────────────────
-
-export interface UpNextItem {
-  kind: "in_progress" | "newly_aired" | "recommendation";
-  titleId: number;
-  title: string;
-  posterUrl: string | null;
-  nextEpisodeId?: number;
-  nextEpisodeTitle?: string;
-  nextEpisodeSeason?: number;
-  nextEpisodeNumber?: number;
-  nextEpisodeAirDate?: string;
-  unwatchedCount?: number;
-  recommendedBy?: string;
-  recommendationId?: number;
-}
-
-export async function getUpNext(
-  limit = 12,
-  signal?: AbortSignal,
-): Promise<{ items: UpNextItem[] }> {
-  const qs = new URLSearchParams();
-  qs.set("limit", String(limit));
-  return fetchJson(`/up-next?${qs}`, { signal });
 }
 
 // ─── Overlap / "Watch Together" ───────────────────────────────────────────────

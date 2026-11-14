@@ -27,7 +27,6 @@ import { cn } from "@/lib/utils";
 const DEFAULT_CROWDED_WEEK_THRESHOLD = 5;
 
 const SECTION_LABELS: Record<string, string> = {
-  up_next: "settings.homepage.sections.up_next",
   unwatched: "settings.homepage.sections.unwatched",
   movies_to_watch: "settings.homepage.sections.movies_to_watch",
   recommendations: "settings.homepage.sections.recommendations",
@@ -37,6 +36,8 @@ const SECTION_LABELS: Record<string, string> = {
   airing_soon: "settings.homepage.sections.airing_soon",
   friends_loved: "settings.homepage.sections.friends_loved",
   streak: "settings.homepage.sections.streak",
+  trending: "settings.homepage.sections.trending",
+  suggested: "suggestions.forYou",
 };
 
 function ThemeSection() {

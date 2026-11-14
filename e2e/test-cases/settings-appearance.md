@@ -44,8 +44,8 @@ Mocking the response lets us assert the exact initial state without a seeded dat
 ```json
 {
   "homepage_layout": [
-    { "id": "up_next", "enabled": true },
     { "id": "unwatched", "enabled": true },
+    { "id": "trending", "enabled": true },
     { "id": "recommendations", "enabled": false }
   ]
 }
@@ -233,7 +233,7 @@ Mocking delivers a fixed set of sections so we can assert names and visibility i
 **Preconditions**:
 
 - Same `GET` intercepts as TC-01 (homepage layout returns three sections:
-  `up_next` enabled, `unwatched` enabled, `recommendations` disabled).
+  `unwatched` enabled, `trending` enabled, `recommendations` disabled).
 
 **Steps**:
 
@@ -246,8 +246,8 @@ Mocking delivers a fixed set of sections so we can assert names and visibility i
 **Expected**:
 
 - Three rows are rendered in the homepage layout card.
-- A row with the label matching `settings.homepage.sections.up_next` (or its
-  translation, e.g., "Up next") is visible and shows an Eye icon (enabled).
+- A row with the label matching `settings.homepage.sections.unwatched` (or its
+  translation, e.g., "Up Next") is visible and shows an Eye icon (enabled).
 - A row with the label matching `settings.homepage.sections.recommendations` is
   visible and shows an EyeOff icon (disabled), appearing visually dimmed
   (`opacity-60`).
@@ -273,8 +273,8 @@ persisting to a real database.
 ```json
 {
   "homepage_layout": [
-    { "id": "up_next", "enabled": false },
-    { "id": "unwatched", "enabled": true },
+    { "id": "unwatched", "enabled": false },
+    { "id": "trending", "enabled": true },
     { "id": "recommendations", "enabled": false }
   ]
 }

@@ -117,10 +117,7 @@
     "welcomeTitle": "Remindarr へようこそ",
     "welcomeMessage": "ログインすると次に放送されるエピソードを確認できます。",
     "upNext": {
-      "title": "次に見る",
-      "empty": "まだ何もありません。番組を追加して始めましょう",
-      "inProgress": "視聴中",
-      "newEpisodes": "新着エピソード"
+      "title": "次に見る"
     },
     "unwatched": "未視聴",
     "reels": "リール",
@@ -130,23 +127,14 @@
     "season": "シーズン {{number}}",
     "episodesRemaining_other": "残り {{count}} エピソード",
     "today": "今日",
-    "noEpisodes": "ウォッチリストの番組に今後のエピソードはありません。",
-    "noEpisodesToday": "今日放送されるエピソードはありません。",
     "comingUp": "近日公開",
     "recommendedForYou": "あなたへのおすすめ",
     "seeAll": "すべて表示",
     "airingSoon": {
-      "title": "まもなく放送",
-      "empty": "ウォッチリストの番組に今後のエピソードはありません"
-    },
-    "shelves": {
-      "kicker": "マイリスト",
-      "continueWatching": "続きを見る",
-      "startWatching": "見始める"
+      "title": "まもなく放送"
     },
     "kickers": {
       "browse": "探す",
-      "upNext": "次に見る",
       "fromFriends": "友達から",
       "airingTonight": "今夜の放送",
       "thisWeek": "今週",
@@ -160,8 +148,7 @@
     "calendar": "カレンダー",
     "errors": {
       "watchedStatus": "視聴状態を更新できませんでした。もう一度お試しください",
-      "markEpisodes": "エピソードを視聴済みにできませんでした。もう一度お試しください",
-      "markEpisode": "エピソードを視聴済みにできませんでした。もう一度お試しください"
+      "markEpisodes": "エピソードを視聴済みにできませんでした。もう一度お試しください"
     }
   },
   "tracked": {
@@ -776,8 +763,7 @@
       "showSection": "セクションを表示",
       "hideSection": "セクションを隠す",
       "sections": {
-        "up_next": "次に見る",
-        "unwatched": "未視聴のエピソード",
+        "unwatched": "次に見る",
         "movies_to_watch": "見たい映画",
         "recommendations": "あなたへのおすすめ",
         "today": "今日のエピソード",
@@ -785,7 +771,8 @@
         "upcoming_movies": "公開予定の映画",
         "airing_soon": "まもなく放送",
         "friends_loved": "今週友達が気に入った作品",
-        "streak": "連続記録"
+        "streak": "連続記録",
+        "trending": "トレンド"
       }
     },
     "crowdedWeek": {

@@ -109,7 +109,27 @@ function makeRecommendation(
   };
 }
 
+function makeEpisode(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 1,
+    title_id: "tv-1",
+    season_number: 1,
+    episode_number: 1,
+    name: "Pilot",
+    overview: null,
+    air_date: "2020-01-01",
+    still_path: null,
+    show_title: "Test Show",
+    poster_url: null,
+    is_watched: false,
+    offers: [],
+    ...overrides,
+  };
+}
+
 // File-wide default impls that differ from the shared apiMock defaults.
+// One episode airs today so the Today heading renders: empty sections are
+// hidden, and most tests use that heading as their "page has loaded" signal.
 function applyHomeDefaults() {
   apiMock.browseTitles.mockImplementation(() =>
     Promise.resolve({
@@ -120,7 +140,7 @@ function applyHomeDefaults() {
     }),
   );
   apiMock.getUpcomingEpisodes.mockImplementation(() =>
-    Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
+    Promise.resolve({ today: [makeEpisode()], upcoming: [], unwatched: [] }),
   );
   apiMock.getRecommendations.mockImplementation(() =>
     Promise.resolve({ recommendations: [], count: 0 }),
@@ -140,15 +160,11 @@ function applyHomeDefaults() {
   apiMock.getTrending.mockImplementation(() =>
     Promise.resolve({ movies: [], shows: [], people: [], refreshedAt: "" }),
   );
-  apiMock.getUpNext.mockImplementation(() => Promise.resolve({ items: [] }));
   apiMock.getFriendsLoved.mockImplementation(() =>
     Promise.resolve({ items: [] }),
   );
   apiMock.getMovieTracking.mockImplementation(() =>
     Promise.resolve({ to_watch: [], upcoming: [] }),
-  );
-  apiMock.getShelves.mockImplementation(() =>
-    Promise.resolve({ continue_watching: [], start_watching: [] }),
   );
   apiMock.getMyStreak.mockImplementation(() => Promise.resolve(null));
   apiMock.getSuggestionsAggregate.mockImplementation(() =>
@@ -596,32 +612,7 @@ describe("HomePage — friends loved this week", () => {
   });
 });
 
-describe("HomePage smart shelves", () => {
-  function shelfTitle(id: string, title: string) {
-    return {
-      id,
-      object_type: "SHOW" as const,
-      title,
-      original_title: null,
-      release_year: 2020,
-      release_date: "2020-01-01",
-      runtime_minutes: 42,
-      short_description: null,
-      genres: [] as string[],
-      imdb_id: null,
-      tmdb_id: null,
-      poster_url: null,
-      age_certification: null,
-      original_language: "en",
-      tmdb_url: null,
-      imdb_score: null,
-      imdb_votes: null,
-      tmdb_score: null,
-      is_tracked: true,
-      offers: [],
-    };
-  }
-
+describe("HomePage — one row per kind of content", () => {
   function signedInUser() {
     mockUser = {
       id: "u1",
@@ -632,46 +623,30 @@ describe("HomePage smart shelves", () => {
     };
   }
 
-  it("renders continue and start rows below the release sections", async () => {
-    signedInUser();
-    apiMock.getShelves.mockImplementation(() =>
+  function layout(...sections: [string, boolean][]) {
+    apiMock.getHomepageLayout.mockImplementation(() =>
       Promise.resolve({
-        continue_watching: [shelfTitle("show-1", "Half Show")],
-        start_watching: [shelfTitle("movie-1", "Fresh Movie")],
+        homepage_layout: sections.map(([id, enabled]) => ({ id, enabled })),
+      }),
+    );
+  }
+
+  it("shows unwatched shows once, in a row titled Up Next", async () => {
+    signedInUser();
+    apiMock.getUpcomingEpisodes.mockImplementation(() =>
+      Promise.resolve({
+        today: [],
+        upcoming: [],
+        unwatched: [makeEpisode({ show_title: "Half Show" })],
       }),
     );
 
     render(<HomePage />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("heading", { name: "Continue Watching" }),
-      ).toBeDefined();
-    });
-    expect(
-      screen.getByRole("heading", { name: "Start Watching" }),
-    ).toBeDefined();
-    expect(screen.getAllByText("My Lists").length).toBeGreaterThan(0);
-    expect(screen.getByRole("heading", { name: "Half Show" })).toBeDefined();
-    expect(screen.getByRole("heading", { name: "Fresh Movie" })).toBeDefined();
-    const continueHeading = screen.getByRole("heading", {
-      name: "Continue Watching",
-    });
-    const todayHeading = screen.getByRole("heading", { name: "Today" });
-    expect(
-      todayHeading.compareDocumentPosition(continueHeading) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(apiMock.getShelves).toHaveBeenCalledWith(expect.any(AbortSignal));
-  });
-
-  it("hides empty shelves", async () => {
-    signedInUser();
-
-    render(<HomePage />, { wrapper: Wrapper });
-
-    await waitFor(() => {
-      expect(screen.getByText("Today")).toBeDefined();
+      expect(screen.getAllByRole("heading", { name: "Up Next" })).toHaveLength(
+        1,
+      );
     });
     expect(
       screen.queryByRole("heading", { name: "Continue Watching" }),
@@ -681,20 +656,64 @@ describe("HomePage smart shelves", () => {
     ).toBeNull();
   });
 
-  it("still loads the page when getShelves fails", async () => {
+  it("hides Today when nothing airs today", async () => {
     signedInUser();
-    apiMock.getShelves.mockImplementation(() =>
-      Promise.reject(new Error("network error")),
+    apiMock.getUpcomingEpisodes.mockImplementation(() =>
+      Promise.resolve({
+        today: [],
+        upcoming: [makeEpisode({ air_date: "2999-01-01" })],
+        unwatched: [],
+      }),
     );
 
     render(<HomePage />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(screen.getByText("Today")).toBeDefined();
+      expect(screen.getByRole("heading", { name: "Coming Up" })).toBeDefined();
     });
-    expect(
-      screen.queryByRole("heading", { name: "Continue Watching" }),
-    ).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Today" })).toBeNull();
+  });
+
+  it("hides Airing Soon when no tracked show has an upcoming episode", async () => {
+    signedInUser();
+    layout(["airing_soon", true], ["today", true]);
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Today" })).toBeDefined();
+    });
+    expect(screen.queryByRole("heading", { name: "Airing Soon" })).toBeNull();
+  });
+
+  it("shows Suggested for you when the layout enables it", async () => {
+    signedInUser();
+    layout(["today", true], ["suggested", true]);
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
+      Promise.resolve({ flat: [makeSearchTitle(1)] }),
+    );
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Suggested for you")).toBeDefined();
+    });
+  });
+
+  it("hides Suggested for you when the layout disables it", async () => {
+    signedInUser();
+    layout(["today", true], ["suggested", false]);
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
+      Promise.resolve({ flat: [makeSearchTitle(1)] }),
+    );
+
+    render(<HomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Today" })).toBeDefined();
+    });
+    expect(apiMock.getSuggestionsAggregate).not.toHaveBeenCalled();
+    expect(screen.queryByText("Suggested for you")).toBeNull();
   });
 });
 
@@ -706,16 +725,23 @@ describe("HomePage dashboard modes", () => {
       apiMock.getHomepageLayout.mockImplementation(() =>
         Promise.resolve({
           homepage_layout: [
-            { id: "up_next", enabled: true },
+            { id: "unwatched", enabled: true },
             { id: "today", enabled: false },
           ],
+        }),
+      );
+      apiMock.getUpcomingEpisodes.mockImplementation(() =>
+        Promise.resolve({
+          today: [makeEpisode()],
+          upcoming: [],
+          unwatched: [makeEpisode()],
         }),
       );
       render(<HomePage />, { wrapper: Wrapper });
       await waitFor(() =>
         expect(screen.getByRole("heading", { name: "Up Next" })).toBeDefined(),
       );
-      expect(screen.queryByText("Today")).toBeNull();
+      expect(screen.queryByRole("heading", { name: "Today" })).toBeNull();
       expect(
         screen.queryByRole("navigation", { name: "Home views" }),
       ).toBeNull();
