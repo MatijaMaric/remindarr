@@ -15,7 +15,7 @@ import {
   act,
   fireEvent,
 } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "../api";
@@ -236,6 +236,74 @@ describe("ReelsPage", () => {
 });
 
 // ─── Source picker tests ───────────────────────────────────────────────────────
+
+// "/" redirects phones back to Reels, so every way out of Reels to the
+// dashboard has to ask for it explicitly or the dashboard is unreachable.
+describe("ReelsPage links to the Home dashboard", () => {
+  function DashboardProbe() {
+    return (
+      <div data-testid="home-state">{JSON.stringify(useLocation().state)}</div>
+    );
+  }
+
+  function renderInRoutes() {
+    render(
+      <QueryClientProvider client={newTestClient()}>
+        <MemoryRouter initialEntries={["/reels"]}>
+          <Routes>
+            <Route path="/reels" element={<ReelsPage />} />
+            <Route path="/" element={<DashboardProbe />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
+  const cases: [string, string, () => void][] = [
+    [
+      "Home pill with cards",
+      "Home",
+      () =>
+        getUpcomingEpisodesSpy.mockImplementation(() =>
+          Promise.resolve({
+            today: [],
+            upcoming: [],
+            unwatched: [sampleEpisode],
+          } as any),
+        ),
+    ],
+    [
+      "Home pill in the empty state",
+      "Home",
+      () =>
+        getUpcomingEpisodesSpy.mockImplementation(() =>
+          Promise.resolve({ today: [], upcoming: [], unwatched: [] }),
+        ),
+    ],
+    [
+      "Go back link in the error state",
+      "Go back",
+      () =>
+        getUpcomingEpisodesSpy.mockImplementation(() =>
+          Promise.reject(new Error("API error")),
+        ),
+    ],
+  ];
+
+  for (const [label, linkName, arrange] of cases) {
+    it(`${label} asks for the dashboard`, async () => {
+      arrange();
+      renderInRoutes();
+      const link = await screen.findByRole("link", { name: linkName });
+      fireEvent.click(link);
+      await waitFor(() =>
+        expect(screen.getByTestId("home-state").textContent).toBe(
+          JSON.stringify({ dashboard: true }),
+        ),
+      );
+    });
+  }
+});
 
 describe("ReelsPage source picker", () => {
   it("default (no ?source param) calls getUpcomingEpisodes", async () => {

@@ -21,6 +21,7 @@ import type { UndoInfo } from "../components/ReelsCard";
 import ReelsSeasonPanel from "../components/ReelsSeasonPanel";
 import { ReelsSkeleton } from "../components/SkeletonComponents";
 import { useContentAdvisory } from "../hooks/useContentAdvisory";
+import { HOME_DASHBOARD_STATE } from "../lib/homeView";
 
 // ─── Source types ──────────────────────────────────────────────────────────────
 
@@ -676,7 +677,11 @@ export default function ReelsPage() {
       >
         <div className="text-center">
           <p className="text-destructive mb-4">{errorMessage}</p>
-          <Link to="/" className="text-primary-text hover:text-primary-text">
+          <Link
+            to="/"
+            state={HOME_DASHBOARD_STATE}
+            className="text-primary-text hover:text-primary-text"
+          >
             Go back
           </Link>
         </div>
@@ -703,6 +708,7 @@ export default function ReelsPage() {
           <div className="flex items-center gap-2 mb-2">
             <Link
               to="/"
+              state={HOME_DASHBOARD_STATE}
               className="px-3 py-1.5 rounded-full text-[12px] font-bold text-foreground/55 border border-transparent"
             >
               Home
@@ -772,6 +778,7 @@ export default function ReelsPage() {
         >
           <Link
             to="/"
+            state={HOME_DASHBOARD_STATE}
             className="flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold text-foreground/60 border border-transparent"
           >
             Home

@@ -45,10 +45,13 @@ export default function BottomTabBar() {
       <div className="flex items-center bg-card backdrop-blur-xl backdrop-saturate-150 border border-border rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.6)] px-1.5">
         {user ? (
           <>
+            {/* "/" opens Reels on phones (HomeRoute), so Home covers both. */}
             <NavLink
               to="/"
               end
-              className={({ isActive }) => tabClass(isActive)}
+              className={({ isActive }) =>
+                tabClass(isActive || location.pathname === "/reels")
+              }
             >
               <Home size={ICON_SIZE} aria-hidden="true" />
               <span className="max-w-full truncate text-xs font-semibold tracking-[0.02em]">
