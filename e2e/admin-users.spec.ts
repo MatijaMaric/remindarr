@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { isAuthGetSession, mockLoggedIn, mockLoggedOut } from "./helpers";
+import {
+  isAuthGetSession,
+  mockLoggedIn,
+  mockLoggedOut,
+  stubAuthenticatedShell,
+} from "./helpers";
 import { AdminUsersPage } from "./pages/admin-users-page";
 
 test.describe.configure({ mode: "serial" });
@@ -61,6 +66,7 @@ const TWO_USER_LIST = {
 };
 
 async function mockAdminSession(page: AdminUsersPage["page"]) {
+  await stubAuthenticatedShell(page);
   await page.route(isAuthGetSession, (route) =>
     route.fulfill({ json: MOCK_ADMIN_SESSION }),
   );

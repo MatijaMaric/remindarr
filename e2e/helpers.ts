@@ -231,10 +231,14 @@ export async function mockLoggedOut(page: Page) {
  *
  * Registered on the browser context so a page.route() in the spec still wins.
  */
-async function stubAuthenticatedShell(page: Page) {
+export async function stubAuthenticatedShell(page: Page) {
   const context = page.context();
   await context.route("**/api/user/settings/advisory**", (route) =>
     route.fulfill({ json: { level: "none", allowlist: [] } }),
+  );
+  // useAppearance fetches this on every route (#1362); {} merges onto its defaults.
+  await context.route("**/api/user/settings/appearance**", (route) =>
+    route.fulfill({ json: {} }),
   );
   await context.route("**/api/user/settings/subscriptions**", (route) =>
     route.fulfill({ json: { providerIds: [], onlyMine: false } }),

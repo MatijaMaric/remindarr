@@ -1,10 +1,16 @@
 import { test, expect } from "@playwright/test";
-import { isAuthGetSession, mockLoggedOut, mockLoggedIn } from "./helpers";
+import {
+  isAuthGetSession,
+  mockLoggedOut,
+  mockLoggedIn,
+  stubAuthenticatedShell,
+} from "./helpers";
 import { MorePagePO } from "./pages/more-page";
 
 test.describe.configure({ mode: "serial" });
 
 async function setupMoreMocks(page: MorePagePO["page"]) {
+  await stubAuthenticatedShell(page);
   // Background shell components — must mock to prevent auth:unauthorized.
   await page.route("**/api/achievements/me**", (route) =>
     route.fulfill({ json: [] }),

@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { isAuthGetSession, mockLoggedIn } from "./helpers";
+import {
+  isAuthGetSession,
+  mockLoggedIn,
+  stubAuthenticatedShell,
+} from "./helpers";
 import { SettingsAdminPage } from "./pages/settings-admin-page";
 
 test.describe.configure({ mode: "serial" });
@@ -23,6 +27,7 @@ const MOCK_ADMIN_SESSION = {
 };
 
 async function mockAdminSession(page: SettingsAdminPage["page"]) {
+  await stubAuthenticatedShell(page);
   await page.route(isAuthGetSession, (route) =>
     route.fulfill({ json: MOCK_ADMIN_SESSION }),
   );

@@ -171,7 +171,7 @@ test.describe("Browse", () => {
     await expect(page.getByRole("article")).toHaveCount(0);
 
     // Empty state message from TitleList
-    await expect(page.getByText("No titles found.")).toBeVisible();
+    await expect(page.getByText("No titles found")).toBeVisible();
 
     // Filter bar still rendered
     await expect(browse.categoryButton("Popular")).toBeVisible();
