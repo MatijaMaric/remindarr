@@ -21,7 +21,6 @@ const libraryKeys = new Set([
   "titles",
   "browse",
   "search",
-  "up-next",
   "rating",
   "episode-rating",
   "season-ratings",
