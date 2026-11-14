@@ -46,14 +46,14 @@ export default function MonthlyActivityCard({
       <div className="flex items-baseline justify-between mb-3.5 gap-4">
         <div>
           <Kicker>{t("userProfile.dossier.activity12m")}</Kicker>
-          <div className="text-base font-bold text-zinc-100">
+          <div className="text-base font-bold text-foreground">
             {t("userProfile.dossier.activitySummary", {
               episodes: totals.episodes,
               movies: totals.movies,
             })}
           </div>
         </div>
-        <div className="flex gap-3.5 text-[11px] text-zinc-400">
+        <div className="flex gap-3.5 text-[11px] text-muted-foreground">
           <Legend
             color={EPISODE_COLOR}
             label={t("userProfile.dossier.legendEpisodes")}

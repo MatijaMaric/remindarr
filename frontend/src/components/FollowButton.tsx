@@ -71,12 +71,12 @@ export default function FollowButton({
 
   let className: string;
   if (showUnfollow) {
-    className = "bg-red-500 text-white";
+    className = "bg-destructive-soft text-destructive";
   } else if (following) {
-    className = "bg-amber-500 text-zinc-950";
+    className = "bg-primary text-primary-foreground";
   } else {
     className =
-      "bg-zinc-800 text-zinc-400 hover:bg-amber-500 hover:text-zinc-950";
+      "bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground";
   }
 
   return (
@@ -85,7 +85,7 @@ export default function FollowButton({
       disabled={loading}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className={`min-h-8 inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${className} disabled:opacity-50`}
+      className={`min-h-8 inline-flex items-center justify-center px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer ${className} disabled:opacity-50`}
     >
       {label}
     </button>

@@ -73,7 +73,7 @@ export default function ExternalLinks({
           target="_blank"
           rel="noopener noreferrer"
           title={link.label}
-          className="text-zinc-400 hover:text-white transition-colors"
+          className="text-muted-foreground hover:text-foreground transition-colors"
           data-testid={`external-link-${link.label.toLowerCase()}`}
         >
           {link.icon}
@@ -85,7 +85,7 @@ export default function ExternalLinks({
 
 function TmdbIcon() {
   return (
-    <span className="inline-flex items-center rounded bg-current/10 px-1.5 py-0.5 text-[11px] font-bold leading-none tracking-tight">
+    <span className="inline-flex items-center rounded-sm bg-current/10 px-1.5 py-0.5 text-[11px] font-bold leading-none tracking-tight">
       TMDB
     </span>
   );
@@ -93,7 +93,7 @@ function TmdbIcon() {
 
 function ImdbIcon() {
   return (
-    <span className="inline-flex items-center rounded bg-current/10 px-1.5 py-0.5 text-[11px] font-bold leading-none tracking-tight">
+    <span className="inline-flex items-center rounded-sm bg-current/10 px-1.5 py-0.5 text-[11px] font-bold leading-none tracking-tight">
       IMDb
     </span>
   );

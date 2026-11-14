@@ -46,7 +46,7 @@ function PersonCardItem({ person }: { person: TrendingPerson }) {
       className="group w-32 flex-shrink-0 text-center"
       style={{ scrollSnapAlign: "start" }}
     >
-      <div className="mx-auto mb-2 h-28 w-28 overflow-hidden rounded-full bg-zinc-800 transition-all group-hover:ring-2 group-hover:ring-amber-400">
+      <div className="mx-auto mb-2 h-28 w-28 overflow-hidden rounded-full bg-muted transition-all group-hover:ring-2 group-hover:ring-primary">
         {person.profileUrl ? (
           <img
             src={person.profileUrl}
@@ -55,16 +55,16 @@ function PersonCardItem({ person }: { person: TrendingPerson }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-b from-zinc-800 to-zinc-950 text-3xl text-zinc-500">
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-b from-muted to-background text-3xl text-muted-foreground">
             {person.name.charAt(0)}
           </div>
         )}
       </div>
-      <p className="truncate text-sm font-medium text-white transition-colors group-hover:text-amber-400">
+      <p className="truncate text-sm font-medium text-foreground transition-colors group-hover:text-primary-text">
         {person.name}
       </p>
       {person.knownForDepartment && (
-        <p className="truncate text-xs text-zinc-400">
+        <p className="truncate text-xs text-muted-foreground">
           {person.knownForDepartment}
         </p>
       )}
@@ -73,7 +73,7 @@ function PersonCardItem({ person }: { person: TrendingPerson }) {
 }
 
 function GroupHeading({ children }: { children: React.ReactNode }) {
-  return <h3 className="mb-2 text-xs text-zinc-400">{children}</h3>;
+  return <h3 className="mb-2 text-xs text-muted-foreground">{children}</h3>;
 }
 
 export default function TrendingSection({
@@ -97,7 +97,7 @@ export default function TrendingSection({
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="aspect-[2/3] w-44 flex-shrink-0 animate-pulse rounded-xl bg-zinc-800/60"
+              className="aspect-[2/3] w-44 flex-shrink-0 animate-pulse rounded-lg bg-muted/60"
             />
           ))}
         </div>

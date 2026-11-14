@@ -58,7 +58,7 @@ describe("ReelsUndoBar", () => {
   it("applies active styling to the selected rating", () => {
     render(<ReelsUndoBar {...defaultProps} currentRating="DISLIKE" />);
     const btn = screen.getByRole("button", { name: "Dislike" });
-    expect(btn.className).toContain("bg-amber-500");
+    expect(btn.className).toContain("bg-primary");
   });
 
   it("calls onRate with each rating value correctly", () => {

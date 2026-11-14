@@ -95,9 +95,9 @@ export function getCellBorderColor(items: CalendarItem[]): string {
   const hasShows = items.some(
     (i) => i.type === "title" && i.data.object_type === "SHOW",
   );
-  if (hasEpisodes && (hasMovies || hasShows)) return "border-l-amber-500";
-  if (hasEpisodes) return "border-l-emerald-500";
-  if (hasMovies) return "border-l-blue-500";
+  if (hasEpisodes && (hasMovies || hasShows)) return "border-l-primary";
+  if (hasEpisodes) return "border-l-success";
+  if (hasMovies) return "border-l-info";
   if (hasShows) return "border-l-purple-500";
   return "";
 }
@@ -142,15 +142,15 @@ export function ViewToggle({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center bg-zinc-800 rounded-lg p-0.5">
+    <div className="flex items-center bg-muted rounded-md p-0.5">
       <button
         onClick={() => onViewModeChange("grid")}
         aria-label={t("calendar.gridView")}
         aria-pressed={viewMode === "grid"}
-        className={`p-1.5 rounded-md transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-800 ${
+        className={`p-1.5 rounded-sm transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-muted ${
           viewMode === "grid"
-            ? "bg-amber-500 text-zinc-950"
-            : "text-zinc-400 hover:text-white"
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:text-foreground"
         }`}
         title="Grid view"
       >
@@ -160,10 +160,10 @@ export function ViewToggle({
         onClick={() => onViewModeChange("week")}
         aria-label={t("calendar.weekView")}
         aria-pressed={viewMode === "week"}
-        className={`p-1.5 rounded-md transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-800 ${
+        className={`p-1.5 rounded-sm transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-muted ${
           viewMode === "week"
-            ? "bg-amber-500 text-zinc-950"
-            : "text-zinc-400 hover:text-white"
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:text-foreground"
         }`}
         title="Week view"
       >
@@ -173,10 +173,10 @@ export function ViewToggle({
         onClick={() => onViewModeChange("agenda")}
         aria-label={t("calendar.agendaView")}
         aria-pressed={viewMode === "agenda"}
-        className={`p-1.5 rounded-md transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-800 ${
+        className={`p-1.5 rounded-sm transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-muted ${
           viewMode === "agenda"
-            ? "bg-amber-500 text-zinc-950"
-            : "text-zinc-400 hover:text-white"
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:text-foreground"
         }`}
         title="Agenda view"
       >
@@ -203,20 +203,20 @@ export function DensityToggle({
   ];
   return (
     <div
-      className="flex items-center bg-zinc-800 rounded-lg p-0.5 gap-0.5"
+      className="flex items-center bg-muted rounded-md p-0.5 gap-0.5"
       title="Density"
     >
-      <AlignJustifyIcon className="size-3.5 text-zinc-500 mx-1 flex-shrink-0" />
+      <AlignJustifyIcon className="size-3.5 text-muted-foreground mx-1 flex-shrink-0" />
       {options.map((opt) => (
         <button
           key={opt.value}
           onClick={() => onDensityChange(opt.value)}
           aria-label={opt.label}
           aria-pressed={density === opt.value}
-          className={`px-2 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-800 ${
+          className={`px-2 py-1 rounded-sm text-[11px] font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-muted ${
             density === opt.value
-              ? "bg-amber-500 text-zinc-950"
-              : "text-zinc-400 hover:text-white"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           {opt.label.charAt(0).toUpperCase()}
@@ -242,17 +242,17 @@ const DayHeader = memo(function DayHeader({
 
   return (
     <div
-      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-md ${
         isToday
-          ? "bg-amber-500/10 border-l-2 border-amber-500"
-          : "bg-zinc-900/60 border-l-2 border-zinc-700"
+          ? "bg-primary-soft border-l-2 border-primary"
+          : "bg-card/60 border-l-2 border-border"
       }`}
     >
       {posterUrl && (
         <img
           src={posterUrl}
           alt=""
-          className="w-10 h-15 rounded object-cover flex-shrink-0"
+          className="w-10 h-15 rounded-sm object-cover flex-shrink-0"
           loading="lazy"
           width={40}
           height={60}
@@ -260,17 +260,17 @@ const DayHeader = memo(function DayHeader({
       )}
       <div className="flex-1 min-w-0">
         {isToday && (
-          <span className="text-[10px] uppercase tracking-widest text-amber-400 font-semibold">
+          <span className="text-[11px] uppercase tracking-widest text-primary-text font-semibold">
             Today
           </span>
         )}
         <h3
-          className={`text-sm font-semibold ${isToday ? "text-white" : "text-zinc-200"}`}
+          className={`text-sm font-semibold ${isToday ? "text-foreground" : "text-foreground-secondary"}`}
         >
           {dateLabel}
         </h3>
       </div>
-      <span className="text-xs text-zinc-500 flex-shrink-0">
+      <span className="text-xs text-muted-foreground flex-shrink-0">
         {items.length} item{items.length !== 1 ? "s" : ""}
       </span>
     </div>
@@ -725,14 +725,14 @@ function AgendaCalendarImpl({
                 key={dateKey}
                 onClick={() => scrollToDate(dateKey)}
                 aria-label={t("calendar.goToDay", { date: dateKey })}
-                className={`w-8 h-8 rounded-full text-xs font-medium flex items-center justify-center transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-950 ${
+                className={`w-8 h-8 rounded-full text-xs font-medium flex items-center justify-center transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${
                   isTodayDate
-                    ? "bg-amber-500 text-zinc-950 font-bold"
+                    ? "bg-primary text-primary-foreground font-bold"
                     : isActive
-                      ? "bg-zinc-700 text-white ring-1 ring-amber-500/50"
+                      ? "bg-muted-hover text-foreground ring-1 ring-primary-border"
                       : isPast
-                        ? "text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800"
-                        : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                        ? "text-muted-foreground hover:text-muted-foreground hover:bg-muted"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
                 title={dateKey}
               >
@@ -746,13 +746,13 @@ function AgendaCalendarImpl({
       {/* Main content */}
       <div className="flex-1 min-w-0 space-y-4">
         {/* Header */}
-        <div className="flex flex-col gap-3 sticky top-14 z-30 bg-zinc-950 pb-2">
+        <div className="flex flex-col gap-3 sticky top-14 z-30 bg-background pb-2">
           <div className="flex items-center gap-3">
             <Popover.Root open={pickerOpen} onOpenChange={setPickerOpen}>
               <Popover.Trigger
-                className={`flex items-center gap-2 px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white text-sm hover:bg-zinc-700 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/50 ${viewMode ? "flex-1" : "w-full"}`}
+                className={`flex items-center gap-2 px-3 py-2 bg-muted border border-border rounded-md text-foreground text-sm hover:bg-muted-hover transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-border ${viewMode ? "flex-1" : "w-full"}`}
               >
-                <CalendarIcon className="size-4 text-amber-400 flex-shrink-0" />
+                <CalendarIcon className="size-4 text-primary-text flex-shrink-0" />
                 <span>
                   {activeDate.toLocaleDateString(undefined, {
                     month: "long",
@@ -768,18 +768,18 @@ function AgendaCalendarImpl({
                   sideOffset={4}
                   className="z-50"
                 >
-                  <Popover.Popup className="rounded-lg border border-white/[0.08] bg-zinc-900 shadow-xl p-2">
+                  <Popover.Popup className="rounded-md border border-border bg-card shadow-xl p-2">
                     <Calendar
                       mode="single"
                       selected={activeDate}
                       defaultMonth={activeDate}
-                      className="!bg-zinc-900 text-white [--cell-size:--spacing(8)]"
+                      className="!bg-card text-foreground [--cell-size:--spacing(8)]"
                       classNames={{
-                        month_caption: "text-white",
-                        weekday: "!text-zinc-500",
-                        today: "!bg-amber-500/20 !text-amber-400",
-                        day: "text-zinc-300",
-                        outside: "!text-zinc-600",
+                        month_caption: "text-foreground",
+                        weekday: "!text-muted-foreground",
+                        today: "!bg-primary-soft !text-primary-text",
+                        day: "text-foreground-secondary",
+                        outside: "!text-muted-foreground",
                       }}
                       onSelect={(date) => {
                         if (date) {
@@ -789,16 +789,16 @@ function AgendaCalendarImpl({
                       }}
                       modifiers={{ hasContent: contentDateObjects }}
                       modifiersClassNames={{
-                        hasContent: "!text-amber-400 font-semibold",
+                        hasContent: "!text-primary-text font-semibold",
                       }}
                     />
-                    <div className="border-t border-white/[0.08] pt-2 mt-1">
+                    <div className="border-t border-border pt-2 mt-1">
                       <button
                         onClick={() => {
                           jumpToDate(new Date());
                           setPickerOpen(false);
                         }}
-                        className="w-full px-3 py-1.5 text-sm font-medium text-amber-400 hover:bg-zinc-800 rounded-md transition-colors cursor-pointer"
+                        className="w-full px-3 py-1.5 text-sm font-medium text-primary-text hover:bg-muted rounded-sm transition-colors cursor-pointer"
                       >
                         Go to Today
                       </button>
@@ -825,10 +825,10 @@ function AgendaCalendarImpl({
               <button
                 key={f.value}
                 onClick={() => setTypeFilter(f.value)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                   typeFilter === f.value
-                    ? "bg-amber-500 text-zinc-950"
-                    : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >
                 {f.label}
@@ -838,10 +838,10 @@ function AgendaCalendarImpl({
               onClick={() => setHideWatched((v) => !v)}
               aria-label={t("calendar.hideWatched")}
               aria-pressed={hideWatched}
-              className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 ${
+              className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                 hideWatched
-                  ? "bg-amber-500 text-zinc-950"
-                  : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
               title={hideWatched ? "Show watched" : "Hide watched"}
             >
@@ -862,7 +862,7 @@ function AgendaCalendarImpl({
             <div ref={topRef} className="h-1" />
 
             {condensedEntries.length === 0 ? (
-              <div className="text-center py-8 text-zinc-500 text-sm">
+              <div className="text-center py-8 text-muted-foreground text-sm">
                 No items for this period.
               </div>
             ) : (
@@ -876,11 +876,11 @@ function AgendaCalendarImpl({
                           key={`gap-${entry.from}-${entry.to}`}
                           className="flex items-center gap-3 py-2"
                         >
-                          <div className="flex-1 h-px bg-zinc-800" />
-                          <span className="text-xs text-zinc-600">
+                          <div className="flex-1 h-px bg-muted" />
+                          <span className="text-xs text-muted-foreground">
                             {entry.from} – {entry.to}: No releases
                           </span>
-                          <div className="flex-1 h-px bg-zinc-800" />
+                          <div className="flex-1 h-px bg-muted" />
                         </div>
                       );
                     }
@@ -907,7 +907,7 @@ function AgendaCalendarImpl({
                         {showCrowdedBanner && (
                           <div className="flex items-center gap-2 mb-2 px-1">
                             <div className="flex-1 h-px bg-orange-500/30" />
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[10px] font-mono font-semibold">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[11px] font-mono font-semibold">
                               Crowded week
                             </span>
                             <div className="flex-1 h-px bg-orange-500/30" />
@@ -951,7 +951,7 @@ function AgendaCalendarImpl({
                                         showEps.length > 1 ? showEps.length : 1
                                       }
                                     >
-                                      <div className="bg-zinc-900 rounded-xl overflow-hidden flex sm:block [&_button]:min-h-10">
+                                      <div className="bg-card rounded-lg overflow-hidden flex sm:block [&_button]:min-h-10">
                                         <Link
                                           to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
                                           aria-label={`${ep.show_title} ${formatEpisodeCode(ep)}`}
@@ -967,7 +967,7 @@ function AgendaCalendarImpl({
                                               loading="lazy"
                                             />
                                           ) : (
-                                            <div className="w-full h-full sm:aspect-video bg-gradient-to-b from-zinc-800 to-zinc-950" />
+                                            <div className="w-full h-full sm:aspect-video bg-gradient-to-b from-muted to-background" />
                                           )}
                                         </Link>
                                         <div
@@ -982,9 +982,9 @@ function AgendaCalendarImpl({
                                           <div className="flex items-center justify-between gap-2">
                                             <Link
                                               to={`/title/${ep.title_id}`}
-                                              className="hover:text-amber-400 transition-colors min-w-0"
+                                              className="hover:text-primary-text transition-colors min-w-0"
                                             >
-                                              <h3 className="font-semibold text-white text-sm break-words">
+                                              <h3 className="font-semibold text-foreground text-sm break-words">
                                                 {ep.show_title}
                                               </h3>
                                             </Link>
@@ -1002,14 +1002,14 @@ function AgendaCalendarImpl({
                                           </div>
                                           <Link
                                             to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
-                                            className="hover:text-amber-400 transition-colors"
+                                            className="hover:text-primary-text transition-colors"
                                           >
                                             <p className="text-xs mt-0.5">
-                                              <span className="text-amber-400 font-medium">
+                                              <span className="text-primary-text font-medium">
                                                 {formatEpisodeCode(ep)}
                                               </span>
                                               {ep.name && (
-                                                <span className="text-zinc-400">
+                                                <span className="text-muted-foreground">
                                                   {" "}
                                                   · {ep.name}
                                                 </span>
@@ -1058,7 +1058,7 @@ function AgendaCalendarImpl({
 
             <div ref={bottomRef} className="h-1" />
             {loadingMore && (
-              <div className="text-center py-4 text-zinc-500 text-sm">
+              <div className="text-center py-4 text-muted-foreground text-sm">
                 Loading more...
               </div>
             )}

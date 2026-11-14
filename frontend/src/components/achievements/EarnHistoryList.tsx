@@ -35,8 +35,10 @@ export function EarnHistoryList({ history }: EarnHistoryListProps) {
         const relative = formatRelativeTime(date);
         return (
           <div key={i} className="flex items-center justify-between text-sm">
-            <span className="text-zinc-300">{ctx ?? relative}</span>
-            <span className="text-zinc-500">{date.toLocaleDateString()}</span>
+            <span className="text-foreground-secondary">{ctx ?? relative}</span>
+            <span className="text-muted-foreground">
+              {date.toLocaleDateString()}
+            </span>
           </div>
         );
       })}

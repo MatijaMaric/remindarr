@@ -31,7 +31,7 @@ export default function WatchlistTabs({
   const { t } = useTranslation();
   return (
     <div
-      className="flex gap-1 overflow-x-auto border-b border-white/[0.06]"
+      className="flex gap-1 overflow-x-auto border-b border-border"
       role="tablist"
       data-testid="watchlist-tabs"
     >
@@ -46,17 +46,17 @@ export default function WatchlistTabs({
             onClick={() => onChange(tab.key)}
             className={`px-4 py-2.5 text-[13px] whitespace-nowrap cursor-pointer flex items-center gap-2 -mb-px border-b-2 transition-colors ${
               isActive
-                ? "font-semibold text-zinc-100 border-amber-400"
-                : "font-medium text-zinc-400 border-transparent hover:text-zinc-200"
+                ? "font-semibold text-foreground border-primary"
+                : "font-medium text-muted-foreground border-transparent hover:text-foreground-secondary"
             }`}
             data-testid={`tab-${tab.key}`}
           >
             {t(tab.labelKey)}
             <span
-              className={`font-mono text-[10px] px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center ${
+              className={`font-mono text-[11px] px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center ${
                 isActive
-                  ? "bg-amber-400 text-black"
-                  : "bg-white/[0.08] text-zinc-400"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-accent text-muted-foreground"
               }`}
             >
               {counts[tab.key]}

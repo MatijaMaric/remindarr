@@ -16,10 +16,10 @@ export function Pill({ children, active, onClick, className, ref }: PillProps) {
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "rounded-full px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors",
+        "rounded-full px-3 py-1.5 pointer-coarse:py-[9px] text-xs font-semibold whitespace-nowrap transition-colors",
         active
-          ? "bg-amber-400 text-black border-transparent"
-          : "bg-white/[0.04] border border-white/[0.08] text-zinc-300 hover:text-zinc-100 hover:bg-white/[0.08]",
+          ? "bg-primary text-primary-foreground border-transparent"
+          : "bg-fill-subtle border border-border text-foreground-secondary hover:text-foreground hover:bg-accent",
         className,
       )}
     >

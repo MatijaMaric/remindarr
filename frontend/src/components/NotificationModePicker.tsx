@@ -125,10 +125,10 @@ export default function NotificationModePicker({
               const newValue = value === mode ? null : value;
               modeMutation.mutate({ value: newValue });
             }}
-            className={`flex-1 flex items-center justify-center gap-1 rounded px-1.5 py-1 text-xs transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-1 rounded-sm px-1.5 py-1 text-xs transition-colors ${
               isActive
-                ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
-                : "text-zinc-500 hover:text-zinc-300 border border-transparent hover:border-zinc-700"
+                ? "bg-primary-soft text-primary-text border border-primary-border"
+                : "text-muted-foreground hover:text-foreground-secondary border border-transparent hover:border-border"
             }`}
           >
             <Icon className="w-3.5 h-3.5" />
@@ -149,10 +149,10 @@ export default function NotificationModePicker({
           aria-pressed={remind}
           disabled={modeMutation.isPending || remindMutation.isPending}
           onClick={() => remindMutation.mutate({ newValue: !remind })}
-          className={`flex items-center justify-center gap-1 rounded px-1.5 py-1 text-xs transition-colors border ${
+          className={`flex items-center justify-center gap-1 rounded-sm px-1.5 py-1 text-xs transition-colors border ${
             remind
               ? "bg-purple-500/20 text-purple-400 border-purple-500/40"
-              : "text-zinc-500 hover:text-zinc-300 border-transparent hover:border-zinc-700"
+              : "text-muted-foreground hover:text-foreground-secondary border-transparent hover:border-border"
           }`}
         >
           <BellDot className="w-3.5 h-3.5" />

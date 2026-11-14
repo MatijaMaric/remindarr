@@ -29,7 +29,7 @@ export default function TitleDetailPage() {
   if (isError) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-red-400 select-text">
+        <div className="text-destructive select-text">
           {error instanceof Error ? error.message : "Failed to load details"}
         </div>
       </div>
@@ -43,5 +43,9 @@ export default function TitleDetailPage() {
     return <ShowDetail data={data as ShowDetailsResponse} />;
   }
 
-  return <div className="text-zinc-400 text-center py-20">Title not found</div>;
+  return (
+    <div className="text-muted-foreground text-center py-20">
+      Title not found
+    </div>
+  );
 }

@@ -34,17 +34,17 @@ export default function AchievementDetailPage() {
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="h-6 w-32 bg-zinc-800 rounded animate-pulse mb-6" />
-        <div className="h-48 bg-zinc-800 rounded animate-pulse" />
+        <div className="h-6 w-32 bg-muted rounded-sm animate-pulse mb-6" />
+        <div className="h-48 bg-muted rounded-sm animate-pulse" />
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-8 text-zinc-400">
+      <div className="max-w-2xl mx-auto px-4 py-8 text-muted-foreground">
         Achievement not found.
-        <Link to={backHref} className="ml-2 text-amber-400 hover:underline">
+        <Link to={backHref} className="ml-2 text-primary-text hover:underline">
           Back
         </Link>
       </div>
@@ -58,7 +58,7 @@ export default function AchievementDetailPage() {
       {/* Back link */}
       <Link
         to={backHref}
-        className="flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"
+        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground-secondary"
       >
         <ChevronLeft className="w-4 h-4" />
         All achievements
@@ -76,10 +76,10 @@ export default function AchievementDetailPage() {
         </div>
         <div className="space-y-1 min-w-0">
           <Kicker>{data.category}</Kicker>
-          <h1 className="text-2xl font-bold text-zinc-100">{data.title}</h1>
-          <p className="text-zinc-400 text-sm">{data.description}</p>
+          <h1 className="text-2xl font-bold text-foreground">{data.title}</h1>
+          <p className="text-muted-foreground text-sm">{data.description}</p>
           {data.rarity && (
-            <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-amber-900/40 text-amber-300 border border-amber-700/30">
+            <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-primary/40 text-primary-text border border-primary-border">
               {data.rarity.bucket} · {data.rarity.pct}% earned
             </span>
           )}
@@ -89,15 +89,15 @@ export default function AchievementDetailPage() {
       {/* Progress */}
       {isOwnProfile && !data.earned && (
         <div className="space-y-1">
-          <div className="flex justify-between text-xs text-zinc-400">
+          <div className="flex justify-between text-xs text-muted-foreground">
             <span>Progress</span>
             <span>
               {data.progress} / {data.threshold}
             </span>
           </div>
-          <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
             <div
-              className="h-full bg-amber-500 rounded-full"
+              className="h-full bg-primary rounded-full"
               style={{
                 width: `${Math.min(100, (data.progress / data.threshold) * 100)}%`,
               }}
@@ -107,7 +107,7 @@ export default function AchievementDetailPage() {
       )}
 
       {data.earned && (
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted-foreground">
           First earned{" "}
           {data.earnedAt ? new Date(data.earnedAt).toLocaleDateString() : "—"}
         </p>
@@ -116,7 +116,7 @@ export default function AchievementDetailPage() {
       {/* Ladder rung dots */}
       {isLadder && data.ladder && (
         <div className="space-y-2">
-          <p className="text-xs text-zinc-500 uppercase tracking-wide">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">
             Ladder progress
           </p>
           <LadderProgress rungs={data.ladder.rungs} currentKey={data.key} />
@@ -126,7 +126,7 @@ export default function AchievementDetailPage() {
       {/* Earn history for repeatables */}
       {data.repeatable && data.history.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs text-zinc-500 uppercase tracking-wide">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">
             Earn history
           </p>
           <EarnHistoryList history={data.history} />

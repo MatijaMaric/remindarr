@@ -368,10 +368,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role="status"
             aria-label="Loading Remindarr"
             className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6"
-            style={{ background: "var(--bg-app)", color: "var(--text-app)" }}
+            style={{
+              background: "var(--background)",
+              color: "var(--foreground)",
+            }}
           >
             <div className="flex items-center gap-3" aria-hidden="true">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-amber-400 text-xl font-extrabold text-black">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-primary text-xl font-extrabold text-primary-foreground">
                 R
               </div>
               <span className="text-2xl font-bold tracking-tight">

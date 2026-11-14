@@ -21,19 +21,21 @@ export default function ContentAdvisoryBanner({
   return (
     <div
       role="status"
-      className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-zinc-200"
+      className="rounded-md border border-primary-border bg-primary-soft px-4 py-3 text-sm text-foreground-secondary"
     >
-      <p className="font-semibold text-amber-400">
+      <p className="font-semibold text-primary-text">
         {filtered
           ? t("advisory.banner.filtered", {
               cert: certification ?? t("advisory.unrated"),
             })
           : t("advisory.banner.allowed")}
       </p>
-      <p className="mt-1 text-zinc-400">{t("advisory.banner.notRemoved")}</p>
+      <p className="mt-1 text-muted-foreground">
+        {t("advisory.banner.notRemoved")}
+      </p>
       <button
         type="button"
-        className="mt-2 text-sm font-semibold text-amber-400 hover:text-amber-300 cursor-pointer"
+        className="mt-2 text-sm font-semibold text-primary-text hover:text-primary-text cursor-pointer"
         onClick={() => void setAllowed(titleId, !allowlisted)}
       >
         {allowlisted

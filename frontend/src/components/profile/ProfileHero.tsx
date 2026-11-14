@@ -24,7 +24,7 @@ function MemberSinceKicker({ memberSince }: { memberSince: string | null }) {
     month: "long",
   });
   return (
-    <div className="text-xs font-medium text-zinc-300 mb-2.5">
+    <div className="text-xs font-medium text-foreground-secondary mb-2.5">
       {t("userProfile.memberSinceKicker", { date: formatted })}
     </div>
   );
@@ -109,7 +109,7 @@ export default function ProfileHero({
         </div>
       ) : (
         <div
-          className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-zinc-950"
+          className="absolute inset-0 bg-gradient-to-br from-muted to-background"
           data-testid="fallback-bg"
         />
       )}
@@ -128,7 +128,7 @@ export default function ProfileHero({
         {isOwnProfile && (
           <Link
             to="/settings"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/50 backdrop-blur-md border border-white/[0.08] text-xs font-semibold text-zinc-300 hover:text-amber-400 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-scrim backdrop-blur-md border border-border text-xs font-semibold text-foreground-secondary hover:text-primary-text transition-colors"
             data-testid="settings-link"
           >
             <Settings className="size-3.5" />
@@ -138,7 +138,7 @@ export default function ProfileHero({
         <button
           type="button"
           onClick={handleShare}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/50 backdrop-blur-md border border-white/[0.08] text-xs font-semibold text-zinc-300 hover:text-white transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-scrim backdrop-blur-md border border-border text-xs font-semibold text-foreground-secondary hover:text-foreground transition-colors cursor-pointer"
           data-testid="share-link"
         >
           <Share2 className="size-3.5" />
@@ -161,7 +161,7 @@ export default function ProfileHero({
             <div className="min-w-0">
               <MemberSinceKicker memberSince={user.member_since} />
               <h1
-                className="text-white font-extrabold leading-none truncate select-text"
+                className="text-foreground font-extrabold leading-none truncate select-text"
                 style={{
                   fontSize: "clamp(32px, 5vw, 56px)",
                   letterSpacing: "-0.032em",
@@ -170,7 +170,7 @@ export default function ProfileHero({
               >
                 {displayName}
               </h1>
-              <div className="mt-2 font-mono text-[13px] text-zinc-300 flex items-center gap-2 select-text">
+              <div className="mt-2 font-mono text-[13px] text-foreground-secondary flex items-center gap-2 select-text">
                 @{user.username}
                 {user.country_code && (
                   <span
@@ -186,23 +186,23 @@ export default function ProfileHero({
 
           <div className="flex items-center gap-2.5 shrink-0">
             <div
-              className="flex gap-5 px-4 py-2.5 rounded-xl bg-black/55 backdrop-blur-md border border-white/[0.08]"
+              className="flex gap-5 px-4 py-2.5 rounded-lg bg-scrim backdrop-blur-md border border-border"
               data-testid="social-bar"
             >
               <div className="text-center">
-                <div className="text-[18px] font-extrabold text-white leading-tight">
+                <div className="text-[18px] font-extrabold text-foreground leading-tight">
                   {followerCount}
                 </div>
-                <div className="text-xs font-medium text-zinc-400">
+                <div className="text-xs font-medium text-muted-foreground">
                   {t("userProfile.followers")}
                 </div>
               </div>
-              <div className="w-px bg-white/10" />
+              <div className="w-px bg-accent" />
               <div className="text-center">
-                <div className="text-[18px] font-extrabold text-white leading-tight">
+                <div className="text-[18px] font-extrabold text-foreground leading-tight">
                   {followingCount}
                 </div>
-                <div className="text-xs font-medium text-zinc-400">
+                <div className="text-xs font-medium text-muted-foreground">
                   {t("userProfile.following")}
                 </div>
               </div>

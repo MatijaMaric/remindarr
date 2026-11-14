@@ -53,10 +53,10 @@ export default function PinButton({
       disabled={togglePinMutation.isPending}
       aria-pressed={pinned}
       title={pinned ? "Unpin from profile" : "Pin to profile"}
-      className={`min-h-8 inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+      className={`min-h-8 inline-flex items-center justify-center px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
         pinned
-          ? "bg-amber-500/20 text-amber-400 border border-amber-500/40 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/40"
-          : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 border border-transparent"
+          ? "bg-primary-soft text-primary-text border border-primary-border hover:bg-destructive-soft hover:text-destructive hover:border-destructive/40"
+          : "bg-muted text-muted-foreground hover:bg-muted-hover border border-transparent"
       } disabled:opacity-50`}
     >
       {togglePinMutation.isPending ? "..." : pinned ? "📌 Pinned" : "📌 Pin"}

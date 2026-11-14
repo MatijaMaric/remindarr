@@ -65,13 +65,13 @@ export default function MovieHero({
             <img
               src={posterUrl}
               alt={title.title}
-              className="w-full rounded-xl shadow-[0_24px_70px_rgba(0,0,0,0.7)] border border-white/[0.08]"
+              className="w-full rounded-lg shadow-[0_24px_70px_rgba(0,0,0,0.7)] border border-border"
               width={500}
               height={750}
               loading="eager"
             />
           ) : (
-            <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-400 border border-white/[0.08]">
+            <div className="aspect-[2/3] bg-muted rounded-lg flex items-center justify-center text-muted-foreground border border-border">
               {t("titleCard.noPoster")}
             </div>
           )}
@@ -81,7 +81,7 @@ export default function MovieHero({
         <div className="flex-1 space-y-3 max-w-[820px]">
           <div>
             {tmdb?.tagline && (
-              <p className="text-sm text-amber-400 italic mb-1 select-text">
+              <p className="text-sm text-primary-text italic mb-1 select-text">
                 {tmdb.tagline}
               </p>
             )}
@@ -91,21 +91,21 @@ export default function MovieHero({
                 ? ` · ${title.offers[0].provider_name}`
                 : ""}
             </Kicker>
-            <h1 className="text-[30px] sm:text-[56px] lg:text-[64px] leading-none tracking-[-0.035em] font-extrabold text-white select-text">
+            <h1 className="text-[30px] sm:text-[56px] lg:text-[64px] leading-none tracking-[-0.035em] font-extrabold text-foreground select-text">
               {displayTitle}
             </h1>
             {originalTitle && originalTitle !== displayTitle && (
-              <p className="text-sm text-zinc-400 mt-1 select-text">
+              <p className="text-sm text-muted-foreground mt-1 select-text">
                 {originalTitle}
               </p>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-400">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             {title.release_year && <span>{title.release_year}</span>}
             {(title.runtime_minutes || tmdb?.runtime) && (
               <>
-                <span className="text-zinc-600">·</span>
+                <span className="text-muted-foreground">·</span>
                 <span>
                   {formatRuntime(tmdb?.runtime || title.runtime_minutes)}
                 </span>
@@ -113,15 +113,15 @@ export default function MovieHero({
             )}
             {certification && (
               <>
-                <span className="text-zinc-600">·</span>
-                <span className="border border-white/[0.10] px-1.5 py-0.5 rounded text-xs">
+                <span className="text-muted-foreground">·</span>
+                <span className="border border-border px-1.5 py-0.5 rounded-sm text-xs">
                   {certification}
                 </span>
               </>
             )}
             {tmdb?.status && (
               <>
-                <span className="text-zinc-600">·</span>
+                <span className="text-muted-foreground">·</span>
                 <span>{tmdb.status}</span>
               </>
             )}
@@ -171,7 +171,7 @@ export default function MovieHero({
               <button
                 type="button"
                 onClick={() => setShowTrailer((prev) => !prev)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-zinc-200 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-fill-subtle hover:bg-accent border border-border text-foreground-secondary transition-colors"
               >
                 <svg
                   className="w-4 h-4"

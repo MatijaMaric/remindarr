@@ -81,11 +81,11 @@ export default function UserProfilePage() {
     return (
       <div className="space-y-8">
         <h1 className="sr-only">{username}</h1>
-        <div className="h-[360px] bg-zinc-900 animate-pulse rounded-xl" />
+        <div className="h-[360px] bg-card animate-pulse rounded-lg" />
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8 max-w-7xl mx-auto px-4">
           <div className="space-y-4">
-            <div className="h-24 bg-zinc-900 animate-pulse rounded-xl" />
-            <div className="h-64 bg-zinc-900 animate-pulse rounded-xl" />
+            <div className="h-24 bg-card animate-pulse rounded-lg" />
+            <div className="h-64 bg-card animate-pulse rounded-lg" />
           </div>
           <TitleGridSkeleton />
         </div>
@@ -97,7 +97,7 @@ export default function UserProfilePage() {
     const notFound = error instanceof ApiError && error.status === 404;
     return (
       <div className="max-w-7xl mx-auto py-12 text-center">
-        <p className="text-zinc-400 text-lg">
+        <p className="text-muted-foreground text-lg">
           {notFound
             ? t("userProfile.userNotFound")
             : t("userProfile.loadFailed")}
@@ -106,7 +106,7 @@ export default function UserProfilePage() {
           <button
             type="button"
             onClick={() => void refetch()}
-            className="inline-block mt-4 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-sm transition-colors cursor-pointer"
+            className="inline-block mt-4 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm transition-colors cursor-pointer"
           >
             {t("common.retry")}
           </button>
@@ -160,7 +160,7 @@ export default function UserProfilePage() {
             {showWatchTogether && (
               <Link
                 to={`/u/${currentUser.username}/overlap/${user.username}`}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-semibold text-sm transition-colors"
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm transition-colors"
               >
                 {t("userProfile.watchTogether", "Watch together")}
               </Link>
@@ -240,7 +240,7 @@ export default function UserProfilePage() {
               </>
             ) : (
               <Card padding="xl" className="text-center">
-                <p className="text-zinc-400">
+                <p className="text-muted-foreground">
                   {is_own_profile
                     ? t("userProfile.watchlistHiddenOwn")
                     : profile_visibility === "friends_only"
@@ -250,7 +250,7 @@ export default function UserProfilePage() {
                 {is_own_profile && (
                   <Link
                     to="/settings"
-                    className="inline-block mt-3 text-amber-400 hover:text-amber-300 text-sm"
+                    className="inline-block mt-3 text-primary-text hover:text-primary-text text-sm"
                   >
                     {t("userProfile.enableInSettings")}
                   </Link>

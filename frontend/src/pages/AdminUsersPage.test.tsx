@@ -142,7 +142,7 @@ describe("AdminUsersPage", () => {
     getAdminUsersSpy.mockImplementation(() => new Promise(() => {}));
     render(<AdminUsersPage />, { wrapper: Wrapper });
     // Loading text is present from i18n key admin.users.loading - check for loading element
-    const el = document.querySelector(".text-zinc-500");
+    const el = document.querySelector(".text-muted-foreground");
     expect(el).not.toBeNull();
   });
 

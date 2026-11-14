@@ -29,7 +29,7 @@ describe("KeyboardShortcutsModal", () => {
       />,
     );
     const backdrop = document.querySelector(
-      ".absolute.inset-0.bg-black\\/60",
+      ".absolute.inset-0.bg-scrim",
     ) as HTMLElement;
     fireEvent.click(backdrop);
     expect(closed).toBe(true);

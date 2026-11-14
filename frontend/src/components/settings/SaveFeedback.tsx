@@ -37,7 +37,7 @@ export function SaveFeedback({
   return (
     <div
       role={status === "failed" ? "alert" : "status"}
-      className="mt-3 text-sm text-zinc-400"
+      className="mt-3 text-sm text-muted-foreground"
     >
       {status === "unsaved" && t("settings.unsaved")}
       {status === "saving" && t("settings.saving")}

@@ -98,10 +98,10 @@ export default function WatchlistCard({ title }: WatchlistCardProps) {
   return (
     <Link
       to={`/title/${title.id}`}
-      className="bg-zinc-900 border border-white/[0.06] rounded-lg overflow-hidden flex flex-col hover:border-white/[0.15] transition-colors group"
+      className="bg-card border border-border rounded-md overflow-hidden flex flex-col hover:border-border transition-colors group"
       data-testid="watchlist-card"
     >
-      <div className="relative aspect-[16/9] bg-zinc-800">
+      <div className="relative aspect-[16/9] bg-muted">
         {title.poster_url ? (
           <img
             src={title.poster_url}
@@ -112,18 +112,18 @@ export default function WatchlistCard({ title }: WatchlistCardProps) {
             height={513}
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-950" />
+          <div className="w-full h-full bg-gradient-to-br from-muted to-background" />
         )}
         <span
-          className="absolute top-2 left-2 text-xs font-bold px-2 py-0.5 rounded"
+          className="absolute top-2 left-2 text-xs font-bold px-2 py-0.5 rounded-sm"
           style={{ color: status.color, background: status.background }}
         >
           {t(status.labelKey)}
         </span>
         {pct !== null && (
-          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/40">
+          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-scrim">
             <div
-              className="h-full bg-amber-400"
+              className="h-full bg-primary"
               style={{ width: `${pct}%` }}
               data-testid="watchlist-progress"
             />
@@ -131,10 +131,10 @@ export default function WatchlistCard({ title }: WatchlistCardProps) {
         )}
       </div>
       <div className="px-3 py-2.5">
-        <div className="text-[13px] font-semibold text-zinc-100 truncate mb-0.5">
+        <div className="text-[13px] font-semibold text-foreground truncate mb-0.5">
           {title.title}
         </div>
-        <div className="font-mono text-[11px] text-zinc-400 truncate">
+        <div className="font-mono text-[11px] text-muted-foreground truncate">
           {meta || "—"}
         </div>
       </div>

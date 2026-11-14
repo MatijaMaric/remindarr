@@ -57,12 +57,12 @@ export default function SearchBar({
         onChange={(e) => setValue(e.target.value)}
         placeholder={t("search.placeholder")}
         aria-label={t("search.label")}
-        className="flex-1 bg-zinc-900 border border-white/[0.06] rounded-lg px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:border-transparent"
+        className="flex-1 bg-card border border-border rounded-md px-4 py-2.5 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border focus-visible:border-transparent"
       />
       <button
         type="submit"
         disabled={loading || !value.trim()}
-        className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-950 text-sm font-medium rounded-lg transition-colors cursor-pointer"
+        className="px-5 py-2.5 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground text-sm font-medium rounded-md transition-colors cursor-pointer"
       >
         {loading ? "..." : t("search.button")}
       </button>

@@ -13,11 +13,13 @@ const TOOLTIP = "Streak resets at midnight UTC";
 function StreakDisplay({ streak }: { streak: StreakData }) {
   return (
     <div className="flex items-center gap-2" title={TOOLTIP}>
-      <Flame className="text-amber-400 shrink-0" size={20} />
-      <span className="text-2xl font-extrabold text-amber-400 tabular-nums">
+      <Flame className="text-primary-text shrink-0" size={20} />
+      <span className="text-2xl font-extrabold text-primary-text tabular-nums">
         {streak.currentStreak}
       </span>
-      <span className="text-sm text-zinc-400 font-medium">day streak</span>
+      <span className="text-sm text-muted-foreground font-medium">
+        day streak
+      </span>
     </div>
   );
 }
@@ -29,7 +31,7 @@ export default function StreakCounter({ streak, variant }: StreakCounterProps) {
         <Kicker>Streak</Kicker>
         <StreakDisplay streak={streak} />
         {streak.longestStreak > 0 && (
-          <p className="text-xs text-zinc-500 font-mono mt-1.5">
+          <p className="text-xs text-muted-foreground font-mono mt-1.5">
             Longest: {streak.longestStreak} days
           </p>
         )}
@@ -40,21 +42,21 @@ export default function StreakCounter({ streak, variant }: StreakCounterProps) {
   if (variant === "home") {
     return (
       <div
-        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-400/[0.06] border border-amber-400/20"
+        className="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary-soft border border-primary-border"
         title={TOOLTIP}
       >
-        <Flame className="text-amber-400 shrink-0" size={22} />
+        <Flame className="text-primary-text shrink-0" size={22} />
         <div>
           <div className="flex items-baseline gap-1.5">
-            <span className="text-xl font-extrabold text-amber-400 tabular-nums">
+            <span className="text-xl font-extrabold text-primary-text tabular-nums">
               {streak.currentStreak}
             </span>
-            <span className="text-sm text-zinc-300 font-medium">
+            <span className="text-sm text-foreground-secondary font-medium">
               day streak
             </span>
           </div>
           {streak.longestStreak > 0 && (
-            <p className="text-[11px] text-zinc-500 font-mono">
+            <p className="text-[11px] text-muted-foreground font-mono">
               Longest: {streak.longestStreak} days
             </p>
           )}
@@ -66,12 +68,14 @@ export default function StreakCounter({ streak, variant }: StreakCounterProps) {
   // inline variant
   return (
     <span
-      className="inline-flex items-center gap-1.5 text-amber-400 font-bold"
+      className="inline-flex items-center gap-1.5 text-primary-text font-bold"
       title={TOOLTIP}
     >
       <Flame size={16} />
       <span className="text-base tabular-nums">{streak.currentStreak}</span>
-      <span className="text-xs text-zinc-400 font-medium">day streak</span>
+      <span className="text-xs text-muted-foreground font-medium">
+        day streak
+      </span>
     </span>
   );
 }

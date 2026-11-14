@@ -46,10 +46,10 @@ function OverviewCard({
   sub?: string;
 }) {
   return (
-    <div className="bg-zinc-900 rounded-xl p-4 flex flex-col gap-1">
-      <span className="text-2xl font-bold text-white">{value}</span>
-      <span className="text-sm text-zinc-400">{label}</span>
-      {sub && <span className="text-xs text-zinc-600">{sub}</span>}
+    <div className="bg-card rounded-lg p-4 flex flex-col gap-1">
+      <span className="text-2xl font-bold text-foreground">{value}</span>
+      <span className="text-sm text-muted-foreground">{label}</span>
+      {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
     </div>
   );
 }
@@ -66,16 +66,16 @@ function HorizontalBar({
   const pct = max > 0 ? (count / max) * 100 : 0;
   return (
     <div className="flex items-center gap-3">
-      <span className="text-xs text-zinc-300 w-28 truncate flex-shrink-0">
+      <span className="text-xs text-foreground-secondary w-28 truncate flex-shrink-0">
         {label}
       </span>
-      <div className="flex-1 bg-zinc-800 rounded-full h-2 overflow-hidden">
+      <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
         <div
-          className="h-full bg-amber-500 rounded-full transition-all duration-300"
+          className="h-full bg-primary rounded-full transition-all duration-300"
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-xs text-zinc-500 w-6 text-right flex-shrink-0">
+      <span className="text-xs text-muted-foreground w-6 text-right flex-shrink-0">
         {count}
       </span>
     </div>
@@ -106,7 +106,7 @@ function MonthlyChart({ monthly }: { monthly: StatsResponse["monthly"] }) {
             >
               {total > 0 ? (
                 <div
-                  className="w-full rounded-t overflow-hidden flex flex-col-reverse"
+                  className="w-full rounded-t-sm overflow-hidden flex flex-col-reverse"
                   style={{ height: `${heightPct}%` }}
                   title={t("stats.monthTooltip", {
                     movies: m.movies_watched,
@@ -117,13 +117,13 @@ function MonthlyChart({ monthly }: { monthly: StatsResponse["monthly"] }) {
                     className="bg-blue-500"
                     style={{ height: `${moviePct}%` }}
                   />
-                  <div className="bg-amber-500 flex-1" />
+                  <div className="bg-primary flex-1" />
                 </div>
               ) : (
-                <div className="w-full h-0.5 bg-zinc-800 rounded" />
+                <div className="w-full h-0.5 bg-muted rounded-sm" />
               )}
             </div>
-            <span className="text-[9px] text-zinc-600">
+            <span className="text-[11px] text-muted-foreground">
               {formatMonth(m.month)}
             </span>
           </div>
@@ -140,14 +140,14 @@ function ShowStatusGrid({
 }) {
   const { t } = useTranslation();
   const entries = [
-    { key: "watching", color: "bg-amber-500" },
+    { key: "watching", color: "bg-primary" },
     { key: "caught_up", color: "bg-teal-500" },
-    { key: "not_started", color: "bg-zinc-500" },
+    { key: "not_started", color: "bg-muted-hover" },
     { key: "completed", color: "bg-emerald-500" },
     { key: "on_hold", color: "bg-yellow-500" },
     { key: "dropped", color: "bg-red-600" },
     { key: "plan_to_watch", color: "bg-blue-500" },
-    { key: "unreleased", color: "bg-zinc-700" },
+    { key: "unreleased", color: "bg-muted-hover" },
   ].map((e) => ({ ...e, label: t(statusLabelKey(e.key) ?? e.key) })) as {
     key: keyof StatsResponse["shows_by_status"];
     color: string;
@@ -162,14 +162,14 @@ function ShowStatusGrid({
         return (
           <div
             key={key}
-            className="bg-zinc-900 rounded-lg p-3 flex items-center gap-3"
+            className="bg-card rounded-md p-3 flex items-center gap-3"
           >
             <div
               className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${color}`}
             />
             <div>
-              <div className="text-base font-bold text-white">{count}</div>
-              <div className="text-xs text-zinc-500">{label}</div>
+              <div className="text-base font-bold text-foreground">{count}</div>
+              <div className="text-xs text-muted-foreground">{label}</div>
             </div>
           </div>
         );
@@ -193,7 +193,7 @@ export function StatsView() {
 
   if (isError) {
     return (
-      <p className="text-zinc-400 text-sm py-12 text-center">
+      <p className="text-muted-foreground text-sm py-12 text-center">
         {t("stats.loadError")}
       </p>
     );
@@ -206,7 +206,7 @@ export function StatsView() {
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="bg-zinc-900 rounded-xl p-4 h-20 animate-pulse"
+              className="bg-card rounded-lg p-4 h-20 animate-pulse"
             />
           ))}
         </div>
@@ -223,7 +223,7 @@ export function StatsView() {
       <div className="flex justify-end">
         <Link
           to="/wrapped"
-          className="text-sm text-amber-400 hover:text-amber-300"
+          className="text-sm text-primary-text hover:text-primary-text"
         >
           {t("nav.wrapped")} →
         </Link>
@@ -273,7 +273,7 @@ export function StatsView() {
       </div>
 
       {!!overview.watch_time_unknown_episodes && (
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted-foreground">
           {t("watchTime.unknownEpisodes", {
             count: overview.watch_time_unknown_episodes,
           })}
@@ -281,14 +281,14 @@ export function StatsView() {
       )}
 
       {/* Monthly Activity */}
-      <div className="bg-zinc-900 rounded-xl p-4 space-y-3">
+      <div className="bg-card rounded-lg p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold">
             {t("stats.monthlyActivity")}
           </h3>
-          <div className="flex items-center gap-4 text-xs text-zinc-500">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-amber-500 inline-block" />{" "}
+              <span className="w-2.5 h-2.5 rounded-sm bg-primary inline-block" />{" "}
               {t("stats.episodes")}
             </span>
             <span className="flex items-center gap-1.5">
@@ -303,7 +303,7 @@ export function StatsView() {
       {/* Genre + Language breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {genres.length > 0 && (
-          <div className="bg-zinc-900 rounded-xl p-4 space-y-3">
+          <div className="bg-card rounded-lg p-4 space-y-3">
             <h3 className="text-sm font-semibold">{t("stats.topGenres")}</h3>
             <div className="space-y-2">
               {genres.map((g) => (
@@ -319,7 +319,7 @@ export function StatsView() {
         )}
 
         {languages.length > 0 && (
-          <div className="bg-zinc-900 rounded-xl p-4 space-y-3">
+          <div className="bg-card rounded-lg p-4 space-y-3">
             <h3 className="text-sm font-semibold">{t("stats.topLanguages")}</h3>
             <div className="space-y-2">
               {languages.map((l) => (

@@ -10,10 +10,10 @@ export function RatingBadge({
   if (score === null || score === undefined) return null;
   return (
     <div className="flex flex-col items-center gap-1">
-      <span className="text-xs font-medium text-zinc-400">{label}</span>
-      <span className="text-[22px] font-bold text-white leading-none">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <span className="text-[22px] font-bold text-foreground leading-none">
         {score.toFixed(1)}
-        <span className="text-sm text-zinc-500">/{max}</span>
+        <span className="text-sm text-muted-foreground">/{max}</span>
       </span>
     </div>
   );

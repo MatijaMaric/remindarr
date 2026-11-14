@@ -64,7 +64,7 @@ export default function ReelsSeasonPanel({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-[70] bg-black/50"
+        className="fixed inset-0 z-[70] bg-scrim"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -74,29 +74,29 @@ export default function ReelsSeasonPanel({
         role="dialog"
         aria-modal="true"
         aria-label={`${showTitle} — Season ${seasonNumber}`}
-        className="select-none dark-section fixed top-0 right-0 bottom-0 z-[80] w-[85vw] max-w-sm bg-zinc-900/95 backdrop-blur-sm border-l border-white/[0.06] overflow-y-auto animate-slide-in-right safe-top"
+        className="select-none dark-section fixed top-0 right-0 bottom-0 z-[80] w-[85vw] max-w-sm bg-card/95 backdrop-blur-sm border-l border-border overflow-y-auto animate-slide-in-right safe-top"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-zinc-900/95 backdrop-blur-sm border-b border-white/[0.06] p-4 z-10">
+        <div className="sticky top-0 bg-card/95 backdrop-blur-sm border-b border-border p-4 z-10">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-bold text-white truncate pr-2">
+            <h3 className="text-lg font-bold text-foreground truncate pr-2">
               {showTitle}
             </h3>
             <button
               onClick={onClose}
               aria-label="Close season panel"
-              className="text-zinc-400 hover:text-white transition-colors cursor-pointer flex-shrink-0"
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex-shrink-0"
             >
               <X size={20} aria-hidden="true" />
             </button>
           </div>
-          <p className="text-sm text-zinc-400">Season {seasonNumber}</p>
+          <p className="text-sm text-muted-foreground">Season {seasonNumber}</p>
           {!allWatched && (
             <button
               onClick={() => onBulkWatch(unwatchedIds)}
-              className="mt-3 w-full bg-amber-500 hover:bg-amber-400 text-zinc-950 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+              className="mt-3 w-full bg-primary hover:bg-primary/90 text-primary-foreground py-2 rounded-md text-sm font-medium transition-colors cursor-pointer"
             >
               Mark Season Watched ({unwatchedIds.length} episodes)
             </button>
@@ -108,10 +108,10 @@ export default function ReelsSeasonPanel({
           {sorted.map((ep) => (
             <div
               key={ep.id}
-              className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+              className={`flex items-start gap-3 p-3 rounded-md border transition-colors ${
                 ep.is_watched
-                  ? "bg-zinc-800/30 border-zinc-800/60 opacity-60"
-                  : "bg-zinc-800/60 border-white/[0.06]"
+                  ? "bg-muted/30 border-border opacity-60"
+                  : "bg-muted/60 border-border"
               }`}
             >
               <WatchedToggleButton
@@ -122,15 +122,17 @@ export default function ReelsSeasonPanel({
               <div className="flex-1 min-w-0">
                 <Link
                   to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
-                  className="hover:text-amber-400 transition-colors"
+                  className="hover:text-primary-text transition-colors"
                 >
-                  <p className="text-sm font-medium text-white">
+                  <p className="text-sm font-medium text-foreground">
                     E{String(ep.episode_number).padStart(2, "0")}
                     {ep.name && ` · ${ep.name}`}
                   </p>
                 </Link>
                 {ep.air_date && (
-                  <p className="text-xs text-zinc-500 mt-0.5">{ep.air_date}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {ep.air_date}
+                  </p>
                 )}
               </div>
             </div>

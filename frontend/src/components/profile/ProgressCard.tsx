@@ -21,8 +21,8 @@ function LabeledProgress({
   return (
     <div>
       <div className="flex justify-between items-baseline text-xs mb-1.5">
-        <span className="text-zinc-300">{label}</span>
-        <span className="font-mono text-zinc-200">
+        <span className="text-foreground-secondary">{label}</span>
+        <span className="font-mono text-foreground-secondary">
           {value}/{max}
         </span>
       </div>
@@ -58,7 +58,7 @@ export default function ProgressCard({ overview }: ProgressCardProps) {
             1,
           )}
         />
-        <div className="grid grid-cols-2 gap-3.5 pt-2.5 border-t border-white/[0.04]">
+        <div className="grid grid-cols-2 gap-3.5 pt-2.5 border-t border-border">
           <StatBlock
             value={formatWatchTime(overview.watch_time_minutes)}
             label={t("userProfile.dossier.watchTime")}
@@ -80,7 +80,7 @@ export default function ProgressCard({ overview }: ProgressCardProps) {
           />
         </div>
         {!!overview.watch_time_unknown_episodes && (
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-muted-foreground">
             {t("watchTime.unknownEpisodes", {
               count: overview.watch_time_unknown_episodes,
             })}

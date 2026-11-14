@@ -152,13 +152,13 @@ export default function NotificationPrompt() {
   return (
     <div
       role="banner"
-      className="mb-4 flex items-center gap-3 rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-3"
+      className="mb-4 flex items-center gap-3 rounded-md border border-primary-border bg-primary-soft px-4 py-3"
     >
-      <Bell className="size-5 shrink-0 text-amber-400" aria-hidden="true" />
-      <div className="flex-1 text-sm text-zinc-200">
+      <Bell className="size-5 shrink-0 text-primary-text" aria-hidden="true" />
+      <div className="flex-1 text-sm text-foreground-secondary">
         <p>{t("notificationPrompt.message")}</p>
         {failed && (
-          <p role="alert" className="mt-1 text-red-300">
+          <p role="alert" className="mt-1 text-destructive">
             {t("notificationPrompt.error")}
           </p>
         )}
@@ -166,7 +166,7 @@ export default function NotificationPrompt() {
       <button
         onClick={handleEnable}
         disabled={enabling}
-        className="shrink-0 rounded-md bg-amber-500 px-3 py-1.5 text-sm font-medium text-black transition-colors hover:bg-amber-400 disabled:opacity-50"
+        className="shrink-0 rounded-sm bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
       >
         {enabling
           ? t("notificationPrompt.enabling")
@@ -176,7 +176,7 @@ export default function NotificationPrompt() {
       </button>
       <button
         onClick={handleDismiss}
-        className="shrink-0 text-zinc-400 transition-colors hover:text-white"
+        className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
         aria-label={t("notificationPrompt.dismiss")}
       >
         <X className="size-4" />

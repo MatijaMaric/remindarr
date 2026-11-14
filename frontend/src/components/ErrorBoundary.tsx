@@ -62,21 +62,21 @@ export default class ErrorBoundary extends Component<Props, State> {
       const outerClass =
         variant === "inline"
           ? "py-12 px-4 flex items-center justify-center"
-          : "min-h-screen bg-zinc-950 flex items-center justify-center p-4";
+          : "min-h-screen bg-background flex items-center justify-center p-4";
 
       if (isChunkLoadError(this.state.error)) {
         return (
           <div className={outerClass}>
-            <div className="max-w-md w-full bg-zinc-900 border border-red-800 rounded-lg p-6 text-center">
-              <h1 className="text-xl font-bold text-red-400 mb-2">
+            <div className="max-w-md w-full bg-card border border-destructive/40 rounded-md p-6 text-center">
+              <h1 className="text-xl font-bold text-destructive mb-2">
                 A new version is available
               </h1>
-              <p className="text-zinc-400 text-sm mb-4">
+              <p className="text-muted-foreground text-sm mb-4">
                 Refresh to load the latest version.
               </p>
               <button
                 onClick={this.handleReload}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 text-sm font-medium rounded-lg transition-colors cursor-pointer"
+                className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-md transition-colors cursor-pointer"
               >
                 Refresh
               </button>
@@ -87,16 +87,16 @@ export default class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div className={outerClass}>
-          <div className="max-w-md w-full bg-zinc-900 border border-red-800 rounded-lg p-6 text-center">
-            <h1 className="text-xl font-bold text-red-400 mb-2">
+          <div className="max-w-md w-full bg-card border border-destructive/40 rounded-md p-6 text-center">
+            <h1 className="text-xl font-bold text-destructive mb-2">
               Something went wrong
             </h1>
-            <p className="text-zinc-400 text-sm mb-4 select-text">
+            <p className="text-muted-foreground text-sm mb-4 select-text">
               {this.state.error?.message || "An unexpected error occurred."}
             </p>
             <button
               onClick={this.handleReset}
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 text-sm font-medium rounded-lg transition-colors cursor-pointer"
+              className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-md transition-colors cursor-pointer"
             >
               Try Again
             </button>

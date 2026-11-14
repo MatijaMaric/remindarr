@@ -149,7 +149,7 @@ test.describe("Settings — Subscriptions tab", () => {
     const netflixLabel = page
       .getByText("Netflix")
       .locator("xpath=ancestor::label");
-    await expect(netflixLabel.locator(".border-amber-400")).toBeVisible();
+    await expect(netflixLabel.locator(".border-primary")).toBeVisible();
   });
 
   test("TC-05: Unchecking a provider removes it from PUT payload", async ({
@@ -280,7 +280,7 @@ test.describe("Settings — Subscriptions tab", () => {
     const netflixLabel = page
       .getByText("Netflix")
       .locator("xpath=ancestor::label");
-    await expect(netflixLabel.locator(".border-amber-400")).not.toBeVisible();
+    await expect(netflixLabel.locator(".border-primary")).not.toBeVisible();
   });
 
   test("TC-08: Region vs. other providers grouping is correct", async ({

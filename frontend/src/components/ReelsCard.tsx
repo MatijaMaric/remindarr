@@ -131,14 +131,14 @@ export default function ReelsCard({
           height={720}
         />
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-b from-zinc-800 to-zinc-950" />
+        <div className="absolute inset-0 bg-gradient-to-b from-muted to-background" />
       )}
       {blurred && (
         <div
           data-testid="advisory-blur"
-          className="absolute inset-0 bg-zinc-950/40 flex items-center justify-center pointer-events-none z-[1]"
+          className="absolute inset-0 bg-background/40 flex items-center justify-center pointer-events-none z-[1]"
         >
-          <span className="text-xs font-bold uppercase tracking-wide text-zinc-100 bg-black/70 px-3 py-1.5 rounded">
+          <span className="text-xs font-bold uppercase tracking-wide text-scrim-foreground bg-scrim px-3 py-1.5 rounded-sm">
             {episode.age_certification ?? t("titleCard.sensitive")}
           </span>
         </div>
@@ -170,17 +170,17 @@ export default function ReelsCard({
           }}
         >
           {isLive ? (
-            <span className="inline-flex items-center gap-1.5 bg-amber-400 text-black text-[10px] font-extrabold font-mono px-2.5 py-1.5 rounded-full tracking-[0.12em]">
+            <span className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground text-[11px] font-extrabold font-mono px-2.5 py-1.5 rounded-full tracking-[0.12em]">
               <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
               AIRING NOW
             </span>
           ) : countdownLabel ? (
-            <span className="inline-flex items-center gap-1.5 bg-black/55 backdrop-blur text-amber-400 border border-amber-400/30 text-[10px] font-bold font-mono px-2.5 py-1.5 rounded-full tracking-[0.12em]">
+            <span className="inline-flex items-center gap-1.5 bg-scrim backdrop-blur text-primary-text border border-primary-border text-[11px] font-bold font-mono px-2.5 py-1.5 rounded-full tracking-[0.12em]">
               ◷ {countdownLabel}
             </span>
           ) : null}
           {providerName && (
-            <span className="bg-black/55 backdrop-blur text-zinc-300 border border-white/10 text-[11px] font-bold px-2.5 py-1.5 rounded-full tracking-[0.12em]">
+            <span className="bg-scrim backdrop-blur text-foreground-secondary border border-border text-[11px] font-bold px-2.5 py-1.5 rounded-full tracking-[0.12em]">
               {providerName}
             </span>
           )}
@@ -197,10 +197,10 @@ export default function ReelsCard({
             onClick={() => shareEpisode(episode)}
             className="flex flex-col items-center gap-1"
           >
-            <div className="w-11 h-11 rounded-full bg-black/45 backdrop-blur border border-white/12 flex items-center justify-center text-white">
+            <div className="w-11 h-11 rounded-full bg-black/45 backdrop-blur border border-border flex items-center justify-center text-foreground">
               <Share2 size={18} />
             </div>
-            <span className="text-[9px] text-white/75 font-semibold tracking-[0.05em]">
+            <span className="text-[11px] text-foreground/75 font-semibold tracking-[0.05em]">
               Share
             </span>
           </button>
@@ -208,10 +208,10 @@ export default function ReelsCard({
             to={`/title/${episode.title_id}`}
             className="flex flex-col items-center gap-1"
           >
-            <div className="w-11 h-11 rounded-full bg-black/45 backdrop-blur border border-white/12 flex items-center justify-center text-white">
+            <div className="w-11 h-11 rounded-full bg-black/45 backdrop-blur border border-border flex items-center justify-center text-foreground">
               <Info size={18} />
             </div>
-            <span className="text-[9px] text-white/75 font-semibold tracking-[0.05em]">
+            <span className="text-[11px] text-foreground/75 font-semibold tracking-[0.05em]">
               Info
             </span>
           </Link>
@@ -242,7 +242,7 @@ export default function ReelsCard({
           className="absolute z-10 text-right sm:hidden"
           style={{ right: 20, top: 160 }}
         >
-          <div className="text-[11px] text-zinc-400 tracking-[0.12em] leading-relaxed">
+          <div className="text-[11px] text-muted-foreground tracking-[0.12em] leading-relaxed">
             ↑ SWIPE
             <br />
             FOR NEXT
@@ -257,11 +257,13 @@ export default function ReelsCard({
       >
         {caughtUp ? (
           <div className="text-center py-8">
-            <div className="inline-flex items-center gap-2 bg-green-500/20 text-green-400 px-4 py-2 rounded-full text-lg font-semibold mb-2">
+            <div className="inline-flex items-center gap-2 bg-success/20 text-success px-4 py-2 rounded-full text-lg font-semibold mb-2">
               <Check size={20} />
               All caught up!
             </div>
-            <p className="text-zinc-400 text-sm mb-3">{episode.show_title}</p>
+            <p className="text-muted-foreground text-sm mb-3">
+              {episode.show_title}
+            </p>
             {undoInfo && (
               <div className="flex justify-center">
                 <ReelsUndoBar {...undoInfo} />
@@ -272,7 +274,7 @@ export default function ReelsCard({
           <>
             {/* Show title — mono amber kicker */}
             <Link to={`/title/${episode.title_id}`}>
-              <div className="text-xs text-zinc-300 font-medium mb-1.5 drop-shadow hover:opacity-80 transition-opacity">
+              <div className="text-xs text-foreground-secondary font-medium mb-1.5 drop-shadow hover:opacity-80 transition-opacity">
                 <span>{episode.show_title}</span>
                 {!isMovie && <span> · {formatEpisodeCode(episode)}</span>}
                 {isMovie && <span> · Movie</span>}
@@ -287,7 +289,7 @@ export default function ReelsCard({
                   : `/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`
               }
             >
-              <h2 className="text-[30px] font-extrabold tracking-[-0.02em] leading-[1.02] text-white mb-2.5 drop-shadow-lg hover:text-amber-300 transition-colors select-text">
+              <h2 className="text-[30px] font-extrabold tracking-[-0.02em] leading-[1.02] text-foreground mb-2.5 drop-shadow-lg hover:text-primary-text transition-colors select-text">
                 {episode.name ??
                   (isMovie ? episode.show_title : formatEpisodeCode(episode))}
               </h2>
@@ -295,7 +297,7 @@ export default function ReelsCard({
 
             {/* Meta line */}
             {airDateFormatted && (
-              <div className="font-mono text-[12px] text-zinc-300 mb-3.5 drop-shadow">
+              <div className="font-mono text-[12px] text-foreground-secondary mb-3.5 drop-shadow">
                 {airDateFormatted}
                 {providerName ? ` · ${providerName}` : ""}
               </div>
@@ -303,7 +305,7 @@ export default function ReelsCard({
 
             {/* Overview */}
             {episode.overview && (
-              <p className="text-sm text-white/70 line-clamp-3 mb-4 drop-shadow select-text">
+              <p className="text-sm text-foreground/70 line-clamp-3 mb-4 drop-shadow select-text">
                 {episode.overview}
               </p>
             )}
@@ -319,15 +321,15 @@ export default function ReelsCard({
               );
               return (
                 <div className="mb-4">
-                  <div className="flex justify-between mb-1.5 font-mono text-[10px] text-zinc-500 tracking-[0.1em]">
+                  <div className="flex justify-between mb-1.5 font-mono text-[11px] text-muted-foreground tracking-[0.1em]">
                     <span>{pct}% CAUGHT UP</span>
                     <span>
                       {watched} OF {total}
                     </span>
                   </div>
-                  <div className="h-[3px] bg-white/[0.15] rounded-full overflow-hidden">
+                  <div className="h-[3px] bg-accent rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-amber-400 rounded-full"
+                      className="h-full bg-primary rounded-full"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -351,7 +353,7 @@ export default function ReelsCard({
             {/* Mark as watched button */}
             <button
               onClick={onMarkWatched}
-              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-zinc-950 px-6 py-3 rounded-xl text-base font-semibold transition-colors cursor-pointer w-full justify-center"
+              className="flex items-center gap-2 bg-primary hover:bg-primary/90 active:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg text-base font-semibold transition-colors cursor-pointer w-full justify-center"
             >
               <CheckCircle size={20} />
               Mark as Watched

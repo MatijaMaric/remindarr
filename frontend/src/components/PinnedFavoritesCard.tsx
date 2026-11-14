@@ -73,12 +73,12 @@ function SortableTile({ title, onUnpin, saving }: SortableTileProps) {
         <img
           src={title.poster_url}
           alt={title.title}
-          className="w-full rounded-lg aspect-[2/3] object-cover border border-white/[0.06]"
+          className="w-full rounded-md aspect-[2/3] object-cover border border-border"
           draggable={false}
         />
       ) : (
-        <div className="w-full rounded-lg aspect-[2/3] bg-zinc-800 flex items-center justify-center border border-white/[0.06]">
-          <span className="text-zinc-600 text-xs text-center px-1 line-clamp-2">
+        <div className="w-full rounded-md aspect-[2/3] bg-muted flex items-center justify-center border border-border">
+          <span className="text-muted-foreground text-xs text-center px-1 line-clamp-2">
             {title.title}
           </span>
         </div>
@@ -87,7 +87,7 @@ function SortableTile({ title, onUnpin, saving }: SortableTileProps) {
         onPointerDown={(e) => e.stopPropagation()}
         onClick={() => onUnpin(title.id)}
         disabled={saving}
-        className="absolute top-1 right-1 w-5 h-5 bg-black/70 rounded-full flex items-center justify-center text-red-400 text-[10px] hover:bg-red-900/70 transition-colors disabled:opacity-30 z-20 cursor-pointer"
+        className="absolute top-1 right-1 w-5 h-5 bg-scrim rounded-full flex items-center justify-center text-scrim-foreground text-[11px] hover:bg-red-900/70 transition-colors disabled:opacity-30 z-20 cursor-pointer"
         title="Unpin"
         aria-label={`Unpin ${title.title}`}
       >
@@ -170,9 +170,9 @@ export default function PinnedFavoritesCard({
   }
 
   return (
-    <div className="rounded-xl bg-zinc-900/60 border border-white/[0.06] p-4">
+    <div className="rounded-lg bg-card/60 border border-border p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-zinc-300 tracking-wide uppercase">
+        <h3 className="text-sm font-semibold text-foreground-secondary tracking-wide uppercase">
           Favorites
         </h3>
         {isOwnProfile && displayed.length > 0 && (
@@ -181,7 +181,7 @@ export default function PinnedFavoritesCard({
               setLocalPinned(pinned);
               setEditing((e) => !e);
             }}
-            className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+            className="text-xs text-muted-foreground hover:text-foreground-secondary transition-colors cursor-pointer"
           >
             {editing ? "Done" : "Edit"}
           </button>
@@ -220,11 +220,11 @@ export default function PinnedFavoritesCard({
                     <img
                       src={title.poster_url}
                       alt={title.title}
-                      className="w-full rounded-lg aspect-[2/3] object-cover border border-white/[0.06] hover:border-amber-400/40 transition-colors"
+                      className="w-full rounded-md aspect-[2/3] object-cover border border-border hover:border-primary-border transition-colors"
                     />
                   ) : (
-                    <div className="w-full rounded-lg aspect-[2/3] bg-zinc-800 flex items-center justify-center border border-white/[0.06]">
-                      <span className="text-zinc-600 text-xs text-center px-1 line-clamp-2">
+                    <div className="w-full rounded-md aspect-[2/3] bg-muted flex items-center justify-center border border-border">
+                      <span className="text-muted-foreground text-xs text-center px-1 line-clamp-2">
                         {title.title}
                       </span>
                     </div>
@@ -237,16 +237,16 @@ export default function PinnedFavoritesCard({
               Array.from({ length: 4 - displayed.length }).map((_, i) => (
                 <div
                   key={`empty-${i}`}
-                  className="w-full rounded-lg aspect-[2/3] bg-zinc-800/40 border border-dashed border-zinc-700/50 flex items-center justify-center"
+                  className="w-full rounded-md aspect-[2/3] bg-muted/40 border border-dashed border-border flex items-center justify-center"
                 >
-                  <span className="text-zinc-700 text-lg">+</span>
+                  <span className="text-muted-foreground text-lg">+</span>
                 </div>
               ))}
           </div>
         )
       ) : (
         isOwnProfile && (
-          <p className="text-xs text-zinc-500 text-center py-4">
+          <p className="text-xs text-muted-foreground text-center py-4">
             Pin your favorite titles from any title page
           </p>
         )

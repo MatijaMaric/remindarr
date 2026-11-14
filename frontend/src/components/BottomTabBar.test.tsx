@@ -117,10 +117,10 @@ describe("BottomTabBar", () => {
     expect(container.innerHTML).toBe("");
   });
 
-  it("has xl:hidden class for compact phone and tablet navigation", () => {
+  it("has md:hidden class so only phones get the tab bar", () => {
     const { container } = render(<BottomTabBar />, { wrapper: Wrapper });
     const nav = container.querySelector("nav");
-    expect(nav?.className).toContain("xl:hidden");
+    expect(nav?.className).toContain("md:hidden");
   });
 
   it("links to correct routes when authenticated", () => {

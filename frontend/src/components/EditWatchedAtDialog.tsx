@@ -86,26 +86,26 @@ export default function EditWatchedAtDialog({
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => pickQuick(0)}
-            className="min-h-7 px-3 py-1 rounded-md text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors cursor-pointer"
+            className="min-h-7 px-3 py-1 rounded-sm text-xs font-medium bg-muted text-foreground-secondary hover:bg-muted-hover transition-colors cursor-pointer"
           >
             {t("watchedAt.today", "Today")}
           </button>
           <button
             onClick={() => pickQuick(1)}
-            className="min-h-7 px-3 py-1 rounded-md text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors cursor-pointer"
+            className="min-h-7 px-3 py-1 rounded-sm text-xs font-medium bg-muted text-foreground-secondary hover:bg-muted-hover transition-colors cursor-pointer"
           >
             {t("watchedAt.yesterday", "Yesterday")}
           </button>
           <button
             onClick={() => pickQuick(7)}
-            className="min-h-7 px-3 py-1 rounded-md text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors cursor-pointer"
+            className="min-h-7 px-3 py-1 rounded-sm text-xs font-medium bg-muted text-foreground-secondary hover:bg-muted-hover transition-colors cursor-pointer"
           >
             {t("watchedAt.lastWeek", "Last week")}
           </button>
           {anchorDate && (
             <button
               onClick={pickAnchor}
-              className="min-h-7 px-3 py-1 rounded-md text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors cursor-pointer"
+              className="min-h-7 px-3 py-1 rounded-sm text-xs font-medium bg-muted text-foreground-secondary hover:bg-muted-hover transition-colors cursor-pointer"
             >
               {t("watchedAt.onRelease", "On release")}
             </button>
@@ -117,15 +117,15 @@ export default function EditWatchedAtDialog({
           selected={selected}
           onSelect={setSelected}
           disabled={{ after: today }}
-          className="rounded-md"
+          className="rounded-sm"
         />
 
-        {error && <p className="text-xs text-red-400">{error}</p>}
+        {error && <p className="text-xs text-destructive">{error}</p>}
 
         <div className="flex justify-end gap-2">
           <AlertDialogClose
             onClick={onClose}
-            className="min-h-8 px-3 py-1.5 rounded-md text-sm font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors cursor-pointer"
+            className="min-h-8 px-3 py-1.5 rounded-sm text-sm font-medium bg-muted text-foreground-secondary hover:bg-muted-hover transition-colors cursor-pointer"
           >
             {t("watchedAt.cancel", "Cancel")}
           </AlertDialogClose>

@@ -139,10 +139,10 @@ export default function TrackButton({
         aria-busy={loading || undefined}
         aria-describedby={tracked ? undefined : hintId}
         title={tracked ? undefined : t("track.hint")}
-        className={`min-h-8 inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+        className={`min-h-8 inline-flex items-center justify-center px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
           tracked
-            ? "bg-amber-400/10 text-amber-300 hover:bg-red-500 hover:text-white"
-            : "bg-zinc-800 text-zinc-400 hover:bg-amber-500 hover:text-zinc-950"
+            ? "bg-primary-soft text-primary-text hover:bg-destructive-soft hover:text-destructive"
+            : "bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground"
         } disabled:opacity-50`}
       >
         {queued ? t("offline.queued") : label}
@@ -162,12 +162,12 @@ export default function TrackButton({
             {t("track.confirmUntrackDescription")}
           </AlertDialogDescription>
           <div className="mt-4 flex justify-end gap-2">
-            <AlertDialogClose className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer transition-colors">
+            <AlertDialogClose className="inline-flex items-center justify-center rounded-sm px-3 py-1.5 text-xs font-medium bg-muted text-muted-foreground hover:bg-muted-hover cursor-pointer transition-colors">
               {t("common.cancel")}
             </AlertDialogClose>
             <button
               onClick={handleUntrack}
-              className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-red-600 text-white hover:bg-red-700 cursor-pointer transition-colors"
+              className="inline-flex items-center justify-center rounded-sm px-3 py-1.5 text-xs font-medium bg-destructive-soft text-destructive hover:bg-destructive/20 cursor-pointer transition-colors"
             >
               {t("track.confirm")}
             </button>

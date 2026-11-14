@@ -31,7 +31,7 @@ function RoleBadge({ user }: { user: AdminUser }) {
   const isAdmin = user.role === "admin" || user.is_admin === 1;
   return (
     <span
-      className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isAdmin ? "bg-amber-500/20 text-amber-400" : "bg-zinc-700 text-zinc-400"}`}
+      className={`text-[11px] font-bold px-1.5 py-0.5 rounded-sm ${isAdmin ? "bg-primary-soft text-primary-text" : "bg-muted-hover text-muted-foreground"}`}
     >
       {isAdmin ? "Admin" : "User"}
     </span>
@@ -40,7 +40,7 @@ function RoleBadge({ user }: { user: AdminUser }) {
 
 function BannedBadge() {
   return (
-    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-900/40 text-red-400">
+    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-sm bg-destructive-soft text-destructive">
       Banned
     </span>
   );
@@ -142,7 +142,9 @@ export default function AdminUsersPage() {
   }
 
   if (!me?.is_admin) {
-    return <div className="text-zinc-400">{t("admin.accessDenied")}</div>;
+    return (
+      <div className="text-muted-foreground">{t("admin.accessDenied")}</div>
+    );
   }
 
   return (
@@ -150,18 +152,18 @@ export default function AdminUsersPage() {
       <div className="flex items-center gap-3">
         <Link
           to="/settings"
-          className="text-zinc-400 hover:text-white transition-colors text-sm"
+          className="text-muted-foreground hover:text-foreground transition-colors text-sm"
         >
           ← {t("admin.backToSettings")}
         </Link>
       </div>
 
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">
+        <h1 className="text-2xl font-bold text-foreground">
           {t("admin.users.title")}
         </h1>
         {data && (
-          <span className="text-sm text-zinc-400">
+          <span className="text-sm text-muted-foreground">
             {t("admin.users.total", { count: data.total })}
           </span>
         )}
@@ -172,7 +174,7 @@ export default function AdminUsersPage() {
         <div className="relative flex-1">
           <Search
             size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
             aria-hidden="true"
           />
           <input
@@ -181,7 +183,7 @@ export default function AdminUsersPage() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("admin.users.searchPlaceholder")}
             aria-label={t("admin.users.searchPlaceholder")}
-            className="w-full bg-zinc-900 border border-white/[0.06] rounded-lg pl-8 pr-4 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+            className="w-full bg-card border border-border rounded-md pl-8 pr-4 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border"
           />
         </div>
         <div className="flex gap-1">
@@ -189,7 +191,7 @@ export default function AdminUsersPage() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-2 text-sm rounded-lg transition-colors cursor-pointer ${filter === f ? "bg-amber-500 text-black font-medium" : "bg-zinc-900 text-zinc-400 hover:text-white border border-white/[0.06]"}`}
+              className={`px-3 py-2 text-sm rounded-md transition-colors cursor-pointer ${filter === f ? "bg-primary text-primary-foreground font-medium" : "bg-card text-muted-foreground hover:text-foreground border border-border"}`}
             >
               {t(`admin.users.filter.${f}`)}
             </button>
@@ -207,8 +209,8 @@ export default function AdminUsersPage() {
           }
         }}
       >
-        <AlertDialogPopup className="max-w-sm space-y-4 bg-zinc-900 border-white/[0.08]">
-          <AlertDialogTitle className="text-base font-semibold text-white">
+        <AlertDialogPopup className="max-w-sm space-y-4 bg-card border-border">
+          <AlertDialogTitle className="text-base font-semibold text-foreground">
             {t("admin.users.banTitle")}
           </AlertDialogTitle>
           <input
@@ -216,18 +218,18 @@ export default function AdminUsersPage() {
             value={banReason}
             onChange={(e) => setBanReason(e.target.value)}
             placeholder={t("admin.users.banReasonPlaceholder")}
-            className="w-full bg-zinc-800 border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+            className="w-full bg-muted border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border"
           />
           <div className="flex gap-2">
             <AlertDialogClose
               onClick={() => {
                 if (banTarget) void handleBan(banTarget);
               }}
-              className="flex-1 py-2 bg-red-700 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
+              className="flex-1 py-2 bg-destructive-soft hover:bg-destructive/20 text-destructive text-sm font-medium rounded-md transition-colors cursor-pointer"
             >
               {t("admin.users.banConfirm")}
             </AlertDialogClose>
-            <AlertDialogClose className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-lg transition-colors cursor-pointer">
+            <AlertDialogClose className="px-4 py-2 bg-muted hover:bg-muted-hover text-foreground-secondary text-sm rounded-md transition-colors cursor-pointer">
               {t("admin.cancel")}
             </AlertDialogClose>
           </div>
@@ -244,8 +246,8 @@ export default function AdminUsersPage() {
           }
         }}
       >
-        <AlertDialogPopup className="max-w-sm space-y-4 bg-zinc-900 border-white/[0.08]">
-          <AlertDialogTitle className="text-base font-semibold text-white">
+        <AlertDialogPopup className="max-w-sm space-y-4 bg-card border-border">
+          <AlertDialogTitle className="text-base font-semibold text-foreground">
             {t("admin.users.resetPasswordTitle", {
               username: resetTarget?.username ?? "",
             })}
@@ -273,17 +275,17 @@ export default function AdminUsersPage() {
               autoComplete="new-password"
               minLength={8}
               required
-              className="w-full bg-zinc-800 border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+              className="w-full bg-muted border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border"
             />
             <div className="flex gap-2">
               <button
                 type="submit"
                 disabled={resetPasswordMutation.isPending}
-                className="flex-1 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 text-sm font-medium rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                className="flex-1 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-md transition-colors cursor-pointer disabled:opacity-50"
               >
                 {t("admin.users.resetPasswordConfirm")}
               </button>
-              <AlertDialogClose className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-lg transition-colors cursor-pointer">
+              <AlertDialogClose className="px-4 py-2 bg-muted hover:bg-muted-hover text-foreground-secondary text-sm rounded-md transition-colors cursor-pointer">
                 {t("admin.cancel")}
               </AlertDialogClose>
             </div>
@@ -298,8 +300,8 @@ export default function AdminUsersPage() {
           if (!open) setConfirmDelete(null);
         }}
       >
-        <AlertDialogPopup className="max-w-sm space-y-4 bg-zinc-900 border-white/[0.08]">
-          <AlertDialogTitle className="text-base font-semibold text-red-400">
+        <AlertDialogPopup className="max-w-sm space-y-4 bg-card border-border">
+          <AlertDialogTitle className="text-base font-semibold text-destructive">
             {t("admin.users.deleteTitle")}
           </AlertDialogTitle>
           <AlertDialogDescription>
@@ -310,11 +312,11 @@ export default function AdminUsersPage() {
               onClick={() => {
                 if (confirmDelete) void handleDelete(confirmDelete);
               }}
-              className="flex-1 py-2 bg-red-800 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
+              className="flex-1 py-2 bg-destructive-soft hover:bg-destructive/20 text-destructive text-sm font-medium rounded-md transition-colors cursor-pointer"
             >
               {t("admin.users.deleteConfirmButton")}
             </AlertDialogClose>
-            <AlertDialogClose className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-lg transition-colors cursor-pointer">
+            <AlertDialogClose className="px-4 py-2 bg-muted hover:bg-muted-hover text-foreground-secondary text-sm rounded-md transition-colors cursor-pointer">
               {t("admin.cancel")}
             </AlertDialogClose>
           </div>
@@ -323,22 +325,22 @@ export default function AdminUsersPage() {
 
       {/* User table */}
       {isLoading ? (
-        <div className="text-zinc-400 text-sm py-8 text-center">
+        <div className="text-muted-foreground text-sm py-8 text-center">
           {t("admin.users.loading")}
         </div>
       ) : isError ? (
-        <div className="text-red-400 text-sm">
+        <div className="text-destructive text-sm">
           {error instanceof Error ? error.message : String(error)}
         </div>
       ) : !data || data.users.length === 0 ? (
-        <div className="text-zinc-400 text-sm py-8 text-center">
+        <div className="text-muted-foreground text-sm py-8 text-center">
           {t("admin.users.empty")}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-white/[0.06]">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/[0.06] text-zinc-400 text-xs uppercase tracking-wide">
+              <tr className="border-b border-border text-muted-foreground text-xs uppercase tracking-wide">
                 <th className="text-left px-4 py-3 font-medium">
                   {t("admin.users.col.user")}
                 </th>
@@ -356,17 +358,17 @@ export default function AdminUsersPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.04]">
+            <tbody className="divide-y divide-border">
               {data.users.map((user) => (
                 <tr
                   key={user.id}
-                  className="hover:bg-white/[0.02] transition-colors"
+                  className="hover:bg-fill-subtle transition-colors"
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-white">
+                          <span className="font-medium text-foreground">
                             {user.username}
                           </span>
                           {user.banned && <BannedBadge />}
@@ -375,12 +377,12 @@ export default function AdminUsersPage() {
                           </span>
                         </div>
                         {user.name && (
-                          <div className="text-xs text-zinc-400">
+                          <div className="text-xs text-muted-foreground">
                             {user.name}
                           </div>
                         )}
                         {user.email && (
-                          <div className="text-xs text-zinc-400">
+                          <div className="text-xs text-muted-foreground">
                             {user.email}
                           </div>
                         )}
@@ -390,10 +392,10 @@ export default function AdminUsersPage() {
                   <td className="px-4 py-3 hidden sm:table-cell">
                     <RoleBadge user={user} />
                   </td>
-                  <td className="px-4 py-3 hidden md:table-cell text-zinc-400 capitalize">
+                  <td className="px-4 py-3 hidden md:table-cell text-muted-foreground capitalize">
                     {user.auth_provider}
                   </td>
-                  <td className="px-4 py-3 hidden lg:table-cell text-zinc-400">
+                  <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground">
                     {formatDate(user.created_at)}
                   </td>
                   <td className="px-4 py-3">
@@ -413,7 +415,7 @@ export default function AdminUsersPage() {
                                 ? t("admin.users.demote")
                                 : t("admin.users.promote")
                             }
-                            className="p-1.5 rounded-lg text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-primary-text hover:bg-primary-soft transition-colors cursor-pointer"
                           >
                             <Shield size={14} />
                           </button>
@@ -423,7 +425,7 @@ export default function AdminUsersPage() {
                               onClick={() => handleUnban(user.id)}
                               title={t("admin.users.unban")}
                               aria-label={t("admin.users.unban")}
-                              className="p-1.5 rounded-lg text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer"
+                              className="p-1.5 rounded-md text-muted-foreground hover:text-success hover:bg-success/10 transition-colors cursor-pointer"
                             >
                               <ShieldOff size={14} />
                             </button>
@@ -435,7 +437,7 @@ export default function AdminUsersPage() {
                               }}
                               title={t("admin.users.ban")}
                               aria-label={t("admin.users.ban")}
-                              className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                              className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive-soft transition-colors cursor-pointer"
                             >
                               <ShieldOff size={14} />
                             </button>
@@ -449,7 +451,7 @@ export default function AdminUsersPage() {
                               }}
                               title={t("admin.users.resetPassword")}
                               aria-label={t("admin.users.resetPassword")}
-                              className="p-1.5 rounded-lg text-zinc-400 hover:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                              className="p-1.5 rounded-md text-muted-foreground hover:text-primary-text hover:bg-primary-soft transition-colors cursor-pointer"
                             >
                               <KeyRound size={14} />
                             </button>
@@ -459,14 +461,14 @@ export default function AdminUsersPage() {
                             onClick={() => setConfirmDelete(user.id)}
                             title={t("admin.users.delete")}
                             aria-label={t("admin.users.delete")}
-                            className="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive-soft transition-colors cursor-pointer"
                           >
                             <Trash2 size={14} />
                           </button>
                         </>
                       )}
                       {user.id === me.id && (
-                        <span className="text-xs text-zinc-400 px-2">
+                        <span className="text-xs text-muted-foreground px-2">
                           {t("admin.users.you")}
                         </span>
                       )}
@@ -486,18 +488,18 @@ export default function AdminUsersPage() {
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
             aria-label={t("admin.users.prevPage")}
-            className="p-2 rounded-lg bg-zinc-900 border border-white/[0.06] text-zinc-400 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            className="p-2 rounded-md bg-card border border-border text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
           >
             <ChevronLeft size={16} />
           </button>
-          <span className="text-sm text-zinc-400">
+          <span className="text-sm text-muted-foreground">
             {t("admin.users.page", { page, total: data.total_pages })}
           </span>
           <button
             onClick={() => setPage((p) => Math.min(data.total_pages, p + 1))}
             disabled={page >= data.total_pages}
             aria-label={t("admin.users.nextPage")}
-            className="p-2 rounded-lg bg-zinc-900 border border-white/[0.06] text-zinc-400 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            className="p-2 rounded-md bg-card border border-border text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
           >
             <ChevronRight size={16} />
           </button>

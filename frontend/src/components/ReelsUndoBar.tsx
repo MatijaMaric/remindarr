@@ -27,8 +27,8 @@ export default function ReelsUndoBar({
   onUndo,
 }: ReelsUndoBarProps) {
   return (
-    <div className="flex items-center gap-2 bg-zinc-800/80 backdrop-blur-sm rounded-xl px-3 py-2 mb-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
-      <span className="text-xs text-zinc-400 whitespace-nowrap mr-auto">
+    <div className="flex items-center gap-2 bg-muted/80 backdrop-blur-sm rounded-lg px-3 py-2 mb-2 animate-in fade-in slide-in-from-bottom-2 duration-200">
+      <span className="text-xs text-muted-foreground whitespace-nowrap mr-auto">
         Marked {episodeCode}
       </span>
 
@@ -43,8 +43,8 @@ export default function ReelsUndoBar({
               aria-pressed={isActive}
               className={`p-1.5 rounded-full transition-colors cursor-pointer ${
                 isActive
-                  ? "bg-amber-500 text-zinc-950"
-                  : "text-zinc-400 hover:text-white"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <Icon
@@ -57,11 +57,11 @@ export default function ReelsUndoBar({
         })}
       </div>
 
-      <div className="w-px h-5 bg-zinc-600/50" />
+      <div className="w-px h-5 bg-muted-hover/50" />
 
       <button
         onClick={onUndo}
-        className="flex items-center gap-1.5 text-zinc-300 hover:text-white transition-colors cursor-pointer px-1"
+        className="flex items-center gap-1.5 text-foreground-secondary hover:text-foreground transition-colors cursor-pointer px-1"
         aria-label="Undo"
       >
         <Undo2 size={14} />

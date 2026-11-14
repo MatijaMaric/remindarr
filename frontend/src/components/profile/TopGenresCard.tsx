@@ -25,8 +25,8 @@ export default function TopGenresCard({
         {slice.map((g) => (
           <div key={g.genre}>
             <div className="flex justify-between text-xs mb-1.5">
-              <span className="text-zinc-200">{g.genre}</span>
-              <span className="font-mono text-zinc-500">{g.count}</span>
+              <span className="text-foreground-secondary">{g.genre}</span>
+              <span className="font-mono text-muted-foreground">{g.count}</span>
             </div>
             <ThinProgress value={g.count} max={max} height={3} />
           </div>

@@ -26,33 +26,37 @@ interface StatusOption {
 }
 
 const SHOW_OPTIONS: StatusOption[] = [
-  { value: null, labelKey: "status.auto", color: "text-zinc-400" },
-  { value: "watching", labelKey: "status.watching", color: "text-amber-400" },
+  { value: null, labelKey: "status.auto", color: "text-muted-foreground" },
+  {
+    value: "watching",
+    labelKey: "status.watching",
+    color: "text-primary-text",
+  },
   {
     value: "plan_to_watch",
     labelKey: "status.planToWatch",
-    color: "text-blue-400",
+    color: "text-info",
   },
   { value: "on_hold", labelKey: "status.onHold", color: "text-yellow-400" },
-  { value: "dropped", labelKey: "status.dropped", color: "text-red-400" },
+  { value: "dropped", labelKey: "status.dropped", color: "text-destructive" },
   {
     value: "completed",
     labelKey: "status.completed",
-    color: "text-emerald-400",
+    color: "text-success",
   },
 ];
 
 const MOVIE_OPTIONS: StatusOption[] = [
-  { value: null, labelKey: "status.auto", color: "text-zinc-400" },
+  { value: null, labelKey: "status.auto", color: "text-muted-foreground" },
   {
     value: "plan_to_watch",
     labelKey: "status.planToWatch",
-    color: "text-blue-400",
+    color: "text-info",
   },
   {
     value: "completed",
     labelKey: "status.completed",
-    color: "text-emerald-400",
+    color: "text-success",
   },
 ];
 
@@ -89,11 +93,11 @@ export default function StatusPicker({
         aria-expanded={open}
         aria-disabled={statusMutation.isPending}
         aria-busy={statusMutation.isPending}
-        className={`w-full text-left text-xs min-h-10 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 transition-colors flex items-center gap-1.5 ${activeOption.color}`}
+        className={`w-full text-left text-xs min-h-10 px-2 py-1 rounded-sm bg-muted hover:bg-muted-hover transition-colors flex items-center gap-1.5 ${activeOption.color}`}
       >
         <span className="flex-1 truncate">{t(activeOption.labelKey)}</span>
         <svg
-          className="w-3 h-3 flex-shrink-0 text-zinc-500"
+          className="w-3 h-3 flex-shrink-0 text-muted-foreground"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -115,7 +119,7 @@ export default function StatusPicker({
           sideOffset={4}
           className="z-50"
         >
-          <Menu.Popup className="min-w-[140px] bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl overflow-hidden">
+          <Menu.Popup className="min-w-[140px] bg-muted border border-border rounded-md shadow-xl overflow-hidden">
             <Menu.RadioGroup value={currentStatus ?? "auto"}>
               {options.map((opt) => (
                 <Menu.RadioItem
@@ -123,7 +127,7 @@ export default function StatusPicker({
                   value={opt.value ?? "auto"}
                   closeOnClick
                   onClick={() => statusMutation.mutate(opt.value)}
-                  className={`w-full text-left text-xs px-3 py-2 outline-none data-[highlighted]:bg-zinc-700 transition-colors ${opt.color} ${opt.value === (currentStatus ?? null) ? "bg-zinc-700" : ""}`}
+                  className={`w-full text-left text-xs px-3 py-2 outline-none data-[highlighted]:bg-muted-hover transition-colors ${opt.color} ${opt.value === (currentStatus ?? null) ? "bg-muted-hover" : ""}`}
                 >
                   {t(opt.labelKey)}
                 </Menu.RadioItem>

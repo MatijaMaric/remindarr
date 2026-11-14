@@ -159,7 +159,7 @@ test("header, compact rows and selection actions fit at phone, tablet and deskto
     await page.keyboard.press("Space");
     await expect(checkbox).toBeChecked();
     await page.keyboard.press("Escape");
-    if (width < 1280) {
+    if (width < 768) {
       await review.assertFits(
         page.getByRole("link", { name: "More navigation options" }),
       );
@@ -511,13 +511,13 @@ test("toasts never cover the mobile navigation or the desktop corner", async ({
     const nav = page.getByRole("navigation", { name: "Mobile navigation" });
     // Polling waits out the slide-in animation.
     const limit =
-      width < 1280 ? (await nav.boundingBox())!.y : page.viewportSize()!.height;
+      width < 768 ? (await nav.boundingBox())!.y : page.viewportSize()!.height;
     await expect
       .poll(async () => bottomOf(await toast.first().boundingBox()), {
         message: `${width}px`,
       })
       .toBeLessThanOrEqual(limit);
-    if (width >= 1280) await expect(nav).toBeHidden();
+    if (width >= 768) await expect(nav).toBeHidden();
   }
 });
 

@@ -75,7 +75,7 @@ export default function SubscriptionsTab() {
   function ProviderRow({ provider }: { provider: Provider }) {
     const checked = selectedIds.has(provider.id);
     return (
-      <label className="flex items-center gap-3 py-2.5 cursor-pointer hover:bg-white/[0.03] rounded-lg px-2 -mx-2 transition-colors">
+      <label className="flex items-center gap-3 py-2.5 cursor-pointer hover:bg-fill-subtle rounded-md px-2 -mx-2 transition-colors">
         <input
           type="checkbox"
           className="sr-only"
@@ -84,11 +84,11 @@ export default function SubscriptionsTab() {
           disabled={saving}
         />
         <div
-          className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${checked ? "border-amber-400 bg-amber-400" : "border-zinc-600 bg-transparent"}`}
+          className={`w-5 h-5 rounded-sm border-2 flex items-center justify-center flex-shrink-0 transition-colors ${checked ? "border-primary bg-primary" : "border-input bg-transparent"}`}
         >
           {checked && (
             <svg
-              className="w-3 h-3 text-black"
+              className="w-3 h-3 text-primary-foreground"
               fill="currentColor"
               viewBox="0 0 12 12"
               aria-hidden="true"
@@ -108,11 +108,13 @@ export default function SubscriptionsTab() {
           <img
             src={provider.icon_url}
             alt=""
-            className="w-6 h-6 rounded flex-shrink-0"
+            className="w-6 h-6 rounded-sm flex-shrink-0"
             loading="lazy"
           />
         )}
-        <span className="text-sm text-zinc-200">{provider.name}</span>
+        <span className="text-sm text-foreground-secondary">
+          {provider.name}
+        </span>
       </label>
     );
   }
@@ -120,7 +122,7 @@ export default function SubscriptionsTab() {
   return (
     <div>
       {saveError && (
-        <p role="alert" className="text-sm text-red-400 mb-3">
+        <p role="alert" className="text-sm text-destructive mb-3">
           {t("settings.subscriptions.saveError")}
         </p>
       )}
@@ -130,13 +132,13 @@ export default function SubscriptionsTab() {
       >
         <StreamingRegion country={data?.country} help />
         {isFetching && (
-          <p role="status" className="text-sm text-zinc-400 mb-3">
+          <p role="status" className="text-sm text-muted-foreground mb-3">
             {t("settings.subscriptions.loading")}
           </p>
         )}
         {isError && (
           <div className="mb-3 space-y-2">
-            <p role="alert" className="text-sm text-red-400">
+            <p role="alert" className="text-sm text-destructive">
               {t("settings.subscriptions.loadError")}
             </p>
             <SButton
@@ -150,14 +152,14 @@ export default function SubscriptionsTab() {
           </div>
         )}
         {allProviders.length === 0 && !isFetching && !isError ? (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             {t("settings.subscriptions.empty")}
           </p>
         ) : (
           <div className="space-y-6">
             {regionProviders.length > 0 && (
               <div>
-                <div className="text-xs font-semibold text-amber-400 mb-2">
+                <div className="text-xs font-semibold text-primary-text mb-2">
                   {t("settings.subscriptions.regionProviders")}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-0.5">
@@ -169,7 +171,7 @@ export default function SubscriptionsTab() {
             )}
             {otherProviders.length > 0 && (
               <div>
-                <div className="text-xs font-semibold text-zinc-500 mb-2">
+                <div className="text-xs font-semibold text-muted-foreground mb-2">
                   {t("settings.subscriptions.otherProviders")}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-0.5">

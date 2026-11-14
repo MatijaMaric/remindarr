@@ -37,7 +37,7 @@ export default function FriendsCard({
         </Kicker>
         <Link
           to={`/u/${profileUsername}/followers`}
-          className="text-[11px] font-semibold text-amber-400 hover:text-amber-300 transition-colors"
+          className="text-[11px] font-semibold text-primary-text hover:text-primary-text transition-colors"
         >
           {t("userProfile.dossier.seeAll")}
         </Link>
@@ -47,7 +47,7 @@ export default function FriendsCard({
           <Link
             key={f.id}
             to={`/u/${f.username}`}
-            className="flex items-center gap-2.5 py-1 -mx-1 px-1 rounded-md hover:bg-white/[0.03] transition-colors"
+            className="flex items-center gap-2.5 py-1 -mx-1 px-1 rounded-sm hover:bg-fill-subtle transition-colors"
           >
             <Avatar
               username={f.username}
@@ -57,10 +57,10 @@ export default function FriendsCard({
               fontSize={11}
             />
             <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-semibold text-zinc-200 truncate">
+              <div className="text-[13px] font-semibold text-foreground-secondary truncate">
                 {f.display_name || f.username}
               </div>
-              <div className="font-mono text-[10px] text-zinc-500 truncate">
+              <div className="font-mono text-[11px] text-muted-foreground truncate">
                 {t("userProfile.dossier.followedSince", {
                   date: formatSince(f.since),
                 })}

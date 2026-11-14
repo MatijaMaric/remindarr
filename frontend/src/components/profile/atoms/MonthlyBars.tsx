@@ -61,7 +61,7 @@ export function MonthlyBars({
               style={{ height: `${barArea}px` }}
             >
               <div
-                className="w-full rounded overflow-hidden flex flex-col"
+                className="w-full rounded-sm overflow-hidden flex flex-col"
                 style={{ height: `${totalPct}%` }}
               >
                 <div
@@ -70,7 +70,7 @@ export function MonthlyBars({
                 <div style={{ flex: 1, background: episodeColor }} />
               </div>
             </div>
-            <div className="font-mono text-[10px] text-zinc-500 select-none">
+            <div className="font-mono text-[11px] text-muted-foreground select-none">
               {formatMonth(m.month)}
             </div>
           </div>

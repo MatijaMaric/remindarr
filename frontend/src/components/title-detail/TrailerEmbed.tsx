@@ -39,7 +39,7 @@ export default function TrailerEmbed({ videos }: TrailerEmbedProps) {
 
   if (playing) {
     return (
-      <div className="relative w-full aspect-video rounded-xl overflow-hidden">
+      <div className="relative w-full aspect-video rounded-lg overflow-hidden">
         <iframe
           className="w-full h-full"
           src={`https://www.youtube-nocookie.com/embed/${key}?autoplay=${autoplay}`}
@@ -55,7 +55,7 @@ export default function TrailerEmbed({ videos }: TrailerEmbedProps) {
 
   return (
     <div
-      className="relative w-full aspect-video rounded-xl overflow-hidden cursor-pointer group"
+      className="relative w-full aspect-video rounded-lg overflow-hidden cursor-pointer group"
       onClick={() => setPlaying(true)}
     >
       <img
@@ -66,11 +66,11 @@ export default function TrailerEmbed({ videos }: TrailerEmbedProps) {
         height={360}
       />
       {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/50 transition-colors" />
+      <div className="absolute inset-0 bg-black/30 group-hover:bg-scrim transition-colors" />
       {/* Play button */}
       <div className="absolute inset-0 flex items-center justify-center">
         <svg
-          className="w-16 h-16 text-white drop-shadow-lg group-hover:scale-110 transition-transform"
+          className="w-16 h-16 text-foreground drop-shadow-lg group-hover:scale-110 transition-transform"
           viewBox="0 0 64 64"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"

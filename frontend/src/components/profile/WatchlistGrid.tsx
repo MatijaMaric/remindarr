@@ -11,7 +11,7 @@ export default function WatchlistGrid({ titles }: WatchlistGridProps) {
   if (titles.length === 0) {
     return (
       <p
-        className="text-zinc-500 text-center py-10 text-sm"
+        className="text-muted-foreground text-center py-10 text-sm"
         data-testid="watchlist-empty"
       >
         {t("userProfile.dossier.emptyTab")}

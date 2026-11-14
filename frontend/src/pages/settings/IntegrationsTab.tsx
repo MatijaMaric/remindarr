@@ -227,18 +227,18 @@ function PlexSection() {
             {integrations.map((integration) => (
               <div
                 key={integration.id}
-                className="p-3.5 bg-zinc-800 border border-white/[0.08] rounded-[10px] flex flex-col sm:flex-row sm:items-center gap-3"
+                className="p-3.5 bg-muted border border-border rounded-[10px] flex flex-col sm:flex-row sm:items-center gap-3"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <div className="text-sm font-bold text-zinc-100 truncate">
+                    <div className="text-sm font-bold text-foreground truncate">
                       {integration.name}
                     </div>
                     <SStatusPill kind={integration.enabled ? "ok" : "neutral"}>
                       {integration.enabled ? "Enabled" : "Disabled"}
                     </SStatusPill>
                   </div>
-                  <div className="text-[11px] text-zinc-500 font-mono space-y-0.5">
+                  <div className="text-[11px] text-muted-foreground font-mono space-y-0.5">
                     <div className="truncate">
                       {integration.config.serverUrl}
                     </div>
@@ -246,7 +246,7 @@ function PlexSection() {
                       Last sync: {formatSyncTime(integration.last_sync_at)}
                     </div>
                     {integration.last_sync_error && (
-                      <div className="text-red-400">
+                      <div className="text-destructive">
                         Error: {integration.last_sync_error}
                       </div>
                     )}
@@ -254,8 +254,8 @@ function PlexSection() {
                       <span
                         className={
                           integration.config.syncMovies
-                            ? "text-zinc-300"
-                            : "text-zinc-600"
+                            ? "text-foreground-secondary"
+                            : "text-muted-foreground"
                         }
                       >
                         Movies
@@ -263,8 +263,8 @@ function PlexSection() {
                       <span
                         className={
                           integration.config.syncEpisodes
-                            ? "text-zinc-300"
-                            : "text-zinc-600"
+                            ? "text-foreground-secondary"
+                            : "text-muted-foreground"
                         }
                       >
                         Episodes
@@ -318,13 +318,13 @@ function PlexSection() {
               Waiting for authorization&hellip; Sign in and authorize Remindarr
               in the Plex popup.
             </div>
-            <div className="text-[11px] text-zinc-400 mb-3">
+            <div className="text-[11px] text-muted-foreground mb-3">
               Popup blocked?{" "}
               <a
                 href={step.authUrl}
                 target="plex_auth"
                 rel="noopener noreferrer"
-                className="text-amber-400 hover:text-amber-300 underline"
+                className="text-primary-text hover:text-primary-text underline"
               >
                 Open authorization page
               </a>
@@ -336,8 +336,8 @@ function PlexSection() {
         )}
 
         {step.type === "pick_server" && (
-          <div className="bg-zinc-800 rounded-[10px] p-4 space-y-4">
-            <div className="text-sm font-semibold text-zinc-100">
+          <div className="bg-muted rounded-[10px] p-4 space-y-4">
+            <div className="text-sm font-semibold text-foreground">
               Select a Plex server
             </div>
 
@@ -355,9 +355,9 @@ function PlexSection() {
                       server.clientIdentifier
                     }
                     onChange={() => selectServer(server)}
-                    className="accent-amber-400"
+                    className="accent-primary"
                   />
-                  <span className="text-sm text-zinc-100">{server.name}</span>
+                  <span className="text-sm text-foreground">{server.name}</span>
                 </label>
               ))}
             </div>
@@ -369,7 +369,7 @@ function PlexSection() {
                   <button
                     onClick={handleRefreshServers}
                     disabled={refreshingServers}
-                    className="text-[11px] text-amber-400 hover:text-amber-300 transition-colors cursor-pointer disabled:opacity-50"
+                    className="text-[11px] text-primary-text hover:text-primary-text transition-colors cursor-pointer disabled:opacity-50"
                   >
                     {refreshingServers ? "Refreshing..." : "Refresh"}
                   </button>
@@ -377,7 +377,7 @@ function PlexSection() {
                 <select
                   value={selectedUri}
                   onChange={(e) => setSelectedUri(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40"
+                  className="w-full px-3 py-2.5 bg-muted border border-border rounded-md text-foreground text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border"
                 >
                   {selectedServer.connections.map((conn) => (
                     <option key={conn.uri} value={conn.uri}>
@@ -392,21 +392,21 @@ function PlexSection() {
             <div>
               <SLabel>Sync options</SLabel>
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm text-zinc-200 cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-foreground-secondary cursor-pointer">
                   <input
                     type="checkbox"
                     checked={syncMovies}
                     onChange={(e) => setSyncMovies(e.target.checked)}
-                    className="accent-amber-400"
+                    className="accent-primary"
                   />
                   Sync watched movies
                 </label>
-                <label className="flex items-center gap-2 text-sm text-zinc-200 cursor-pointer">
+                <label className="flex items-center gap-2 text-sm text-foreground-secondary cursor-pointer">
                   <input
                     type="checkbox"
                     checked={syncEpisodes}
                     onChange={(e) => setSyncEpisodes(e.target.checked)}
-                    className="accent-amber-400"
+                    className="accent-primary"
                   />
                   Sync watched episodes
                 </label>
@@ -470,14 +470,14 @@ function CalendarFeedSection() {
   return (
     <SCard title={t("feed.title")} subtitle={t("feed.description")}>
       {loadingToken ? (
-        <p className="text-sm text-zinc-500">{t("common.loading")}</p>
+        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
       ) : token ? (
         <div className="space-y-3">
           {FEED_FLAVORS.map((flavor) => {
             const url = `${window.location.origin}/api/feed/${flavor.path}?token=${token}`;
             return (
               <div key={flavor.key} className="space-y-1">
-                <div className="text-xs text-zinc-400 font-medium">
+                <div className="text-xs text-muted-foreground font-medium">
                   {t(flavor.labelKey)}
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2">
@@ -562,7 +562,7 @@ function KioskSection() {
   return (
     <SCard title={t("kiosk.title")} subtitle={t("kiosk.description")}>
       {loadingToken ? (
-        <p className="text-sm text-zinc-500">{t("common.loading")}</p>
+        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
       ) : token ? (
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row gap-2">
@@ -654,7 +654,7 @@ function WatchlistShareSection() {
   return (
     <SCard title={t("share.title")} subtitle={t("share.description")}>
       {loadingToken ? (
-        <p className="text-sm text-zinc-500">{t("common.loading")}</p>
+        <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
       ) : token ? (
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row gap-2">
@@ -774,22 +774,22 @@ function WatchlistSection() {
         <div role="alert">{err && <SMessage kind="error">{err}</SMessage>}</div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="p-4 bg-zinc-800 border border-white/[0.08] rounded-[10px]">
-            <div className="text-sm font-bold text-zinc-100 mb-1">
+          <div className="p-4 bg-muted border border-border rounded-[10px]">
+            <div className="text-sm font-bold text-foreground mb-1">
               {t("profile.exportWatchlist")}
             </div>
-            <div className="text-xs text-zinc-500 mb-3 leading-relaxed">
+            <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
               {t("profile.exportDescription")}
             </div>
             <SButton icon="↓" onClick={handleExport} disabled={exporting}>
               {exporting ? t("profile.exporting") : t("profile.export")}
             </SButton>
           </div>
-          <div className="p-4 bg-zinc-800 border border-white/[0.08] rounded-[10px]">
-            <div className="text-sm font-bold text-zinc-100 mb-1">
+          <div className="p-4 bg-muted border border-border rounded-[10px]">
+            <div className="text-sm font-bold text-foreground mb-1">
               {t("profile.importWatchlist")}
             </div>
-            <div className="text-xs text-zinc-500 mb-3 leading-relaxed">
+            <div className="text-xs text-muted-foreground mb-3 leading-relaxed">
               {t("profile.importDescription")}
             </div>
             <button
@@ -800,7 +800,7 @@ function WatchlistSection() {
                 if (!importing) fileInputRef.current?.click();
               }}
               className={cn(
-                "inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-lg bg-white/[0.06] text-zinc-200 border border-white/[0.08] hover:bg-white/[0.1] transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-amber-400",
+                "inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-md bg-fill-subtle text-foreground-secondary border border-border hover:bg-accent transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-primary",
                 importing && "opacity-50 cursor-wait",
               )}
             >
@@ -880,12 +880,12 @@ function CsvImportSection() {
           ].map((s) => (
             <div
               key={s.n}
-              className="p-3.5 bg-zinc-800 border border-white/[0.08] rounded-[10px]"
+              className="p-3.5 bg-muted border border-border rounded-[10px]"
             >
-              <div className="text-[13px] font-bold text-zinc-100 mb-1">
+              <div className="text-[13px] font-bold text-foreground mb-1">
                 {s.n}
               </div>
-              <div className="text-[11px] text-zinc-500 font-mono leading-relaxed">
+              <div className="text-[11px] text-muted-foreground font-mono leading-relaxed">
                 {s.hint}
               </div>
             </div>
@@ -894,10 +894,10 @@ function CsvImportSection() {
 
         <div
           className={cn(
-            "p-10 text-center border-2 border-dashed rounded-xl transition-colors cursor-pointer",
+            "p-10 text-center border-2 border-dashed rounded-lg transition-colors cursor-pointer",
             dragOver
-              ? "border-amber-400 bg-amber-400/10"
-              : "border-zinc-700 hover:border-zinc-500 bg-white/[0.015]",
+              ? "border-primary bg-primary-soft"
+              : "border-border hover:border-input bg-fill-subtle",
             importing && "opacity-50 pointer-events-none",
           )}
           onDragOver={(e) => {
@@ -908,13 +908,15 @@ function CsvImportSection() {
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
         >
-          <div className="w-11 h-11 mx-auto mb-3 rounded-[10px] bg-zinc-800 text-amber-400 font-mono text-xl flex items-center justify-center">
+          <div className="w-11 h-11 mx-auto mb-3 rounded-[10px] bg-muted text-primary-text font-mono text-xl flex items-center justify-center">
             ↓
           </div>
-          <div className="text-sm font-semibold text-zinc-100 mb-1">
+          <div className="text-sm font-semibold text-foreground mb-1">
             {t("import.dropHint")}
           </div>
-          <div className="text-[11px] text-zinc-500 font-mono">.csv</div>
+          <div className="text-[11px] text-muted-foreground font-mono">
+            .csv
+          </div>
           <input
             ref={fileInputRef}
             type="file"
@@ -928,7 +930,7 @@ function CsvImportSection() {
         <div>
           <label
             className={cn(
-              "inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-lg bg-amber-400 text-black hover:bg-amber-300 transition-colors cursor-pointer",
+              "inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer",
               importing && "opacity-50 pointer-events-none",
             )}
           >

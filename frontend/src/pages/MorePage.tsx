@@ -24,7 +24,9 @@ function MoreGroup({
 }) {
   return (
     <div className="mb-4">
-      <div className="px-5 pb-2 text-xs text-zinc-400 font-medium">{label}</div>
+      <div className="px-5 pb-2 text-xs text-muted-foreground font-medium">
+        {label}
+      </div>
       <Card radius="2xl" padding="none" className="mx-4 overflow-hidden">
         {children}
       </Card>
@@ -51,24 +53,26 @@ function MoreRow({
 }) {
   const inner = (
     <div
-      className={`flex items-center gap-3 px-4 py-3.5 ${!isLast ? "border-b border-white/[0.04]" : ""}`}
+      className={`flex items-center gap-3 px-4 py-3.5 ${!isLast ? "border-b border-border" : ""}`}
     >
-      <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0 text-zinc-400">
+      <div className="w-8 h-8 rounded-md bg-accent flex items-center justify-center shrink-0 text-muted-foreground">
         {icon}
       </div>
       <div className="flex-1 min-w-0">
         <div
-          className={`text-sm font-medium ${danger ? "text-red-400" : "text-zinc-100"}`}
+          className={`text-sm font-medium ${danger ? "text-destructive" : "text-foreground"}`}
         >
           {label}
         </div>
         {sub && (
-          <div className="font-mono text-[11px] text-zinc-400 mt-0.5">
+          <div className="font-mono text-[11px] text-muted-foreground mt-0.5">
             {sub}
           </div>
         )}
       </div>
-      {!danger && <ChevronRight size={16} className="text-zinc-600 shrink-0" />}
+      {!danger && (
+        <ChevronRight size={16} className="text-muted-foreground shrink-0" />
+      )}
     </div>
   );
 
@@ -89,7 +93,7 @@ function MoreRow({
 export default function MorePage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const isMobile = useIsMobile("(max-width: 1279px)");
+  const isMobile = useIsMobile("(max-width: 767px)");
 
   if (!user) return null;
   if (!isMobile) return <Navigate to="/reels" replace />;
@@ -112,20 +116,20 @@ export default function MorePage() {
       <div className="mx-4 mb-6">
         <Link
           to={`/user/${user.username}`}
-          className="flex items-center gap-3 bg-zinc-900 border border-white/[0.05] rounded-2xl p-4 hover:bg-zinc-900/80 transition-colors"
+          className="flex items-center gap-3 bg-card border border-border rounded-xl p-4 hover:bg-card/80 transition-colors"
         >
-          <div className="w-12 h-12 rounded-full bg-[oklch(0.6_0.1_250)] flex items-center justify-center font-extrabold text-lg text-black shrink-0">
+          <div className="w-12 h-12 rounded-full bg-[oklch(0.6_0.1_250)] flex items-center justify-center font-extrabold text-lg text-primary-foreground shrink-0">
             {initials}
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[15px] font-bold truncate">
               {user.display_name ?? user.username}
             </div>
-            <div className="font-mono text-[11px] text-zinc-400">
+            <div className="font-mono text-[11px] text-muted-foreground">
               @{user.username}
             </div>
           </div>
-          <ChevronRight size={16} className="text-zinc-600 shrink-0" />
+          <ChevronRight size={16} className="text-muted-foreground shrink-0" />
         </Link>
       </div>
 

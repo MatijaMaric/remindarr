@@ -256,7 +256,7 @@ export default function SeasonDetailPage() {
   if (error || !data) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-red-400">
+        <div className="text-destructive">
           {t("season.notFound", "Season not found")}
         </div>
       </div>
@@ -288,16 +288,16 @@ export default function SeasonDetailPage() {
       {/* Breadcrumb */}
       <nav
         aria-label="breadcrumb"
-        className="flex items-center gap-2 text-sm text-zinc-400"
+        className="flex items-center gap-2 text-sm text-muted-foreground"
       >
         <Link
           to={`/title/${title.id}`}
-          className="hover:text-white transition-colors"
+          className="hover:text-foreground transition-colors"
         >
           {title.title}
         </Link>
-        <span className="text-zinc-600">/</span>
-        <span className="text-white" aria-current="page">
+        <span className="text-muted-foreground">/</span>
+        <span className="text-foreground" aria-current="page">
           {seasonLabel}
         </span>
       </nav>
@@ -309,25 +309,25 @@ export default function SeasonDetailPage() {
             <img
               src={posterUrl}
               alt={seasonLabel}
-              className="w-full rounded-xl shadow-xl"
+              className="w-full rounded-lg shadow-xl"
               width={500}
               height={750}
               loading="eager"
             />
           ) : (
-            <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-300">
+            <div className="aspect-[2/3] bg-muted rounded-lg flex items-center justify-center text-foreground-secondary">
               {seasonFallback}
             </div>
           )}
         </div>
 
         <div className="flex-1 space-y-3">
-          <h1 className="text-2xl font-bold text-white">{seasonLabel}</h1>
-          <div className="flex items-center gap-2 text-sm text-zinc-400">
+          <h1 className="text-2xl font-bold text-foreground">{seasonLabel}</h1>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             {tmdb?.air_date && <span>{formatDate(tmdb.air_date)}</span>}
             {episodes.length > 0 && (
               <>
-                <span className="text-zinc-600">·</span>
+                <span className="text-muted-foreground">·</span>
                 <span>
                   {t("season.episodeCount", { count: episodes.length })}
                 </span>
@@ -335,7 +335,7 @@ export default function SeasonDetailPage() {
             )}
             {tmdb?.vote_average ? (
               <>
-                <span className="text-zinc-600">·</span>
+                <span className="text-muted-foreground">·</span>
                 <span className="text-yellow-500">
                   {tmdb.vote_average.toFixed(1)}
                 </span>
@@ -344,7 +344,7 @@ export default function SeasonDetailPage() {
           </div>
 
           {tmdb?.overview && (
-            <p className="text-zinc-300 leading-relaxed select-text">
+            <p className="text-foreground-secondary leading-relaxed select-text">
               {tmdb.overview}
             </p>
           )}
@@ -360,7 +360,7 @@ export default function SeasonDetailPage() {
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-lg font-semibold text-white">
+              <h2 className="text-lg font-semibold text-foreground">
                 {t("season.episodes", "Episodes")}
               </h2>
               {seasons && seasons.length > 1 && (
@@ -377,8 +377,8 @@ export default function SeasonDetailPage() {
                         }
                         className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
                           active
-                            ? "bg-amber-400 text-black"
-                            : "bg-white/[0.04] text-zinc-300 border border-white/[0.08] hover:border-white/20"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-fill-subtle text-foreground-secondary border border-border hover:border-border"
                         }`}
                         aria-pressed={active}
                       >
@@ -391,7 +391,7 @@ export default function SeasonDetailPage() {
             </div>
             <div className="flex items-center gap-4">
               {hasStatus && releasedWithStatus.length > 0 && (
-                <span className="text-[11px] font-mono text-zinc-500 tracking-wide whitespace-nowrap">
+                <span className="text-[11px] font-mono text-muted-foreground tracking-wide whitespace-nowrap">
                   {t("season.watchProgress", {
                     watched: watchedCount,
                     total: episodes.length,
@@ -404,7 +404,7 @@ export default function SeasonDetailPage() {
                 (allReleasedWatched ? (
                   <button
                     onClick={() => toggleAllWatched()}
-                    className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   >
                     {t("episodes.markAllUnwatched", "Mark all unwatched")}
                   </button>
@@ -437,15 +437,15 @@ export default function SeasonDetailPage() {
                   key={ep.episode_number}
                   className={`rounded-[10px] border transition-colors group ${
                     airingToday
-                      ? "bg-amber-400/[0.06] border-amber-400/25"
-                      : "bg-zinc-900 border-white/[0.05] hover:border-white/10"
+                      ? "bg-primary-soft border-primary-border"
+                      : "bg-card border-border hover:border-border"
                   }`}
                 >
                   <div className="flex items-stretch sm:items-center gap-3 sm:gap-5 p-3 sm:p-4">
                     {/* Episode number */}
                     <div
                       className={`shrink-0 w-8 sm:w-10 self-center text-[22px] leading-none font-mono font-extrabold tabular-nums tracking-tight text-center ${
-                        watched ? "text-zinc-600" : "text-zinc-100"
+                        watched ? "text-muted-foreground" : "text-foreground"
                       }`}
                     >
                       {String(ep.episode_number).padStart(2, "0")}
@@ -456,7 +456,7 @@ export default function SeasonDetailPage() {
                       className="flex flex-1 min-w-0 gap-3 sm:gap-5 items-stretch sm:items-center"
                     >
                       {/* Still */}
-                      <div className="shrink-0 w-24 sm:w-[180px] aspect-video bg-zinc-800 rounded-md overflow-hidden self-center">
+                      <div className="shrink-0 w-24 sm:w-[180px] aspect-video bg-muted rounded-sm overflow-hidden self-center">
                         {ep.still_path ? (
                           <img
                             src={mkStillUrl(ep.still_path, "w300") ?? ""}
@@ -467,7 +467,7 @@ export default function SeasonDetailPage() {
                             height={169}
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-zinc-300 text-[11px] font-mono">
+                          <div className="w-full h-full flex items-center justify-center text-foreground-secondary text-[11px] font-mono">
                             E{String(ep.episode_number).padStart(2, "0")}
                           </div>
                         )}
@@ -477,38 +477,40 @@ export default function SeasonDetailPage() {
                       <div className="flex-1 min-w-0 self-center">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3
-                            className={`text-sm font-semibold transition-colors group-hover:text-amber-400 ${
-                              watched ? "text-zinc-400" : "text-zinc-100"
+                            className={`text-sm font-semibold transition-colors group-hover:text-primary-text ${
+                              watched
+                                ? "text-muted-foreground"
+                                : "text-foreground"
                             }`}
                           >
                             {ep.name}
                           </h3>
                           {airingToday && (
-                            <span className="text-[10px] font-mono font-semibold tracking-[0.15em] text-amber-400">
+                            <span className="text-[11px] font-mono font-semibold tracking-[0.15em] text-primary-text">
                               AIRING NOW
                             </span>
                           )}
                         </div>
                         {ep.overview && (
-                          <p className="hidden sm:block text-xs text-zinc-400 mt-1 line-clamp-2 leading-snug select-text">
+                          <p className="hidden sm:block text-xs text-muted-foreground mt-1 line-clamp-2 leading-snug select-text">
                             {ep.overview}
                           </p>
                         )}
                         {/* Mobile-only meta row */}
-                        <div className="sm:hidden flex items-center gap-2 mt-1 text-[11px] font-mono text-zinc-400">
+                        <div className="sm:hidden flex items-center gap-2 mt-1 text-[11px] font-mono text-muted-foreground">
                           {ep.air_date && (
                             <span>{formatDate(ep.air_date)}</span>
                           )}
                           {ep.runtime && (
                             <>
-                              <span className="text-zinc-700">·</span>
+                              <span className="text-muted-foreground">·</span>
                               <span>{ep.runtime} min</span>
                             </>
                           )}
                           {ep.vote_average > 0 && (
                             <>
-                              <span className="text-zinc-700">·</span>
-                              <span className="text-amber-400">
+                              <span className="text-muted-foreground">·</span>
+                              <span className="text-primary-text">
                                 ★ {ep.vote_average.toFixed(1)}
                               </span>
                             </>
@@ -518,15 +520,15 @@ export default function SeasonDetailPage() {
                     </Link>
 
                     {/* Desktop: air date column */}
-                    <div className="hidden sm:block shrink-0 w-[110px] text-xs font-mono text-zinc-400">
+                    <div className="hidden sm:block shrink-0 w-[110px] text-xs font-mono text-muted-foreground">
                       {ep.air_date ? formatDate(ep.air_date) : "—"}
                     </div>
 
                     {/* Desktop: runtime + rating column */}
-                    <div className="hidden sm:block shrink-0 w-[100px] text-xs font-mono text-zinc-400">
+                    <div className="hidden sm:block shrink-0 w-[100px] text-xs font-mono text-muted-foreground">
                       <div>{ep.runtime ? `${ep.runtime} min` : "—"}</div>
                       {ep.vote_average > 0 && (
-                        <div className="text-amber-400 mt-0.5">
+                        <div className="text-primary-text mt-0.5">
                           ★ {ep.vote_average.toFixed(1)}
                         </div>
                       )}
@@ -577,7 +579,7 @@ export default function SeasonDetailPage() {
       {tmdb?.credits?.cast && tmdb.credits.cast.length > 0 && (
         <SectionErrorBoundary label="cast">
           <section className="space-y-3">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-foreground">
               {t("season.cast", "Season Cast")}
             </h2>
             <ScrollableRow className="gap-4 pb-2">
@@ -617,7 +619,7 @@ function EpisodeWatchedPill({
       <span
         role="img"
         aria-label={t("episodes.notYetReleased", "Not yet released")}
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-semibold bg-zinc-800/50 text-zinc-600 border-zinc-800 cursor-not-allowed opacity-60 sm:w-[108px] sm:justify-center"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm border text-[11px] font-semibold bg-muted/50 text-muted-foreground border-border cursor-not-allowed opacity-60 sm:w-[108px] sm:justify-center"
       >
         <Circle size={12} aria-hidden="true" />
         <span className="hidden sm:inline">{t("episodes.watch", "Watch")}</span>
@@ -637,10 +639,10 @@ function EpisodeWatchedPill({
           ? t("episodes.markAsUnwatched", "Mark as unwatched")
           : t("episodes.markAsWatched", "Mark as watched")
       }
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-semibold cursor-pointer transition-colors sm:w-[108px] sm:justify-center ${
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm border text-[11px] font-semibold cursor-pointer transition-colors sm:w-[108px] sm:justify-center ${
         watched
-          ? "bg-amber-400/15 text-amber-400 border-amber-400/30 hover:bg-amber-400/25"
-          : "bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:bg-white/10 hover:text-white"
+          ? "bg-primary-soft text-primary-text border-primary-border hover:bg-primary-soft/80"
+          : "bg-fill-subtle text-foreground-secondary border-border hover:bg-accent hover:text-foreground"
       }`}
     >
       {watched ? (
@@ -672,7 +674,7 @@ function MarkAllWatchedMenu({
     <div ref={ref} className="relative inline-flex items-stretch">
       <button
         onClick={() => onMarkAll()}
-        className="text-sm text-zinc-400 hover:text-white transition-colors cursor-pointer pr-1"
+        className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer pr-1"
       >
         {t("episodes.markAllWatched", "Mark all watched")}
       </button>
@@ -684,7 +686,7 @@ function MarkAllWatchedMenu({
           "episodes.markAllWatchedOptions",
           "Mark all watched options",
         )}
-        className="inline-flex items-center justify-center w-6 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+        className="inline-flex items-center justify-center w-6 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
       >
         <ChevronDown size={14} aria-hidden="true" />
       </button>
@@ -701,7 +703,7 @@ function MarkAllWatchedMenu({
               setOpen(false);
               onMarkAll();
             }}
-            className="w-full text-left px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.06] cursor-pointer transition-colors"
+            className="w-full text-left px-3 py-2 text-[13px] text-foreground-secondary hover:bg-accent cursor-pointer transition-colors"
           >
             {t("episodes.markAllWatchedToday", "Mark all watched today")}
           </button>
@@ -711,7 +713,7 @@ function MarkAllWatchedMenu({
               setOpen(false);
               onMarkAll({ useAirDate: true });
             }}
-            className="w-full flex items-start gap-2 text-left px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.06] cursor-pointer transition-colors"
+            className="w-full flex items-start gap-2 text-left px-3 py-2 text-[13px] text-foreground-secondary hover:bg-accent cursor-pointer transition-colors"
           >
             <CalendarDays
               size={13}
@@ -725,7 +727,7 @@ function MarkAllWatchedMenu({
                   "Mark watched on air date",
                 )}
               </span>
-              <span className="text-[11px] text-zinc-500">
+              <span className="text-[11px] text-muted-foreground">
                 {t(
                   "episodes.markAllWatchedOnAirDateHint",
                   "Backdate to keep stats accurate",
@@ -789,7 +791,7 @@ function EpisodeOverflowMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={t("episodes.moreActions", "More actions")}
-        className="inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-500 hover:text-white hover:bg-white/[0.06] cursor-pointer transition-colors"
+        className="inline-flex items-center justify-center w-8 h-8 rounded-sm text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer transition-colors"
       >
         <MoreHorizontal size={16} aria-hidden="true" />
       </button>
@@ -808,7 +810,7 @@ function EpisodeOverflowMenu({
                 `/title/${titleId}/season/${seasonNumber}/episode/${episodeNumber}`,
               );
             }}
-            className="w-full text-left px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.06] cursor-pointer transition-colors"
+            className="w-full text-left px-3 py-2 text-[13px] text-foreground-secondary hover:bg-accent cursor-pointer transition-colors"
           >
             {t("episodes.viewDetails", "View details")}
           </button>
@@ -819,7 +821,7 @@ function EpisodeOverflowMenu({
                 setOpen(false);
                 void onMarkOnAirDate();
               }}
-              className="w-full flex items-center gap-2 text-left px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.06] cursor-pointer transition-colors"
+              className="w-full flex items-center gap-2 text-left px-3 py-2 text-[13px] text-foreground-secondary hover:bg-accent cursor-pointer transition-colors"
             >
               <CalendarDays size={13} aria-hidden="true" />
               {t("episodes.markWatchedOnAirDate", "Mark watched on air date")}
@@ -828,7 +830,7 @@ function EpisodeOverflowMenu({
           <button
             role="menuitem"
             onClick={handleShare}
-            className="w-full flex items-center gap-2 text-left px-3 py-2 text-[13px] text-zinc-200 hover:bg-white/[0.06] cursor-pointer transition-colors"
+            className="w-full flex items-center gap-2 text-left px-3 py-2 text-[13px] text-foreground-secondary hover:bg-accent cursor-pointer transition-colors"
           >
             <Share2 size={13} aria-hidden="true" />
             {t("share.share", "Share")}
