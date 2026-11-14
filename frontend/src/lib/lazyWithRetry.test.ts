@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  mock,
+  spyOn,
+} from "bun:test";
 
 const mockUpdateAllRegistrations = mock(() => Promise.resolve());
 const mockClearPagesCache = mock(() => Promise.resolve());
@@ -150,6 +158,28 @@ describe("loadWithRetry", () => {
     });
     expect(sessionStorage.getItem(LAZY_RETRY_KEY)).toBeNull();
     expect(mockReloadPage).not.toHaveBeenCalled();
+  });
+
+  it("does not reload when a navigation away cancelled the import (#1399)", async () => {
+    const now = spyOn(Date, "now").mockReturnValue(1_000);
+    try {
+      window.dispatchEvent(new Event("beforeunload"));
+      const factory = mock(() =>
+        Promise.reject(new Error("Importing a module script failed.")),
+      );
+
+      expect(await runWithTimeout(factory)).toBe("timeout");
+      expect(mockReloadPage).not.toHaveBeenCalled();
+      expect(mockUpdateAllRegistrations).not.toHaveBeenCalled();
+      expect(sessionStorage.getItem(LAZY_RETRY_KEY)).toBeNull();
+
+      // An abandoned navigation (download, 204) must not disable recovery.
+      now.mockReturnValue(1_000 + 5_000);
+      await runWithTimeout(factory);
+      expect(mockReloadPage).toHaveBeenCalledTimes(1);
+    } finally {
+      now.mockRestore();
+    }
   });
 
   it("all browser error variants trigger retry", async () => {

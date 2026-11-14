@@ -11,6 +11,18 @@ export function isChunkLoadError(error: unknown): boolean {
   );
 }
 
+// WebKit (and sometimes Firefox) cancels in-flight imports as soon as a
+// document navigation starts. Reloading then cancels that navigation and
+// strands the user on the page they were leaving (#1399). The window expires
+// because a navigation can be abandoned (a download, a 204).
+// ponytail: beforeunload only. If iOS Safari turns out not to fire it, also
+// listen to the Navigation API's `navigate` event.
+const LEAVING_WINDOW_MS = 5000;
+let leavingAt = -Infinity;
+window.addEventListener("beforeunload", () => {
+  leavingAt = Date.now();
+});
+
 export async function loadWithRetry(
   factory: () => Promise<{ default: React.ComponentType }>,
 ): Promise<{ default: React.ComponentType }> {
@@ -20,6 +32,9 @@ export async function loadWithRetry(
     return mod;
   } catch (importError: unknown) {
     if (!isChunkLoadError(importError)) throw importError;
+    // The page is going away: keep the Suspense fallback up, do not reload.
+    if (Date.now() - leavingAt < LEAVING_WINDOW_MS)
+      return new Promise<never>(() => {});
 
     const retries = parseInt(sessionStorage.getItem(LAZY_RETRY_KEY) ?? "0", 10);
     if (retries >= 2) {
