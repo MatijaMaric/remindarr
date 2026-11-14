@@ -90,20 +90,29 @@ test.describe("Home", () => {
     await expect(page.getByText(/S01[·\s]?E02/)).toBeVisible();
   });
 
-  // ── TC-04: Empty state — no tracked titles ────────────────────────────────
-  test("TC-04: empty state shows no episodes message", async ({ page }) => {
+  // ── TC-04: Empty sections are hidden ──────────────────────────────────────
+  test("TC-04: hides the Today section when nothing airs today", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     const home = new HomePage(page);
     await mockLoggedIn(page);
-    // mockHomeDataEndpoints stubs episodes/upcoming with empty arrays
     await home.mockHomeDataEndpoints();
+    // An upcoming episode gives the page something to render, so the absence
+    // of "Today" is checked after the sections have loaded.
+    await page.route("**/api/episodes/upcoming", (route) =>
+      route.fulfill({
+        json: { today: [], upcoming: [MOCK_UPCOMING_EPISODE], unwatched: [] },
+      }),
+    );
     await home.gotoHome();
 
-    await expect(page.locator("main")).toBeVisible();
-    // "Today" section kicker "Airing tonight" is rendered as a div (Kicker component)
-    await expect(page.getByText(/airing tonight/i)).toBeVisible();
-    // Empty state message — t("home.noEpisodes") when all lists empty
-    await expect(page.getByText(/no upcoming episodes/i)).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /coming up/i }),
+    ).toBeVisible();
+    // No "Today" header and no empty-state line for it
+    await expect(page.getByText(/airing tonight/i)).toHaveCount(0);
+    await expect(page.getByText(/no episodes/i)).toHaveCount(0);
     // No JS error banner
     await expect(page.locator(".bg-red-900\\/50")).not.toBeVisible();
   });

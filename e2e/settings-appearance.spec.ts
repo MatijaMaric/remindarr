@@ -16,8 +16,8 @@ const MOCK_APPEARANCE = {
 
 const MOCK_HOMEPAGE_LAYOUT = {
   homepage_layout: [
-    { id: "up_next", enabled: true },
     { id: "unwatched", enabled: true },
+    { id: "trending", enabled: true },
     { id: "recommendations", enabled: false },
   ],
 };
@@ -198,7 +198,7 @@ test.describe("Settings — Appearance tab", () => {
 
     // Three sections should be rendered (labels from i18n)
     await expect(page.getByText("Up Next").first()).toBeVisible();
-    await expect(page.getByText("Unwatched Episodes").first()).toBeVisible();
+    await expect(page.getByText("Trending Now").first()).toBeVisible();
     await expect(page.getByText("Recommended for You").first()).toBeVisible();
 
     // Enabled rows have a "Hide section" button
@@ -228,8 +228,8 @@ test.describe("Settings — Appearance tab", () => {
         await route.fulfill({
           json: {
             homepage_layout: [
-              { id: "up_next", enabled: false },
-              { id: "unwatched", enabled: true },
+              { id: "unwatched", enabled: false },
+              { id: "trending", enabled: true },
               { id: "recommendations", enabled: false },
             ],
           },
@@ -245,13 +245,13 @@ test.describe("Settings — Appearance tab", () => {
     await sap.gotoAppearance();
     await sap.waitForVisible(sap.homepageLayoutSection());
 
-    // Click the hide button on the first (up_next) row
+    // Click the hide button on the first (unwatched) row
     const hideBtn = page.getByRole("button", { name: /hide section/i }).first();
     await sap.waitForVisible(hideBtn);
     await hideBtn.click();
     await page.waitForTimeout(500);
 
-    expect(putBody).toContain("up_next");
+    expect(putBody).toContain("unwatched");
   });
 
   test("TC-08: Crowded week badge toggle fires PUT", async ({ page }) => {

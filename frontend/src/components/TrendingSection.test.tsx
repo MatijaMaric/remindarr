@@ -63,15 +63,28 @@ const personNoPhoto: TrendingPerson = {
 afterEach(() => cleanup());
 
 describe("TrendingSection — titles (US1)", () => {
-  it("renders movie and TV rows with titles", () => {
-    render(<TrendingSection movies={[movie]} shows={[show]} people={[]} />, {
-      wrapper: Wrapper,
-    });
+  it("renders movies, shows and people in one row, titles interleaved by rank", () => {
+    const { container } = render(
+      <TrendingSection
+        movies={[movie, movieNoPoster]}
+        shows={[show]}
+        people={[person]}
+      />,
+      { wrapper: Wrapper },
+    );
     expect(screen.getByText("Trending Now")).toBeTruthy();
-    expect(screen.getByText("Movies")).toBeTruthy();
-    expect(screen.getByText("TV Shows")).toBeTruthy();
-    expect(screen.getByText("Trending Movie")).toBeTruthy();
-    expect(screen.getByText("Trending Show")).toBeTruthy();
+    expect(screen.queryByText("Movies")).toBeNull();
+    expect(screen.queryByText("TV Shows")).toBeNull();
+    expect(screen.queryByText("People")).toBeNull();
+    const hrefs = [...container.querySelectorAll("a")].map((a) =>
+      a.getAttribute("href"),
+    );
+    expect([...new Set(hrefs)]).toEqual([
+      "/title/movie-1",
+      "/title/tv-2",
+      "/title/movie-5",
+      "/person/3",
+    ]);
   });
 
   it("links a title to its detail view /title/:id", () => {
@@ -91,8 +104,21 @@ describe("TrendingSection — titles (US1)", () => {
     expect(screen.getByText("No Poster Movie")).toBeTruthy();
   });
 
-  it("shows a tracked badge for tracked titles (FR-012)", () => {
+  it("leaves out titles the viewer already tracks", () => {
     render(
+      <TrendingSection
+        movies={[{ ...movie, isTracked: true }]}
+        shows={[show]}
+        people={[]}
+      />,
+      { wrapper: Wrapper },
+    );
+    expect(screen.queryByText("Trending Movie")).toBeNull();
+    expect(screen.getByText("Trending Show")).toBeTruthy();
+  });
+
+  it("hides the section when every trending title is already tracked", () => {
+    const { container } = render(
       <TrendingSection
         movies={[{ ...movie, isTracked: true }]}
         shows={[]}
@@ -100,7 +126,7 @@ describe("TrendingSection — titles (US1)", () => {
       />,
       { wrapper: Wrapper },
     );
-    expect(screen.getByText("Tracking")).toBeTruthy();
+    expect(container.querySelector("section")).toBeNull();
   });
 });
 
@@ -109,7 +135,6 @@ describe("TrendingSection — people (US2)", () => {
     render(<TrendingSection movies={[]} shows={[]} people={[person]} />, {
       wrapper: Wrapper,
     });
-    expect(screen.getByText("People")).toBeTruthy();
     expect(screen.getByText("Trending Actor")).toBeTruthy();
     expect(screen.getByText("Acting")).toBeTruthy();
   });
@@ -130,14 +155,6 @@ describe("TrendingSection — people (US2)", () => {
     expect(container.querySelector("img")).toBeNull();
     // Placeholder is the first letter of the name
     expect(screen.getByText("Z")).toBeTruthy();
-  });
-
-  it("omits the people group entirely when there are no people (FR-013)", () => {
-    render(<TrendingSection movies={[movie]} shows={[]} people={[]} />, {
-      wrapper: Wrapper,
-    });
-    expect(screen.queryByText("People")).toBeNull();
-    expect(screen.queryByText("TV Shows")).toBeNull();
   });
 });
 

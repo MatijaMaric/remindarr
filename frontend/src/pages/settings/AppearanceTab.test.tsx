@@ -81,8 +81,8 @@ beforeEach(() => {
     } as any),
     spyOn(api, "getHomepageLayout").mockResolvedValue({
       homepage_layout: [
-        { id: "up_next", enabled: true },
         { id: "unwatched", enabled: true },
+        { id: "trending", enabled: true },
       ],
     } as any),
     spyOn(api, "getCrowdedWeekSettings").mockResolvedValue({
@@ -124,6 +124,10 @@ describe("AppearanceTab", () => {
       // Check that the layout sections rendered (at least one section item)
       expect(screen.getAllByRole("button").length).toBeGreaterThan(0);
     });
+    // Every section has a readable label, never its raw id.
+    expect(await screen.findByText("Up Next")).toBeDefined();
+    expect(screen.getByText("Trending Now")).toBeDefined();
+    expect(screen.queryByText("trending")).toBeNull();
   });
 
   it("shows crowded week section", async () => {

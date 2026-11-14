@@ -273,6 +273,8 @@ describe("homepage-layout — new section IDs (regression #803)", () => {
     expect(ids).toContain("upcoming_movies");
     expect(ids).toContain("streak");
     expect(ids).toContain("friends_loved");
+    expect(ids).toContain("suggested");
+    expect(ids).not.toContain("up_next");
     expect(ids).toHaveLength(11);
   });
 
@@ -316,7 +318,9 @@ describe("homepage-layout — new section IDs (regression #803)", () => {
     ).toBe(false);
   });
 
-  it("PUT accepts movies_to_watch and upcoming_movies — does not 400", async () => {
+  // up_next was retired. A cached client may still send it: the save must
+  // succeed and the retired id must be dropped, not stored.
+  it("PUT accepts movies_to_watch and upcoming_movies and drops retired up_next — does not 400", async () => {
     const app = makeAuthedApp();
     const res = await app.request("/user/settings/homepage-layout", {
       method: "PUT",
@@ -334,6 +338,8 @@ describe("homepage-layout — new section IDs (regression #803)", () => {
     const ids = body.homepage_layout.map((s: { id: string }) => s.id);
     expect(ids).toContain("movies_to_watch");
     expect(ids).toContain("upcoming_movies");
+    expect(ids).not.toContain("up_next");
+    expect(await repository.getHomepageLayout(userId)).not.toContain("up_next");
   });
 
   it("PUT with all 10 sections returns 200 and round-trips them", async () => {

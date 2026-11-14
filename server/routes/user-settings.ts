@@ -30,7 +30,6 @@ const log = logger.child({ module: "user-settings" });
 export const HOMEPAGE_SECTION_IDS = [
   "trending",
   "streak",
-  "up_next",
   "unwatched",
   "movies_to_watch",
   "recommendations",
@@ -39,6 +38,7 @@ export const HOMEPAGE_SECTION_IDS = [
   "upcoming_movies",
   "airing_soon",
   "friends_loved",
+  "suggested",
 ] as const;
 export type HomepageSectionId = (typeof HOMEPAGE_SECTION_IDS)[number];
 
@@ -49,8 +49,6 @@ export interface HomepageSection {
 
 export const DEFAULT_HOMEPAGE_LAYOUT: HomepageSection[] = [
   { id: "streak", enabled: true },
-  { id: "trending", enabled: true },
-  { id: "up_next", enabled: true },
   { id: "unwatched", enabled: true },
   { id: "movies_to_watch", enabled: true },
   { id: "recommendations", enabled: true },
@@ -59,6 +57,8 @@ export const DEFAULT_HOMEPAGE_LAYOUT: HomepageSection[] = [
   { id: "upcoming_movies", enabled: true },
   { id: "airing_soon", enabled: false },
   { id: "friends_loved", enabled: true },
+  { id: "trending", enabled: true },
+  { id: "suggested", enabled: true },
 ];
 
 // Derives from HOMEPAGE_SECTION_IDS so adding a new section is a one-line change above.
@@ -67,10 +67,19 @@ const homepageSectionSchema = z.object({
   enabled: z.boolean().default(true),
 });
 
+// Section ids that no longer exist. A cached client may still send them, so
+// they are dropped instead of failing the whole save with a 400.
+const RETIRED_SECTION_IDS = new Set<unknown>(["up_next"]);
+
 const updateHomepageLayoutSchema = z.object({
-  homepage_layout: z
-    .array(homepageSectionSchema)
-    .superRefine((sections, ctx) => {
+  homepage_layout: z.preprocess(
+    (value) =>
+      Array.isArray(value)
+        ? value.filter(
+            (s: { id?: unknown } | null) => !RETIRED_SECTION_IDS.has(s?.id),
+          )
+        : value,
+    z.array(homepageSectionSchema).superRefine((sections, ctx) => {
       const seen = new Set<string>();
       for (let i = 0; i < sections.length; i++) {
         const id = sections[i].id;
@@ -84,6 +93,7 @@ const updateHomepageLayoutSchema = z.object({
         seen.add(id);
       }
     }),
+  ),
 });
 
 function parseLayout(raw: string | null): HomepageSection[] {

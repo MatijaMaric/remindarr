@@ -19,8 +19,6 @@ import type {
 import { normalizeSearchTitle, DEFAULT_HOMEPAGE_LAYOUT } from "../types";
 import StreakCounter from "../components/profile/StreakCounter";
 import TitleList from "../components/TitleList";
-import TitleCard from "../components/TitleCard";
-import ScrollableRow from "../components/ScrollableRow";
 import { HomeAuthSkeleton } from "../components/SkeletonComponents";
 import {
   groupByShow,
@@ -34,28 +32,18 @@ import HeroBanner from "../components/HeroBanner";
 import FullBleedCarousel from "../components/FullBleedCarousel";
 import { SectionHeader } from "../components/SectionHeader";
 import { posterUrl } from "../lib/tmdb-images";
-import UpNextRow from "../components/UpNextRow";
 import FriendsLovedRow from "../components/FriendsLovedRow";
 import SuggestedForYouRow from "../components/SuggestedForYouRow";
 import MovieRow from "../components/MovieRow";
 import TrendingSection from "../components/TrendingSection";
 import { MediaCard } from "../components/MediaCard";
-import type { UpNextItem, MovieTrackResponse } from "../api";
+import type { MovieTrackResponse } from "../api";
 
 // Module-scope stable empty defaults so downstream memo/effect deps don't see
 // a fresh [] each render when authData is absent.
 const EMPTY_EPISODES: Episode[] = [];
 const EMPTY_RECOMMENDATIONS: Recommendation[] = [];
-const EMPTY_UP_NEXT_ITEMS: UpNextItem[] = [];
 const EMPTY_FRIENDS_LOVED_ITEMS: FriendsLovedItem[] = [];
-const EMPTY_TITLES: Title[] = [];
-const EMPTY_SHELVES: {
-  continue_watching: Title[];
-  start_watching: Title[];
-} = {
-  continue_watching: EMPTY_TITLES,
-  start_watching: EMPTY_TITLES,
-};
 
 export interface UnwatchedCardEntry {
   episode: Episode;
@@ -100,14 +88,9 @@ type AuthHomeData = {
   unwatched: Episode[];
   recommendations: Recommendation[];
   layout: HomepageSection[];
-  upNextItems: UpNextItem[];
   friendsLovedItems: FriendsLovedItem[];
   streakData: StreakData | null;
   movieData: MovieTrackResponse;
-  shelves: {
-    continue_watching: Title[];
-    start_watching: Title[];
-  };
 };
 
 export default function HomePage() {
@@ -156,11 +139,9 @@ export default function HomePage() {
         episodeData,
         recData,
         layoutData,
-        upNextData,
         friendsLovedData,
         streakResult,
         moviesResult,
-        shelvesResult,
       ] = await Promise.all([
         api.getUpcomingEpisodes(signal),
         api
@@ -170,7 +151,6 @@ export default function HomePage() {
           api.getHomepageLayout?.(signal) ??
           Promise.resolve({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })
         ).catch(() => ({ homepage_layout: DEFAULT_HOMEPAGE_LAYOUT })),
-        api.getUpNext(12, signal).catch(() => ({ items: [] as UpNextItem[] })),
         api
           .getFriendsLoved(20, signal)
           .catch(() => ({ items: [] as FriendsLovedItem[] })),
@@ -178,7 +158,6 @@ export default function HomePage() {
         api
           .getMovieTracking(signal)
           .catch(() => ({ to_watch: [], upcoming: [] }) as MovieTrackResponse),
-        api.getShelves(signal).catch(() => EMPTY_SHELVES),
       ]);
       return {
         today: episodeData.today,
@@ -186,11 +165,9 @@ export default function HomePage() {
         unwatched: episodeData.unwatched,
         recommendations: recData.recommendations,
         layout: layoutData.homepage_layout,
-        upNextItems: upNextData.items,
         friendsLovedItems: friendsLovedData.items,
         streakData: streakResult,
         movieData: moviesResult,
-        shelves: shelvesResult,
       };
     },
   });
@@ -260,31 +237,6 @@ export default function HomePage() {
     },
   });
 
-  const upNextMarkWatchedMutation = useMutation({
-    mutationFn: (episodeId: number) => api.watchEpisode(episodeId),
-    onMutate: async (episodeId) => {
-      await qc.cancelQueries({ queryKey: ["home", "auth"] });
-      const snapshot = qc.getQueryData<AuthHomeData>(["home", "auth"]);
-      qc.setQueryData<AuthHomeData>(["home", "auth"], (prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          upNextItems: prev.upNextItems.filter(
-            (item) => item.nextEpisodeId !== episodeId,
-          ),
-        };
-      });
-      return { snapshot };
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.snapshot) qc.setQueryData(["home", "auth"], ctx.snapshot);
-      toast.error(t("home.errors.markEpisode"));
-    },
-    onSettled: () => {
-      void invalidateLibrary(qc);
-    },
-  });
-
   const handleMarkAllWatched = useCallback(
     (titleId: string, episodeIds: number[]) => {
       if (confirmingTitleId === titleId) {
@@ -308,15 +260,11 @@ export default function HomePage() {
   const unwatched = authData?.unwatched ?? EMPTY_EPISODES;
   const recommendations = authData?.recommendations ?? EMPTY_RECOMMENDATIONS;
   const layout = authData?.layout ?? DEFAULT_HOMEPAGE_LAYOUT;
-  const upNextItems = authData?.upNextItems ?? EMPTY_UP_NEXT_ITEMS;
   const friendsLovedItems =
     authData?.friendsLovedItems ?? EMPTY_FRIENDS_LOVED_ITEMS;
 
   const streakData = authData?.streakData ?? null;
   const movieData = authData?.movieData ?? { to_watch: [], upcoming: [] };
-  const shelves = authData?.shelves ?? EMPTY_SHELVES;
-  const continueWatching = shelves.continue_watching;
-  const startWatching = shelves.start_watching;
 
   const popularTitlesPreview = useMemo(
     () => (anonData ?? []).slice(0, 12),
@@ -434,9 +382,6 @@ export default function HomePage() {
     );
   }
 
-  const noEpisodes =
-    today.length === 0 && upcoming.length === 0 && unwatched.length === 0;
-
   function renderSection(sectionId: string) {
     switch (sectionId) {
       case "unwatched":
@@ -455,8 +400,8 @@ export default function HomePage() {
             </div>
             <section key="unwatched">
               <SectionHeader
-                kicker={t("home.kickers.upNext")}
-                title={t("home.unwatched")}
+                kicker={t("home.unwatched")}
+                title={t("home.upNext.title")}
                 href="/upcoming"
                 linkLabel={t("home.seeAll")}
                 headingExtra={
@@ -540,7 +485,7 @@ export default function HomePage() {
         ) : null;
 
       case "today":
-        return (
+        return today.length > 0 ? (
           <section key="today">
             <SectionHeader
               kicker={t("home.kickers.airingTonight")}
@@ -548,30 +493,24 @@ export default function HomePage() {
               href="/calendar"
               linkLabel={t("home.seeAll")}
             />
-            {today.length === 0 ? (
-              <p className="text-muted-foreground text-sm">
-                {noEpisodes ? t("home.noEpisodes") : t("home.noEpisodesToday")}
-              </p>
-            ) : (
-              <FullBleedCarousel>
-                {todayByShowEntries.map(([titleId, eps]) => (
-                  <div
-                    key={titleId}
-                    className="w-80 flex-shrink-0"
-                    style={{ scrollSnapAlign: "start" }}
-                  >
-                    <DeckCardWrapper episodeCount={eps.length}>
-                      <EpisodeShowCard
-                        episode={eps[0]}
-                        episodeCount={eps.length}
-                      />
-                    </DeckCardWrapper>
-                  </div>
-                ))}
-              </FullBleedCarousel>
-            )}
+            <FullBleedCarousel>
+              {todayByShowEntries.map(([titleId, eps]) => (
+                <div
+                  key={titleId}
+                  className="w-80 flex-shrink-0"
+                  style={{ scrollSnapAlign: "start" }}
+                >
+                  <DeckCardWrapper episodeCount={eps.length}>
+                    <EpisodeShowCard
+                      episode={eps[0]}
+                      episodeCount={eps.length}
+                    />
+                  </DeckCardWrapper>
+                </div>
+              ))}
+            </FullBleedCarousel>
           </section>
-        );
+        ) : null;
 
       case "upcoming":
         return upcoming.length > 0 ? (
@@ -639,31 +578,7 @@ export default function HomePage() {
               ))}
             </FullBleedCarousel>
           </section>
-        ) : (
-          <section key="airing_soon">
-            <SectionHeader
-              kicker={t("home.kickers.comingUp")}
-              title={t("home.airingSoon.title")}
-            />
-            <p className="text-muted-foreground text-sm">
-              {t("home.airingSoon.empty")}
-            </p>
-          </section>
-        );
-
-      case "up_next":
-        return (
-          <section key="up_next">
-            <SectionHeader
-              kicker={t("home.upNext.inProgress")}
-              title={t("home.upNext.title")}
-            />
-            <UpNextRow
-              items={upNextItems}
-              onMarkWatched={(id) => upNextMarkWatchedMutation.mutate(id)}
-            />
-          </section>
-        );
+        ) : null;
 
       case "friends_loved":
         return (
@@ -714,6 +629,9 @@ export default function HomePage() {
           />
         );
 
+      case "suggested":
+        return <SuggestedForYouRow key="suggested" />;
+
       default:
         return null;
     }
@@ -723,45 +641,6 @@ export default function HomePage() {
     <div className="space-y-8">
       <FirstSetup />
       {layout.filter((s) => s.enabled).map((s) => renderSection(s.id))}
-      {continueWatching.length > 0 && (
-        <section>
-          <SectionHeader
-            kicker={t("home.shelves.kicker")}
-            title={t("home.shelves.continueWatching")}
-          />
-          <ScrollableRow
-            className="gap-4 pb-2"
-            focusable
-            ariaLabel={t("home.shelves.continueWatching")}
-          >
-            {continueWatching.map((title) => (
-              <div key={title.id} className="w-48 flex-shrink-0">
-                <TitleCard title={title} />
-              </div>
-            ))}
-          </ScrollableRow>
-        </section>
-      )}
-      {startWatching.length > 0 && (
-        <section>
-          <SectionHeader
-            kicker={t("home.shelves.kicker")}
-            title={t("home.shelves.startWatching")}
-          />
-          <ScrollableRow
-            className="gap-4 pb-2"
-            focusable
-            ariaLabel={t("home.shelves.startWatching")}
-          >
-            {startWatching.map((title) => (
-              <div key={title.id} className="w-48 flex-shrink-0">
-                <TitleCard title={title} />
-              </div>
-            ))}
-          </ScrollableRow>
-        </section>
-      )}
-      <SuggestedForYouRow />
     </div>
   );
 }

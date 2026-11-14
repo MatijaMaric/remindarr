@@ -118,10 +118,7 @@
     "welcomeTitle": "Willkommen bei Remindarr",
     "welcomeMessage": "Melde dich an, um deine nächsten Episoden zu sehen.",
     "upNext": {
-      "title": "Als Nächstes",
-      "empty": "Nichts in der Warteschlange – füge eine Serie hinzu, um loszulegen",
-      "inProgress": "Angefangen",
-      "newEpisodes": "Neue Episoden"
+      "title": "Als Nächstes"
     },
     "unwatched": "Ungesehen",
     "reels": "Reels",
@@ -132,23 +129,14 @@
     "episodesRemaining_one": "Noch {{count}} Episode",
     "episodesRemaining_other": "Noch {{count}} Episoden",
     "today": "Heute",
-    "noEpisodes": "Keine anstehenden Episoden deiner Serien.",
-    "noEpisodesToday": "Heute laufen keine Episoden.",
     "comingUp": "Demnächst",
     "recommendedForYou": "Empfohlen für dich",
     "seeAll": "Alle anzeigen",
     "airingSoon": {
-      "title": "Bald im Programm",
-      "empty": "Keine anstehenden Episoden deiner Serien"
-    },
-    "shelves": {
-      "kicker": "Meine Listen",
-      "continueWatching": "Weiterschauen",
-      "startWatching": "Jetzt anfangen"
+      "title": "Bald im Programm"
     },
     "kickers": {
       "browse": "Entdecken",
-      "upNext": "Als Nächstes",
       "fromFriends": "Von Freunden",
       "airingTonight": "Heute Abend",
       "thisWeek": "Diese Woche",
@@ -162,8 +150,7 @@
     "calendar": "Kalender",
     "errors": {
       "watchedStatus": "Gesehen-Status konnte nicht aktualisiert werden – bitte erneut versuchen",
-      "markEpisodes": "Episoden konnten nicht als gesehen markiert werden – bitte erneut versuchen",
-      "markEpisode": "Episode konnte nicht als gesehen markiert werden – bitte erneut versuchen"
+      "markEpisodes": "Episoden konnten nicht als gesehen markiert werden – bitte erneut versuchen"
     }
   },
   "tracked": {
@@ -792,8 +779,7 @@
       "showSection": "Abschnitt einblenden",
       "hideSection": "Abschnitt ausblenden",
       "sections": {
-        "up_next": "Als Nächstes",
-        "unwatched": "Ungesehene Episoden",
+        "unwatched": "Als Nächstes",
         "movies_to_watch": "Filme zum Anschauen",
         "recommendations": "Empfohlen für dich",
         "today": "Heutige Episoden",
@@ -801,7 +787,8 @@
         "upcoming_movies": "Kommende Filme",
         "airing_soon": "Bald im Programm",
         "friends_loved": "Lieblinge deiner Freunde diese Woche",
-        "streak": "Tägliche Serie"
+        "streak": "Tägliche Serie",
+        "trending": "Im Trend"
       }
     },
     "crowdedWeek": {
