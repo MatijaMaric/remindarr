@@ -30,6 +30,7 @@ mock.module("../pages/HomePage", () => ({
 
 const { default: HomeRoute } = await import("./HomeRoute");
 const { AuthContext } = await import("../context/AuthContext");
+const { HOME_DASHBOARD_STATE } = await import("../lib/homeView");
 
 const authedUser = {
   id: "1",
@@ -59,9 +60,15 @@ function LocationProbe() {
   return <span data-testid="pathname">{loc.pathname}</span>;
 }
 
-function Harness({ authValue }: { authValue: ReturnType<typeof makeAuth> }) {
+function Harness({
+  authValue,
+  state,
+}: {
+  authValue: ReturnType<typeof makeAuth>;
+  state?: unknown;
+}) {
   return (
-    <MemoryRouter initialEntries={["/"]}>
+    <MemoryRouter initialEntries={[{ pathname: "/", state }]}>
       <AuthContext value={authValue as any}>
         <LocationProbe />
         <Routes>
@@ -82,15 +89,43 @@ afterEach(() => {
 });
 
 describe("HomeRoute", () => {
-  it("opens the dashboard directly for authenticated mobile users", async () => {
+  it("redirects authenticated mobile users to /reels by default", async () => {
     mockIsMobile = true;
-    const { getByTestId } = render(
+    const { getByTestId, queryByTestId } = render(
       <Harness authValue={makeAuth({ user: authedUser })} />,
     );
 
     await waitFor(() => {
-      expect(getByTestId("pathname").textContent).toBe("/");
-      expect(getByTestId("dashboard")).toBeDefined();
+      expect(getByTestId("pathname").textContent).toBe("/reels");
+    });
+    expect(getByTestId("reels-page")).toBeDefined();
+    expect(queryByTestId("dashboard")).toBeNull();
+  });
+
+  it("opens the dashboard for mobile users who asked for it explicitly", async () => {
+    mockIsMobile = true;
+    const { getByTestId } = render(
+      <Harness
+        authValue={makeAuth({ user: authedUser })}
+        state={HOME_DASHBOARD_STATE}
+      />,
+    );
+
+    await waitFor(() => expect(getByTestId("dashboard")).toBeDefined());
+    expect(getByTestId("pathname").textContent).toBe("/");
+  });
+
+  it("ignores unrelated router state on mobile", async () => {
+    mockIsMobile = true;
+    const { getByTestId } = render(
+      <Harness
+        authValue={makeAuth({ user: authedUser })}
+        state={{ from: "/login" }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("pathname").textContent).toBe("/reels");
     });
   });
 

@@ -137,6 +137,27 @@ describe("BottomTabBar", () => {
     expect(hrefs).toContain("/more");
   });
 
+  it("highlights Home on the dashboard and on Reels, its mobile default", () => {
+    for (const [path, active] of [
+      ["/", true],
+      ["/reels", true],
+      ["/browse", false],
+    ] as const) {
+      render(
+        <QueryClientProvider client={newTestClient()}>
+          <MemoryRouter initialEntries={[path]}>
+            <AuthContext value={mockAuthValue as any}>
+              <BottomTabBar />
+            </AuthContext>
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+      const home = screen.getByRole("link", { name: "Home" });
+      expect(home.className.includes("text-primary-text")).toBe(active);
+      cleanup();
+    }
+  });
+
   it("links to correct routes when not authenticated", () => {
     const noUserAuth = { ...mockAuthValue, user: null };
     render(
