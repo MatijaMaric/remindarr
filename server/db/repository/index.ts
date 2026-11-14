@@ -40,8 +40,6 @@ export {
   deleteEpisodesForTitle,
   getUnwatchedEpisodes,
   getUnwatchedEpisodesWithMeta,
-  getNextUnwatchedEpisode,
-  getNextUnwatchedEpisodesForTitles,
   getLastWatchedAtPerShow,
   getEpisodeAirDate,
   getEpisodeTitleId,
@@ -59,7 +57,6 @@ export {
   getEpisodeIdsBySE,
   getEpisodeIdsBySEForTitles,
 } from "./episodes";
-export type { NextUnwatchedEpisodeRow } from "./episodes";
 
 export {
   logWatch,
@@ -78,7 +75,6 @@ export {
   getTrackedTitleIds,
   getTrackedStatusForIds,
   getTrackedTitles,
-  getSmartShelves,
   getPublicTrackedTitles,
   getPublicTrackedTitleIds,
   getPublicTrackedCount,

@@ -54,7 +54,6 @@ import statsRoutes from "./routes/stats";
 import userSettingsRoutes from "./routes/user-settings";
 import feedRoutes from "./routes/feed";
 import kioskRoutes from "./routes/kiosk";
-import upNextRoutes from "./routes/up-next";
 import moviesRoutes from "./routes/movies";
 import shareRoutes from "./routes/share";
 import overlapRoutes from "./routes/overlap";
@@ -442,11 +441,6 @@ app.route("/api/account", accountRoutes);
 app.use("/api/stats/*", requireAuth);
 app.use("/api/stats", requireAuth);
 app.route("/api/stats", statsRoutes);
-
-// Up Next smart queue
-app.use("/api/up-next/*", requireAuth);
-app.use("/api/up-next", requireAuth);
-app.route("/api/up-next", upNextRoutes);
 
 // Overlap / "what to watch together" (requires auth)
 app.use("/api/overlap/*", requireAuth);

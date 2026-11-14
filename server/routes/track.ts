@@ -5,7 +5,6 @@ import {
   untrackTitle,
   untrackTitlesBulk,
   getTrackedTitles,
-  getSmartShelves,
   insertTitlesIfAbsent,
   getWatchedEpisodesForExport,
   getEpisodeIdsBySEForTitles,
@@ -64,11 +63,6 @@ app.get("/", async (c) => {
       fullUser?.profile_visibility ??
       (fullUser?.profile_public ? "public" : "private"),
   });
-});
-
-app.get("/shelves", async (c) => {
-  const user = c.get("user")!;
-  return ok(c, await getSmartShelves(user.id));
 });
 
 const VALID_USER_STATUSES = [
