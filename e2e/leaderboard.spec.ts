@@ -71,19 +71,19 @@ test.describe("Leaderboard", () => {
     const usernameEl = page.getByText("@testuser");
     await expect(usernameEl).toBeVisible();
 
-    // The PodiumSpot div is the first ancestor div with border-amber-400/40
+    // The PodiumSpot div is the first ancestor div with border-primary-border
     const podiumCard = usernameEl
-      .locator("xpath=ancestor::a[contains(@class,'border-amber')]")
+      .locator("xpath=ancestor::a[contains(@class,'border-primary')]")
       .first();
     await expect(podiumCard).toBeVisible();
-    await expect(podiumCard).toHaveClass(/border-amber/);
+    await expect(podiumCard).toHaveClass(/border-primary/);
 
     // Other podium cards (Alice, Bob) do not have amber border
     const aliceCard = page
       .getByText("@alice")
-      .locator("xpath=ancestor::a[contains(@class,'rounded-xl')]")
+      .locator("xpath=ancestor::a[contains(@class,'rounded-lg')]")
       .first();
-    await expect(aliceCard).not.toHaveClass(/border-amber/);
+    await expect(aliceCard).not.toHaveClass(/border-primary/);
   });
 
   // ── TC-03: Empty leaderboard shows empty state message ───────────────────────

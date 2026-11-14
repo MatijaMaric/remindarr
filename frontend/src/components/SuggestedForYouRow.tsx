@@ -29,7 +29,7 @@ export default function SuggestedForYouRow() {
         </div>
         <Link
           to="/discovery"
-          className="font-mono text-xs text-amber-400 hover:text-amber-300 transition-colors"
+          className="font-mono text-xs text-primary-text hover:text-primary-text transition-colors"
         >
           View all →
         </Link>

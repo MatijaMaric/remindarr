@@ -29,12 +29,12 @@ export function SCard({
         <div className="mb-5 flex justify-between gap-4">
           <div className="min-w-0">
             {title && (
-              <div className="text-[17px] font-bold tracking-[-0.01em] mb-1 text-zinc-100">
+              <div className="text-[17px] font-bold tracking-[-0.01em] mb-1 text-foreground">
                 {title}
               </div>
             )}
             {subtitle && (
-              <div className="text-sm text-zinc-400 leading-relaxed max-w-[640px]">
+              <div className="text-sm text-muted-foreground leading-relaxed max-w-[640px]">
                 {subtitle}
               </div>
             )}
@@ -44,7 +44,7 @@ export function SCard({
       )}
       {children}
       {footer && (
-        <div className="mt-5 pt-4 border-t border-white/[0.04] flex items-center justify-between gap-3">
+        <div className="mt-5 pt-4 border-t border-border flex items-center justify-between gap-3">
           {footer}
         </div>
       )}
@@ -66,9 +66,11 @@ export function SHead({
   return (
     <div className={cn("flex items-end justify-between gap-4 mb-4", className)}>
       <div>
-        <div className="text-xs font-medium text-zinc-300 mb-1.5">{title}</div>
+        <div className="text-xs font-medium text-foreground-secondary mb-1.5">
+          {title}
+        </div>
         {subtitle && (
-          <div className="text-[13px] text-zinc-400 max-w-[620px]">
+          <div className="text-[13px] text-muted-foreground max-w-[620px]">
             {subtitle}
           </div>
         )}
@@ -92,8 +94,10 @@ export function SLabel({
 }) {
   const inner = (
     <>
-      <div className="text-xs font-medium text-zinc-400">{children}</div>
-      {hint && <div className="text-[11px] text-zinc-400">{hint}</div>}
+      <div className="text-xs font-medium text-muted-foreground">
+        {children}
+      </div>
+      {hint && <div className="text-[11px] text-muted-foreground">{hint}</div>}
     </>
   );
   if (htmlFor) {
@@ -168,11 +172,11 @@ export function SSwitch({
 }) {
   const labelId = useId();
   return (
-    <div className="flex items-center justify-between py-3.5 gap-5 border-b border-white/[0.04] last:border-b-0">
+    <div className="flex items-center justify-between py-3.5 gap-5 border-b border-border last:border-b-0">
       <div className="min-w-0 flex-1">
         <div
           id={labelId}
-          className="text-sm font-semibold text-zinc-100 mb-0.5"
+          className="text-sm font-semibold text-foreground mb-0.5"
         >
           {label}
         </div>
@@ -180,7 +184,7 @@ export function SSwitch({
           <div
             className={cn(
               "text-xs font-mono leading-relaxed",
-              warning ? "text-red-400" : "text-zinc-400",
+              warning ? "text-destructive" : "text-muted-foreground",
             )}
           >
             {sub}
@@ -224,13 +228,15 @@ export function SToggle({
       onClick={() => onChange?.(!on)}
       className={cn(
         "relative w-10 h-[22px] rounded-full transition-colors flex-shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
-        on ? "bg-amber-400" : "bg-white/[0.12]",
+        on ? "bg-primary" : "bg-accent",
       )}
     >
       <span
         className={cn(
           "absolute top-0.5 w-[18px] h-[18px] rounded-full transition-all shadow",
-          on ? "left-5 bg-black" : "left-0.5 bg-zinc-200",
+          on
+            ? "left-5 bg-primary-foreground"
+            : "left-0.5 bg-foreground-secondary",
         )}
       />
     </button>
@@ -266,29 +272,29 @@ export function SRadioCard({
       className={cn(
         "w-full text-left flex items-start gap-3.5 p-3.5 rounded-[10px] border transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
         selected
-          ? "bg-amber-400/[0.08] border-amber-400/30"
-          : "bg-zinc-800 border-transparent hover:bg-zinc-800/80",
+          ? "bg-primary-soft border-primary-border"
+          : "bg-muted border-transparent hover:bg-muted/80",
       )}
     >
       <span
         className={cn(
           "mt-0.5 shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center",
-          selected ? "border-amber-400" : "border-zinc-600",
+          selected ? "border-primary" : "border-input",
         )}
       >
-        {selected && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+        {selected && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
       </span>
       <span className="min-w-0">
         <span
           className={cn(
             "block text-sm font-semibold mb-0.5",
-            selected ? "text-amber-400" : "text-zinc-100",
+            selected ? "text-primary-text" : "text-foreground",
           )}
         >
           {title}
         </span>
         {desc && (
-          <span className="block text-xs text-zinc-400 leading-relaxed">
+          <span className="block text-xs text-muted-foreground leading-relaxed">
             {desc}
           </span>
         )}
@@ -300,11 +306,11 @@ export function SRadioCard({
 type PillKind = "ok" | "warning" | "error" | "neutral" | "amber";
 
 const PILL_STYLES: Record<PillKind, string> = {
-  ok: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25",
-  warning: "bg-amber-400/10 text-amber-400 border-amber-400/30",
-  error: "bg-red-500/10 text-red-400 border-red-500/25",
-  neutral: "bg-white/[0.06] text-zinc-400 border-white/[0.08]",
-  amber: "bg-amber-400/10 text-amber-400 border-amber-400/30",
+  ok: "bg-success/10 text-success border-success/25",
+  warning: "bg-primary-soft text-primary-text border-primary-border",
+  error: "bg-destructive-soft text-destructive border-destructive/25",
+  neutral: "bg-accent text-muted-foreground border-border",
+  amber: "bg-primary-soft text-primary-text border-primary-border",
 };
 
 export function SStatusPill({
@@ -332,10 +338,10 @@ export function SStatusPill({
 type HintKind = "info" | "amber" | "danger" | "success";
 
 const HINT_STYLES: Record<HintKind, string> = {
-  info: "bg-white/[0.03] border-white/[0.06] text-zinc-400",
-  amber: "bg-amber-400/[0.06] border-amber-400/30 text-zinc-300",
-  danger: "bg-red-500/10 border-red-500/25 text-zinc-200",
-  success: "bg-emerald-500/10 border-emerald-500/25 text-zinc-200",
+  info: "bg-fill-subtle border-border text-muted-foreground",
+  amber: "bg-primary-soft border-primary-border text-foreground-secondary",
+  danger: "bg-destructive-soft border-destructive/25 text-foreground-secondary",
+  success: "bg-success/10 border-success/25 text-foreground-secondary",
 };
 
 export function SHint({
@@ -350,7 +356,7 @@ export function SHint({
   return (
     <div
       className={cn(
-        "p-3 rounded-lg border text-[12.5px] leading-relaxed",
+        "p-3 rounded-md border text-[12.5px] leading-relaxed",
         HINT_STYLES[kind],
         className,
       )}
@@ -369,11 +375,11 @@ export function SDivider({
 }) {
   return (
     <div className={cn("flex items-center gap-3 my-5 mb-3.5", className)}>
-      <div className="flex-1 h-px bg-white/[0.06]" />
+      <div className="flex-1 h-px bg-accent" />
       {label && (
-        <div className="text-xs font-medium text-zinc-400">{label}</div>
+        <div className="text-xs font-medium text-muted-foreground">{label}</div>
       )}
-      <div className="flex-1 h-px bg-white/[0.06]" />
+      <div className="flex-1 h-px bg-accent" />
     </div>
   );
 }
@@ -388,13 +394,13 @@ export function SKeyValue({
   mono?: boolean;
 }) {
   return (
-    <div className="flex justify-between gap-3 py-2 border-b border-white/[0.04] text-xs">
-      <div className="font-mono tracking-[0.04em] text-zinc-400 shrink-0">
+    <div className="flex justify-between gap-3 py-2 border-b border-border text-xs">
+      <div className="font-mono tracking-[0.04em] text-muted-foreground shrink-0">
         {k}
       </div>
       <div
         className={cn(
-          "text-right text-zinc-200 min-w-0 truncate",
+          "text-right text-foreground-secondary min-w-0 truncate",
           mono && "font-mono",
         )}
         title={typeof v === "string" ? v : undefined}
@@ -429,18 +435,18 @@ export function SButton({
   icon?: ReactNode;
 }) {
   const base =
-    "inline-flex items-center gap-1.5 font-semibold rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap";
+    "inline-flex items-center gap-1.5 font-semibold rounded-md transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap";
   const size = small ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-[13px]";
   const variants: Record<SButtonVariant, string> = {
-    primary: "bg-amber-400 text-black hover:bg-amber-300",
+    primary: "bg-primary text-primary-foreground hover:bg-primary/90",
     ghost:
-      "bg-white/[0.06] text-zinc-200 border border-white/[0.08] hover:bg-white/[0.1]",
+      "bg-fill-subtle text-foreground-secondary border border-border hover:bg-accent",
     outline:
-      "bg-transparent text-zinc-300 border border-white/[0.08] hover:bg-white/[0.04]",
-    link: "bg-transparent text-amber-400 hover:text-amber-300 px-1 py-1",
+      "bg-transparent text-foreground-secondary border border-border hover:bg-fill-subtle",
+    link: "bg-transparent text-primary-text hover:text-primary-text px-1 py-1",
   };
   const dangerStyle =
-    "bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/20";
+    "bg-destructive-soft text-destructive border border-destructive/30 hover:bg-destructive-soft/80";
   return (
     <button
       type={type}
@@ -511,7 +517,7 @@ export function SInput({
       autoComplete={autoComplete}
       aria-label={ariaLabel}
       className={cn(
-        "w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 placeholder-zinc-500 text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 focus-visible:border-transparent disabled:opacity-50",
+        "w-full px-3 py-2.5 bg-muted border border-border rounded-md text-foreground placeholder-muted-foreground text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border focus-visible:border-transparent disabled:opacity-50",
         mono && "font-mono",
         className,
       )}
@@ -531,10 +537,10 @@ export function SMessage({
   return (
     <div
       className={cn(
-        "p-3 rounded-lg border text-sm",
+        "p-3 rounded-md border text-sm",
         kind === "success"
-          ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-200"
-          : "bg-red-500/10 border-red-500/25 text-red-200",
+          ? "bg-success/10 border-success/25 text-success"
+          : "bg-destructive-soft border-destructive/25 text-destructive",
         className,
       )}
     >

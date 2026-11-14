@@ -11,7 +11,9 @@ export default function HomeRoute() {
     <ErrorBoundary variant="inline">
       <Suspense
         fallback={
-          <div className="text-center py-12 text-zinc-500">Loading...</div>
+          <div className="text-center py-12 text-muted-foreground">
+            Loading...
+          </div>
         }
       >
         <HomePage />

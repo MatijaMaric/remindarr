@@ -13,14 +13,14 @@ type FilterMode = "all" | "movies" | "watchable";
 function ProviderIcon({ provider }: { provider: Provider }) {
   return (
     <div
-      className="flex items-center gap-1.5 bg-zinc-800 rounded-lg px-2 py-1 text-xs text-zinc-300"
+      className="flex items-center gap-1.5 bg-muted rounded-md px-2 py-1 text-xs text-foreground-secondary"
       title={provider.name}
     >
       {provider.icon_url ? (
         <img
           src={provider.icon_url}
           alt={provider.name}
-          className="w-5 h-5 rounded"
+          className="w-5 h-5 rounded-sm"
           loading="lazy"
         />
       ) : null}
@@ -99,13 +99,13 @@ export default function UserOverlapPage() {
       errorMessage.includes("mutual followers");
     return (
       <div className="max-w-2xl mx-auto py-16 text-center space-y-4">
-        <p className="text-zinc-400 text-lg">
+        <p className="text-muted-foreground text-lg">
           {isPrivate
             ? t("overlap.privateWatchlist", "Watchlist overlap unavailable.")
             : t("overlap.error", "Something went wrong loading the overlap.")}
         </p>
         {isPrivate && (
-          <p className="text-zinc-400 text-sm max-w-sm mx-auto">
+          <p className="text-muted-foreground text-sm max-w-sm mx-auto">
             {t(
               "overlap.privateWatchlistHint",
               "Both watchlists must be public and you must follow each other to compare watchlists.",
@@ -114,7 +114,7 @@ export default function UserOverlapPage() {
         )}
         <Link
           to={`/user/${friendUsername}`}
-          className="inline-block text-amber-400 hover:text-amber-300 text-sm transition-colors"
+          className="inline-block text-primary-text hover:text-primary-text text-sm transition-colors"
         >
           {t("overlap.backToProfile", "Back to profile")}
         </Link>
@@ -125,13 +125,13 @@ export default function UserOverlapPage() {
   if (loading || !data) {
     return (
       <div className="max-w-7xl mx-auto py-8 space-y-6">
-        <div className="h-20 bg-zinc-900 animate-pulse rounded-xl" />
-        <div className="h-10 bg-zinc-900 animate-pulse rounded-xl" />
+        <div className="h-20 bg-card animate-pulse rounded-lg" />
+        <div className="h-10 bg-card animate-pulse rounded-lg" />
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {Array.from({ length: 10 }).map((_, i) => (
             <div
               key={i}
-              className="aspect-[2/3] bg-zinc-900 animate-pulse rounded-xl"
+              className="aspect-[2/3] bg-card animate-pulse rounded-lg"
             />
           ))}
         </div>
@@ -150,18 +150,18 @@ export default function UserOverlapPage() {
         {/* Viewer avatar */}
         <div className="flex flex-col items-center gap-1">
           <div
-            className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl text-black"
+            className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl text-primary-foreground"
             style={{ background: "oklch(0.6 0.1 250)" }}
           >
             {viewerName.charAt(0).toUpperCase()}
           </div>
-          <span className="text-sm text-zinc-300 font-medium">
+          <span className="text-sm text-foreground-secondary font-medium">
             @{currentUser?.username ?? username}
           </span>
         </div>
 
         {/* VS divider */}
-        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-amber-500 text-black font-extrabold text-sm shrink-0">
+        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary text-primary-foreground font-extrabold text-sm shrink-0">
           vs
         </div>
 
@@ -175,7 +175,7 @@ export default function UserOverlapPage() {
             />
           ) : (
             <div
-              className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl text-black"
+              className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl text-primary-foreground"
               style={{ background: "oklch(0.6 0.12 40)" }}
             >
               {(friendUser.displayName ?? friendUser.username)
@@ -185,7 +185,7 @@ export default function UserOverlapPage() {
           )}
           <Link
             to={`/user/${friendUser.username}`}
-            className="text-sm text-amber-400 hover:text-amber-300 font-medium transition-colors"
+            className="text-sm text-primary-text hover:text-primary-text font-medium transition-colors"
           >
             @{friendUser.username}
           </Link>
@@ -193,10 +193,10 @@ export default function UserOverlapPage() {
 
         {/* Heading */}
         <div className="sm:ml-4 text-center sm:text-left">
-          <h1 className="text-xl font-bold text-white">
+          <h1 className="text-xl font-bold text-foreground">
             {t("overlap.heading", "What to watch together")}
           </h1>
-          <p className="text-zinc-400 text-sm mt-0.5">
+          <p className="text-muted-foreground text-sm mt-0.5">
             {t("overlap.withFriend", "with @{{friend}}", {
               friend: friendUser.username,
             })}
@@ -206,23 +206,23 @@ export default function UserOverlapPage() {
 
       {/* Stats row */}
       <div className="flex flex-wrap gap-3 text-sm">
-        <span className="bg-zinc-800 px-3 py-1.5 rounded-lg text-white font-semibold">
+        <span className="bg-muted px-3 py-1.5 rounded-md text-foreground font-semibold">
           {counts.intersection}{" "}
-          <span className="text-zinc-400 font-normal">
+          <span className="text-muted-foreground font-normal">
             {t("overlap.inCommon", "in common")}
           </span>
         </span>
-        <span className="bg-zinc-800 px-3 py-1.5 rounded-lg text-zinc-400">
+        <span className="bg-muted px-3 py-1.5 rounded-md text-muted-foreground">
           {counts.viewerOnly} {t("overlap.yourOnly", "yours only")}
         </span>
-        <span className="bg-zinc-800 px-3 py-1.5 rounded-lg text-zinc-400">
+        <span className="bg-muted px-3 py-1.5 rounded-md text-muted-foreground">
           {counts.friendOnly}{" "}
           {t("overlap.friendOnly", "{{friend}}'s only", {
             friend: friendUser.username,
           })}
         </span>
         {sharedProviders.length > 0 && (
-          <span className="bg-zinc-800 px-3 py-1.5 rounded-lg text-zinc-400">
+          <span className="bg-muted px-3 py-1.5 rounded-md text-muted-foreground">
             {sharedProviders.length}{" "}
             {t("overlap.sharedProviders", "shared streaming services")}
           </span>
@@ -232,7 +232,7 @@ export default function UserOverlapPage() {
       {/* Shared providers row */}
       {sharedProviders.length > 0 && (
         <div>
-          <p className="text-xs text-zinc-400 uppercase tracking-wider mb-2 font-semibold">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 font-semibold">
             {t("overlap.bothSubscribedTo", "Both subscribed to")}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -251,8 +251,8 @@ export default function UserOverlapPage() {
             onClick={() => setFilterMode(mode)}
             className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
               filterMode === mode
-                ? "bg-amber-500 text-black"
-                : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-foreground-secondary hover:bg-muted-hover"
             }`}
           >
             {mode === "all" && t("overlap.filterAll", "All")}
@@ -275,7 +275,7 @@ export default function UserOverlapPage() {
       <h2 className="sr-only">Shared titles</h2>
       {filteredTitles.length === 0 ? (
         <div className="py-16 text-center space-y-3">
-          <p className="text-zinc-400 text-lg">
+          <p className="text-muted-foreground text-lg">
             {counts.intersection === 0
               ? t(
                   "overlap.noCommon",
@@ -290,7 +290,7 @@ export default function UserOverlapPage() {
           {counts.intersection === 0 && (
             <Link
               to={`/user/${friendUser.username}`}
-              className="inline-block text-amber-400 hover:text-amber-300 text-sm transition-colors"
+              className="inline-block text-primary-text hover:text-primary-text text-sm transition-colors"
             >
               {t("overlap.viewProfile", "View @{{friend}}'s profile", {
                 friend: friendUser.username,

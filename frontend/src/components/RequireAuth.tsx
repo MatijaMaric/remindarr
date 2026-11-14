@@ -19,12 +19,14 @@ export default function RequireAuth({
   }, [loading, sessionStatus, refresh]);
 
   if (loading) {
-    return <div className="text-center py-12 text-zinc-500">Loading...</div>;
+    return (
+      <div className="text-center py-12 text-muted-foreground">Loading...</div>
+    );
   }
 
   if (sessionStatus === "unknown") {
     return (
-      <div className="text-center py-12 text-zinc-500">
+      <div className="text-center py-12 text-muted-foreground">
         <p className="mb-4">Reconnecting…</p>
         <button type="button" onClick={refresh} className="text-sm underline">
           Try again

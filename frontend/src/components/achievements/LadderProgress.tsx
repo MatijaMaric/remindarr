@@ -29,9 +29,8 @@ export function LadderProgress({ rungs, currentKey }: LadderProgressProps) {
               "w-3 h-3 rounded-full border transition-all",
               rung.earned
                 ? cn(colors.ring, colors.bg, "border-transparent")
-                : "border-zinc-600 bg-zinc-800",
-              isCurrent &&
-                "ring-2 ring-offset-1 ring-offset-zinc-900 scale-125",
+                : "border-input bg-muted",
+              isCurrent && "ring-2 ring-offset-1 ring-offset-card scale-125",
             )}
           />
         );

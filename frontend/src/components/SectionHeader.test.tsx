@@ -27,7 +27,7 @@ describe("SectionHeader", () => {
     expect(heading.className).toContain("font-semibold");
     const link = screen.getByRole("link", { name: "Discover More →" });
     expect(link.getAttribute("href")).toBe("/browse");
-    expect(link.className).toContain("text-zinc-400");
+    expect(link.className).toContain("text-muted-foreground");
   });
 
   it("omits the trailing link when none is provided", () => {

@@ -22,12 +22,12 @@ export default function SharedWrappedPage() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-64 bg-zinc-800 rounded animate-pulse" />
+        <div className="h-8 w-64 bg-muted rounded-sm animate-pulse" />
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
             <div
               key={i}
-              className="bg-zinc-900 rounded-xl p-4 h-20 animate-pulse"
+              className="bg-card rounded-lg p-4 h-20 animate-pulse"
             />
           ))}
         </div>
@@ -38,13 +38,15 @@ export default function SharedWrappedPage() {
   if (isError || !data) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
-        <h1 className="text-xl font-bold text-zinc-100">
+        <h1 className="text-xl font-bold text-foreground">
           {t("wrapped.invalidLink")}
         </h1>
-        <p className="text-sm text-zinc-500">{t("wrapped.invalidLinkHint")}</p>
+        <p className="text-sm text-muted-foreground">
+          {t("wrapped.invalidLinkHint")}
+        </p>
         <Link
           to="/"
-          className="text-amber-400 hover:text-amber-300 text-sm transition-colors"
+          className="text-primary-text hover:text-primary-text text-sm transition-colors"
         >
           {t("wrapped.goHome")}
         </Link>

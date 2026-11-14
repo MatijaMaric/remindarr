@@ -43,8 +43,8 @@ describe("ShareButton", () => {
   it("has correct styling classes", () => {
     render(<ShareButton />);
     const button = screen.getByRole("button", { name: /share/i });
-    expect(button.className).toContain("bg-zinc-800");
-    expect(button.className).toContain("text-zinc-400");
+    expect(button.className).toContain("bg-muted");
+    expect(button.className).toContain("text-muted-foreground");
   });
 
   it("copies URL to clipboard when navigator.share is not available", async () => {

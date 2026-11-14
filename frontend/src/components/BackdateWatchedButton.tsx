@@ -69,8 +69,8 @@ export default function BackdateWatchedButton({
 
   const buttonClass =
     variant === "ghost"
-      ? "min-h-8 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/[0.06] cursor-pointer transition-colors"
-      : "min-h-8 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white cursor-pointer transition-colors";
+      ? "min-h-8 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent cursor-pointer transition-colors"
+      : "min-h-8 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium bg-muted text-muted-foreground hover:bg-muted-hover hover:text-foreground cursor-pointer transition-colors";
 
   const label =
     scope === "all"
@@ -118,14 +118,14 @@ export default function BackdateWatchedButton({
             )}
           </AlertDialogDescription>
           <div className="mt-4 flex justify-end gap-2">
-            <AlertDialogClose className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer transition-colors">
+            <AlertDialogClose className="inline-flex items-center justify-center rounded-sm px-3 py-1.5 text-xs font-medium bg-muted text-muted-foreground hover:bg-muted-hover cursor-pointer transition-colors">
               {t("common.cancel")}
             </AlertDialogClose>
             <button
               type="button"
               onClick={handleConfirm}
               disabled={loading}
-              className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-amber-500 text-zinc-950 hover:bg-amber-400 cursor-pointer transition-colors disabled:opacity-50"
+              className="inline-flex items-center justify-center rounded-sm px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer transition-colors disabled:opacity-50"
             >
               {loading ? "..." : t("episodes.backdateConfirm", "Backdate")}
             </button>

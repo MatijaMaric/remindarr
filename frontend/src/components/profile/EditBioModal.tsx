@@ -44,7 +44,7 @@ export function EditBioModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim backdrop-blur-sm"
       aria-hidden="true"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -58,7 +58,7 @@ export function EditBioModal({
         padding="lg"
         className="w-full max-w-md space-y-4"
       >
-        <h2 className="text-lg font-semibold text-white">
+        <h2 className="text-lg font-semibold text-foreground">
           {t("userProfile.dossier.bio")}
         </h2>
         <textarea
@@ -67,12 +67,12 @@ export function EditBioModal({
           maxLength={MAX_LEN + 40 /* tolerate paste, block on save */}
           rows={4}
           placeholder={t("userProfile.dossier.bioPlaceholder")}
-          className="w-full px-3 py-2 bg-zinc-950 border border-white/[0.08] rounded-lg text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 focus-visible:border-amber-400/60 resize-none"
+          className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:border-primary/60 resize-none"
           data-testid="bio-textarea"
         />
         <div className="flex items-center justify-between">
           <div
-            className={`font-mono text-xs ${tooLong ? "text-red-400" : "text-zinc-500"}`}
+            className={`font-mono text-xs ${tooLong ? "text-destructive" : "text-muted-foreground"}`}
             data-testid="bio-char-count"
           >
             {t("userProfile.dossier.bioCharCount", { count: value.length })}
@@ -81,7 +81,7 @@ export function EditBioModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-sm text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               {t("userProfile.dossier.bioCancel")}
             </button>
@@ -89,7 +89,7 @@ export function EditBioModal({
               type="button"
               onClick={handleSave}
               disabled={saving || tooLong}
-              className="px-4 py-1.5 rounded-md text-xs font-semibold bg-amber-400 text-black hover:bg-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="px-4 py-1.5 rounded-sm text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
               data-testid="bio-save"
             >
               {saving ? "…" : t("userProfile.dossier.bioSave")}

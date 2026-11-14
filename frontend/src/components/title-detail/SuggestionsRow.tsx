@@ -42,7 +42,7 @@ function SuggestionsRowInner({ titleId, type }: SuggestionsRowProps) {
               to={`/title/${title.id}`}
               className="w-28 flex-shrink-0 group"
             >
-              <div className="aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800">
+              <div className="aspect-[2/3] rounded-md overflow-hidden bg-muted">
                 {title.posterUrl ? (
                   <img
                     src={title.posterUrl}
@@ -53,16 +53,16 @@ function SuggestionsRowInner({ titleId, type }: SuggestionsRowProps) {
                     height={168}
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-zinc-500 text-xs">
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
                     N/A
                   </div>
                 )}
               </div>
-              <p className="text-xs text-zinc-300 mt-1.5 line-clamp-2 group-hover:text-amber-400 transition-colors">
+              <p className="text-xs text-foreground-secondary mt-1.5 line-clamp-2 group-hover:text-primary-text transition-colors">
                 {title.title}
               </p>
               {title.releaseYear && (
-                <p className="font-mono text-[10px] text-zinc-500">
+                <p className="font-mono text-[11px] text-muted-foreground">
                   {title.releaseYear}
                 </p>
               )}

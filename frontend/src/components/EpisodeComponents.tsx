@@ -101,13 +101,13 @@ export function EpisodeCard({
 
   if (compact) {
     return (
-      <div className="flex items-center gap-3 bg-zinc-900 rounded-lg p-3">
+      <div className="flex items-center gap-3 bg-card rounded-md p-3">
         {episode.poster_url && (
           <Link to={`/title/${episode.title_id}`} className="flex-shrink-0">
             <img
               src={episode.poster_url}
               alt={episode.show_title}
-              className="w-10 h-15 rounded object-cover"
+              className="w-10 h-15 rounded-sm object-cover"
               loading="lazy"
               width={40}
               height={60}
@@ -117,17 +117,17 @@ export function EpisodeCard({
         <div className="flex-1 min-w-0">
           <Link
             to={`/title/${episode.title_id}`}
-            className="hover:text-amber-400 transition-colors"
+            className="hover:text-primary-text transition-colors"
           >
-            <p className="text-sm font-medium text-white truncate">
+            <p className="text-sm font-medium text-foreground truncate">
               {episode.show_title}
             </p>
           </Link>
           <Link
             to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`}
-            className="hover:text-amber-400 transition-colors"
+            className="hover:text-primary-text transition-colors"
           >
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-muted-foreground">
               {formatEpisodeCode(episode)}
               {episode.name && ` · ${episode.name}`}
             </p>
@@ -155,14 +155,14 @@ export function EpisodeCard({
   }
 
   return (
-    <div className="bg-zinc-900 rounded-xl overflow-hidden">
+    <div className="bg-card rounded-lg overflow-hidden">
       <div className="flex gap-4 p-4">
         {episode.poster_url && (
           <Link to={`/title/${episode.title_id}`} className="flex-shrink-0">
             <img
               src={episode.poster_url}
               alt={episode.show_title}
-              className="w-16 h-24 rounded-lg object-cover"
+              className="w-16 h-24 rounded-md object-cover"
               loading="lazy"
               width={64}
               height={96}
@@ -172,21 +172,23 @@ export function EpisodeCard({
         <div className="flex-1 min-w-0">
           <Link
             to={`/title/${episode.title_id}`}
-            className="hover:text-amber-400 transition-colors"
+            className="hover:text-primary-text transition-colors"
           >
-            <h3 className="font-semibold text-white">{episode.show_title}</h3>
+            <h3 className="font-semibold text-foreground">
+              {episode.show_title}
+            </h3>
           </Link>
           <Link
             to={`/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`}
-            className="hover:text-amber-400 transition-colors"
+            className="hover:text-primary-text transition-colors"
           >
-            <p className="text-sm text-amber-400 font-medium mt-0.5">
+            <p className="text-sm text-primary-text font-medium mt-0.5">
               {formatEpisodeCode(episode)}
               {episode.name && ` · ${episode.name}`}
             </p>
           </Link>
           {episode.overview && (
-            <p className="text-sm text-zinc-400 mt-2 line-clamp-2">
+            <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
               {episode.overview}
             </p>
           )}
@@ -240,13 +242,13 @@ export function ShowEpisodeGroup({
 
   if (compact) {
     return (
-      <div className="flex items-center gap-3 bg-zinc-900 rounded-lg p-3">
+      <div className="flex items-center gap-3 bg-card rounded-md p-3">
         {posterUrl && (
           <Link to={`/title/${episodes[0].title_id}`} className="flex-shrink-0">
             <img
               src={posterUrl}
               alt={showTitle}
-              className="w-10 h-15 rounded object-cover"
+              className="w-10 h-15 rounded-sm object-cover"
               loading="lazy"
               width={40}
               height={60}
@@ -256,9 +258,9 @@ export function ShowEpisodeGroup({
         <div className="flex-1 min-w-0">
           <Link
             to={`/title/${episodes[0].title_id}`}
-            className="hover:text-amber-400 transition-colors"
+            className="hover:text-primary-text transition-colors"
           >
-            <p className="text-sm font-medium text-white truncate">
+            <p className="text-sm font-medium text-foreground truncate">
               {showTitle}
             </p>
           </Link>
@@ -273,9 +275,9 @@ export function ShowEpisodeGroup({
                 />
                 <Link
                   to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
-                  className="hover:text-amber-400 transition-colors"
+                  className="hover:text-primary-text transition-colors"
                 >
-                  <span className="text-xs text-zinc-400">
+                  <span className="text-xs text-muted-foreground">
                     {formatEpisodeCode(ep)}
                   </span>
                 </Link>
@@ -296,14 +298,14 @@ export function ShowEpisodeGroup({
   }
 
   return (
-    <div className="bg-zinc-900 rounded-xl overflow-hidden">
+    <div className="bg-card rounded-lg overflow-hidden">
       <div className="flex gap-4 p-4">
         {posterUrl && (
           <Link to={`/title/${episodes[0].title_id}`} className="flex-shrink-0">
             <img
               src={posterUrl}
               alt={showTitle}
-              className="w-16 h-24 rounded-lg object-cover"
+              className="w-16 h-24 rounded-md object-cover"
               loading="lazy"
               width={64}
               height={96}
@@ -313,22 +315,22 @@ export function ShowEpisodeGroup({
         <div className="flex-1 min-w-0">
           <Link
             to={`/title/${episodes[0].title_id}`}
-            className="hover:text-amber-400 transition-colors"
+            className="hover:text-primary-text transition-colors"
           >
-            <h3 className="font-semibold text-white">{showTitle}</h3>
+            <h3 className="font-semibold text-foreground">{showTitle}</h3>
           </Link>
           <div className="mt-2 space-y-1">
             {episodes.map((ep) => (
               <div key={ep.id} className="flex items-center gap-2 text-sm">
                 <Link
                   to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
-                  className="flex-1 min-w-0 hover:text-amber-400 transition-colors"
+                  className="flex-1 min-w-0 hover:text-primary-text transition-colors"
                 >
-                  <span className="text-amber-400 font-medium">
+                  <span className="text-primary-text font-medium">
                     {formatEpisodeCode(ep)}
                   </span>
                   {ep.name && (
-                    <span className="text-zinc-400"> · {ep.name}</span>
+                    <span className="text-muted-foreground"> · {ep.name}</span>
                   )}
                 </Link>
                 <div className="flex-shrink-0">

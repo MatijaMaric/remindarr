@@ -167,7 +167,7 @@ export default function EpisodeDetailPage() {
   if (error || !data) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-red-400 select-text">
+        <div className="text-destructive select-text">
           {t("episodes.notFound", "Episode not found")}
         </div>
       </div>
@@ -206,29 +206,29 @@ export default function EpisodeDetailPage() {
       {/* Breadcrumb */}
       <nav
         aria-label="breadcrumb"
-        className="flex items-center gap-2 text-sm text-zinc-400 flex-wrap"
+        className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap"
       >
         <Link
           to={`/title/${title.id}`}
-          className="hover:text-white transition-colors"
+          className="hover:text-foreground transition-colors"
         >
           {title.title}
         </Link>
-        <span className="text-zinc-600">/</span>
+        <span className="text-muted-foreground">/</span>
         <Link
           to={`/title/${title.id}/season/${seasonNumber}`}
-          className="hover:text-white transition-colors"
+          className="hover:text-foreground transition-colors"
         >
           {t("home.season", { number: seasonNumber })}
         </Link>
-        <span className="text-zinc-600">/</span>
-        <span className="text-white" aria-current="page">
+        <span className="text-muted-foreground">/</span>
+        <span className="text-foreground" aria-current="page">
           {episodeFallback}
         </span>
       </nav>
 
       {/* Still image */}
-      <div className="rounded-xl overflow-hidden">
+      <div className="rounded-lg overflow-hidden">
         {stillUrl ? (
           <img
             src={stillUrl}
@@ -239,8 +239,8 @@ export default function EpisodeDetailPage() {
             loading="eager"
           />
         ) : (
-          <div className="w-full aspect-video bg-zinc-800 flex items-center justify-center">
-            <span className="text-zinc-400 text-sm">
+          <div className="w-full aspect-video bg-muted flex items-center justify-center">
+            <span className="text-muted-foreground text-sm">
               {t("episodes.noPreview", "No preview available")}
             </span>
           </div>
@@ -255,7 +255,7 @@ export default function EpisodeDetailPage() {
           {adjacent.prev ? (
             <Link
               to={`/title/${title.id}/season/${adjacent.prev.season}/episode/${adjacent.prev.episode}`}
-              className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white transition-colors"
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
               aria-label={t(
                 "episodes.previousEpisode",
                 "Previous episode, {{code}}",
@@ -269,7 +269,7 @@ export default function EpisodeDetailPage() {
             >
               <ChevronLeft size={16} aria-hidden="true" />
               {t("episodes.previous", "Previous")}
-              <span className="text-zinc-500">
+              <span className="text-muted-foreground">
                 {formatEpisodeCode(adjacent.prev.season, adjacent.prev.episode)}
               </span>
             </Link>
@@ -279,7 +279,7 @@ export default function EpisodeDetailPage() {
           {adjacent.next ? (
             <Link
               to={`/title/${title.id}/season/${adjacent.next.season}/episode/${adjacent.next.episode}`}
-              className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white transition-colors"
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
               aria-label={t("episodes.nextEpisode", "Next episode, {{code}}", {
                 code: formatEpisodeCode(
                   adjacent.next.season,
@@ -287,7 +287,7 @@ export default function EpisodeDetailPage() {
                 ),
               })}
             >
-              <span className="text-zinc-500">
+              <span className="text-muted-foreground">
                 {formatEpisodeCode(adjacent.next.season, adjacent.next.episode)}
               </span>
               {t("episodes.next", "Next")}
@@ -302,8 +302,8 @@ export default function EpisodeDetailPage() {
       {/* Episode header */}
       <div className="space-y-3">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-white select-text">
-            <span className="text-zinc-500">
+          <h1 className="text-2xl font-bold text-foreground select-text">
+            <span className="text-muted-foreground">
               S{String(seasonNumber).padStart(2, "0")}E
               {String(episodeNumber).padStart(2, "0")}
             </span>{" "}
@@ -320,22 +320,22 @@ export default function EpisodeDetailPage() {
           <ShareButton title={`${title.title} — ${episodeLabel}`} />
         </div>
 
-        <div className="flex items-center gap-3 text-sm text-zinc-400">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
           {tmdb?.air_date && <span>{formatDate(tmdb.air_date)}</span>}
           {tmdb?.runtime && (
             <>
-              <span className="text-zinc-600">·</span>
+              <span className="text-muted-foreground">·</span>
               <span>{tmdb.runtime}m</span>
             </>
           )}
           {tmdb?.vote_average ? (
             <>
-              <span className="text-zinc-600">·</span>
+              <span className="text-muted-foreground">·</span>
               <span className="text-yellow-500 font-medium">
                 {tmdb.vote_average.toFixed(1)}
               </span>
               {tmdb.vote_count > 0 && (
-                <span className="text-zinc-600 text-xs">
+                <span className="text-muted-foreground text-xs">
                   ({t("episodes.votes", { count: tmdb.vote_count })})
                 </span>
               )}
@@ -346,7 +346,7 @@ export default function EpisodeDetailPage() {
         {episodeStatus?.is_watched && watchHistoryEntries.length > 0 && (
           <button
             onClick={() => setEditHistoryEntry(watchHistoryEntries[0].id)}
-            className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors underline-offset-2 hover:underline cursor-pointer"
+            className="text-xs text-success hover:text-success transition-colors underline-offset-2 hover:underline cursor-pointer"
           >
             {t("episodes.watchedOn", "Watched {{date}}", {
               date: formatDate(
@@ -362,7 +362,7 @@ export default function EpisodeDetailPage() {
       {released && episodeStatus && (
         <SectionErrorBoundary label="ratings">
           <section className="space-y-2">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-foreground">
               {t("episodes.rateThis", "Rate this episode")}
             </h2>
             <EpisodeRatingButtons episodeId={episodeStatus.id} />
@@ -384,10 +384,10 @@ export default function EpisodeDetailPage() {
       {/* Overview */}
       {tmdb?.overview && (
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-white">
+          <h2 className="text-lg font-semibold text-foreground">
             {t("episodes.overview", "Overview")}
           </h2>
-          <p className="text-zinc-300 leading-relaxed select-text">
+          <p className="text-foreground-secondary leading-relaxed select-text">
             {tmdb.overview}
           </p>
         </section>
@@ -397,26 +397,26 @@ export default function EpisodeDetailPage() {
       {(directors.length > 0 || writers.length > 0) && (
         <SectionErrorBoundary label="crew">
           <section className="space-y-2">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-foreground">
               {t("episodes.crew", "Crew")}
             </h2>
             <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
               {directors.length > 0 && (
                 <div>
-                  <span className="text-zinc-400">
+                  <span className="text-muted-foreground">
                     {t("episodes.directedBy", "Directed by:")}{" "}
                   </span>
-                  <span className="text-white">
+                  <span className="text-foreground">
                     {directors.map((d) => d.name).join(", ")}
                   </span>
                 </div>
               )}
               {writers.length > 0 && (
                 <div>
-                  <span className="text-zinc-400">
+                  <span className="text-muted-foreground">
                     {t("episodes.writtenBy", "Written by:")}{" "}
                   </span>
-                  <span className="text-white">
+                  <span className="text-foreground">
                     {writers.map((w) => w.name).join(", ")}
                   </span>
                 </div>
@@ -430,7 +430,7 @@ export default function EpisodeDetailPage() {
       {allCast.length > 0 && (
         <SectionErrorBoundary label="cast">
           <section className="space-y-3">
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-foreground">
               {t("episodes.cast", "Cast")}
             </h2>
             <ScrollableRow className="gap-4 pb-2">

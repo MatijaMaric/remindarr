@@ -234,27 +234,27 @@ function HomepageLayoutSection() {
               className={cn(
                 "flex items-center gap-3 px-3.5 py-3 rounded-[10px] cursor-grab active:cursor-grabbing select-none border transition-colors",
                 section.enabled
-                  ? "bg-zinc-800 border-transparent"
-                  : "bg-transparent border-white/[0.06] opacity-60",
+                  ? "bg-muted border-transparent"
+                  : "bg-transparent border-border opacity-60",
               )}
             >
               <GripVertical
                 size={16}
-                className="text-zinc-500 shrink-0"
+                className="text-muted-foreground shrink-0"
                 aria-hidden="true"
               />
               <span
                 aria-hidden="true"
-                className="w-6 h-6 rounded-md bg-zinc-700 text-amber-400 font-mono font-bold text-[10px] flex items-center justify-center"
+                className="w-6 h-6 rounded-sm bg-muted-hover text-primary-text font-mono font-bold text-[11px] flex items-center justify-center"
               >
                 {String(index + 1).padStart(2, "0")}
               </span>
-              <span className="flex-1 text-sm font-semibold text-zinc-100">
+              <span className="flex-1 text-sm font-semibold text-foreground">
                 {t(SECTION_LABELS[section.id] ?? section.id)}
               </span>
               <button
                 onClick={() => toggleEnabled(section.id)}
-                className="text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer p-1"
+                className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer p-1"
                 aria-label={
                   section.enabled
                     ? t("settings.homepage.hideSection")
@@ -332,15 +332,15 @@ function CrowdedWeekSection() {
       >
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-zinc-200">
+            <span className="text-sm font-medium text-foreground-secondary">
               {t("settings.crowdedWeek.enableLabel")}
             </span>
             <button
               onClick={handleToggle}
               aria-pressed={enabled}
               className={cn(
-                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900",
-                enabled ? "bg-amber-500" : "bg-zinc-700",
+                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card",
+                enabled ? "bg-primary" : "bg-muted-hover",
               )}
             >
               <span
@@ -357,7 +357,7 @@ function CrowdedWeekSection() {
             <div className="flex items-center justify-between">
               <label
                 htmlFor="crowded-week-threshold"
-                className="text-sm font-medium text-zinc-200"
+                className="text-sm font-medium text-foreground-secondary"
               >
                 {t("settings.crowdedWeek.thresholdLabel")}
               </label>
@@ -369,7 +369,7 @@ function CrowdedWeekSection() {
                 value={threshold}
                 onChange={handleThresholdChange}
                 onBlur={handleThresholdBlur}
-                className="w-20 rounded-md bg-zinc-800 border border-white/[0.08] text-white text-sm px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-amber-400"
+                className="w-20 rounded-sm bg-muted border border-input text-foreground text-sm px-3 py-1.5 text-right focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           )}
@@ -421,7 +421,7 @@ function AdvisorySection() {
             />
           ))}
         </div>
-        <p className="mt-3 text-xs text-zinc-500">
+        <p className="mt-3 text-xs text-muted-foreground">
           {t("settings.advisory.privacy")}
         </p>
         <SaveFeedback {...feedback} />

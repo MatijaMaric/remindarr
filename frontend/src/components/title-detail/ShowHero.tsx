@@ -53,7 +53,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
       type="button"
       aria-expanded={showTrailer}
       onClick={() => setShowTrailer((prev) => !prev)}
-      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-zinc-200 transition-colors"
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-fill-subtle hover:bg-accent border border-border text-foreground-secondary transition-colors"
     >
       <svg
         className="w-4 h-4"
@@ -82,7 +82,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
               className="absolute inset-0 w-full h-full object-cover object-top"
             />
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-b from-zinc-800 to-zinc-950" />
+            <div className="absolute inset-0 bg-gradient-to-b from-muted to-background" />
           )}
           <div
             className="absolute inset-0"
@@ -98,37 +98,37 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
                 <img
                   src={posterUrl}
                   alt={title.title}
-                  className="w-full rounded-xl shadow-2xl"
+                  className="w-full rounded-lg shadow-2xl"
                   width={500}
                   height={750}
                   loading="eager"
                 />
               ) : (
-                <div className="aspect-[2/3] bg-zinc-800 rounded-xl" />
+                <div className="aspect-[2/3] bg-muted rounded-lg" />
               )}
             </div>
             <div className="flex-1 min-w-0 pb-1">
-              <div className="text-xs text-zinc-300 font-medium mb-1">
+              <div className="text-xs text-foreground-secondary font-medium mb-1">
                 SHOW ·{" "}
                 {title.release_year ?? tmdb?.first_air_date?.slice(0, 4) ?? ""}
                 {title.offers[0]?.provider_name
                   ? ` · ${title.offers[0].provider_name}`
                   : ""}
               </div>
-              <h1 className="text-[1.625rem] leading-tight font-bold text-white break-words">
+              <h1 className="text-[1.625rem] leading-tight font-bold text-foreground break-words">
                 {displayTitle}
               </h1>
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {genres.slice(0, 3).map((g) => (
                   <span
                     key={g}
-                    className="bg-white/[0.08] border border-white/[0.10] text-zinc-300 text-[11px] px-2 py-0.5 rounded-full"
+                    className="bg-accent border border-border text-foreground-secondary text-[11px] px-2 py-0.5 rounded-full"
                   >
                     {g}
                   </span>
                 ))}
                 {title.imdb_score && (
-                  <span className="bg-amber-400/[0.15] border border-amber-400/[0.3] text-amber-300 text-[11px] px-2 py-0.5 rounded-full">
+                  <span className="bg-primary-soft border border-primary-border text-primary-text text-[11px] px-2 py-0.5 rounded-full">
                     ★ {title.imdb_score.toFixed(1)}
                   </span>
                 )}
@@ -142,7 +142,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
             {playableOffers.length > 0 ? (
               <WatchButtonGroup offers={playableOffers} size="lg" fullWidth />
             ) : (
-              <div className="flex items-center justify-center gap-2 bg-white/[0.06] border border-white/[0.08] text-zinc-500 px-4 py-3 rounded-xl text-[14px] font-bold">
+              <div className="flex items-center justify-center gap-2 bg-accent border border-border text-muted-foreground px-4 py-3 rounded-lg text-[14px] font-bold">
                 {t("watchAction.noStream")}
               </div>
             )}
@@ -160,12 +160,12 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
         </div>
         {showTrailer && trailerAvailable && <TrailerEmbed videos={videos} />}
         {title.is_tracked && title.eta_days != null && (
-          <div className="text-xs text-zinc-400 text-center">
+          <div className="text-xs text-muted-foreground text-center">
             {t("titleDetail.finishIn", { eta: formatEta(title.eta_days) })}
           </div>
         )}
         {title.next_episode_air_date && (
-          <div className="flex items-center justify-center gap-2 text-xs text-zinc-400">
+          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <span>Next episode</span>
             <EpisodeCountdown airDate={title.next_episode_air_date} />
           </div>
@@ -198,13 +198,13 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
             <img
               src={posterUrl}
               alt={title.title}
-              className="w-full rounded-xl shadow-[0_24px_70px_rgba(0,0,0,0.7)] border border-white/[0.08]"
+              className="w-full rounded-lg shadow-[0_24px_70px_rgba(0,0,0,0.7)] border border-border"
               width={500}
               height={750}
               loading="eager"
             />
           ) : (
-            <div className="aspect-[2/3] bg-zinc-800 rounded-xl flex items-center justify-center text-zinc-400 border border-white/[0.08]">
+            <div className="aspect-[2/3] bg-muted rounded-lg flex items-center justify-center text-muted-foreground border border-border">
               {t("titleCard.noPoster")}
             </div>
           )}
@@ -213,7 +213,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
         <div className="flex-1 space-y-3 max-w-[820px]">
           <div>
             {tmdb?.tagline && (
-              <p className="text-sm text-amber-400 italic mb-1 select-text">
+              <p className="text-sm text-primary-text italic mb-1 select-text">
                 {tmdb.tagline}
               </p>
             )}
@@ -223,18 +223,18 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
                 ? ` · ${title.offers[0].provider_name}`
                 : ""}
             </Kicker>
-            <h1 className="text-[30px] sm:text-[56px] lg:text-[64px] leading-none tracking-[-0.035em] font-extrabold text-white select-text">
+            <h1 className="text-[30px] sm:text-[56px] lg:text-[64px] leading-none tracking-[-0.035em] font-extrabold text-foreground select-text">
               {displayTitle}
             </h1>
             {originalTitle && originalTitle !== displayTitle && (
-              <p className="text-sm text-zinc-400 mt-1 select-text">
+              <p className="text-sm text-muted-foreground mt-1 select-text">
                 {originalTitle}
               </p>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-400">
-            <span className="bg-amber-500 text-black text-xs font-bold px-1.5 py-0.5 rounded">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <span className="bg-primary text-primary-foreground text-xs font-bold px-1.5 py-0.5 rounded-sm">
               TV
             </span>
             {tmdb?.first_air_date && (
@@ -247,32 +247,32 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
               )}
             {tmdb?.episode_run_time?.[0] && (
               <>
-                <span className="text-zinc-600">·</span>
+                <span className="text-muted-foreground">·</span>
                 <span>{tmdb.episode_run_time[0]}m/ep</span>
               </>
             )}
             {certification && (
               <>
-                <span className="text-zinc-600">·</span>
-                <span className="border border-white/[0.10] px-1.5 py-0.5 rounded text-xs">
+                <span className="text-muted-foreground">·</span>
+                <span className="border border-border px-1.5 py-0.5 rounded-sm text-xs">
                   {certification}
                 </span>
               </>
             )}
             {tmdb?.status && (
               <>
-                <span className="text-zinc-600">·</span>
+                <span className="text-muted-foreground">·</span>
                 <span>{tmdb.status}</span>
               </>
             )}
             {tmdb && (
               <>
-                <span className="text-zinc-600">·</span>
+                <span className="text-muted-foreground">·</span>
                 <span>
                   {tmdb.number_of_seasons} season
                   {tmdb.number_of_seasons !== 1 ? "s" : ""}
                 </span>
-                <span className="text-zinc-600">·</span>
+                <span className="text-muted-foreground">·</span>
                 <span>{tmdb.number_of_episodes} episodes</span>
               </>
             )}
@@ -320,12 +320,12 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
             {trailerButton}
           </div>
           {title.is_tracked && title.eta_days != null && (
-            <div className="text-xs text-zinc-400">
+            <div className="text-xs text-muted-foreground">
               {t("titleDetail.finishIn", { eta: formatEta(title.eta_days) })}
             </div>
           )}
           {title.next_episode_air_date && (
-            <div className="flex items-center gap-2 text-xs text-zinc-400">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>Next episode</span>
               <EpisodeCountdown airDate={title.next_episode_air_date} />
             </div>

@@ -129,7 +129,7 @@ export default function WatchButton({
         rel="noopener noreferrer"
         title={actionLabel}
         aria-label={actionLabel}
-        className="block rounded-lg transition-all duration-200"
+        className="block rounded-md transition-all duration-200"
         style={{
           boxShadow: hovered
             ? `0 0 0 2px ${color.bg}`
@@ -141,7 +141,7 @@ export default function WatchButton({
         <img
           src={providerIconUrl}
           alt={providerName}
-          className="w-7 h-7 rounded-md"
+          className="w-7 h-7 rounded-sm"
           loading="lazy"
           width={28}
           height={28}
@@ -160,7 +160,7 @@ export default function WatchButton({
       aria-label={actionLabel}
       title={actionLabel}
       className={cn(
-        "min-h-8 flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors duration-200",
+        "min-h-8 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors duration-200",
         className,
       )}
       style={{
@@ -174,7 +174,7 @@ export default function WatchButton({
       <img
         src={providerIconUrl}
         alt={providerName}
-        className="w-5 h-5 rounded"
+        className="w-5 h-5 rounded-sm"
         loading="lazy"
         width={20}
         height={20}

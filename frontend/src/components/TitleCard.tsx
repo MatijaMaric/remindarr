@@ -31,7 +31,7 @@ function ProgressBar({ watched, max }: { watched: number; max: number }) {
   const { t } = useTranslation();
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-700"
+      className="absolute bottom-0 left-0 right-0 h-1 bg-muted-hover"
       role="progressbar"
       aria-label={t("titleCard.progress", { watched, count: max })}
       aria-valuenow={watched}
@@ -39,7 +39,7 @@ function ProgressBar({ watched, max }: { watched: number; max: number }) {
       aria-valuemax={max}
     >
       <div
-        className="h-full bg-amber-500 transition-all duration-300"
+        className="h-full bg-primary transition-all duration-300"
         style={{ width: `${(watched / max) * 100}%` }}
       />
     </div>
@@ -50,7 +50,7 @@ function ProgressBar({ watched, max }: { watched: number; max: number }) {
 function EpCount({ watched, total }: { watched: number; total: number }) {
   const { t } = useTranslation();
   return (
-    <span className="absolute bottom-2 left-2 bg-zinc-800/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+    <span className="absolute bottom-2 left-2 bg-muted/90 text-foreground text-[11px] font-bold px-1.5 py-0.5 rounded-sm">
       {t("titleCard.epCount", { watched, total })}
     </span>
   );
@@ -67,7 +67,7 @@ function StatusBadge({
 }) {
   return (
     <span
-      className={`absolute bottom-2 left-2 ${colorClass} text-white text-[10px] font-bold px-1.5 py-0.5 rounded${check ? " flex items-center gap-0.5" : ""}`}
+      className={`absolute bottom-2 left-2 ${colorClass} text-foreground text-[11px] font-bold px-1.5 py-0.5 rounded-sm${check ? " flex items-center gap-0.5" : ""}`}
     >
       {check && (
         <svg
@@ -205,14 +205,14 @@ const TitleCard = memo(function TitleCard({
   return (
     <article
       aria-label={title.title}
-      className={`bg-zinc-900 rounded-xl overflow-hidden hover:scale-[1.02] transition-transform duration-200 flex flex-col${effectiveStatus === "completed" ? " opacity-75" : ""}`}
+      className={`bg-card rounded-lg overflow-hidden hover:scale-[1.02] transition-transform duration-200 flex flex-col${effectiveStatus === "completed" ? " opacity-75" : ""}`}
     >
       {/* Poster — clickable link to detail page */}
-      <div className="aspect-[2/3] bg-zinc-800 relative">
+      <div className="aspect-[2/3] bg-muted relative">
         <Link
           to={`/title/${title.id}`}
           data-title-link
-          className="block w-full h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/70 focus-visible:ring-inset"
+          className="block w-full h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-inset"
         >
           {title.poster_url && !posterError ? (
             <img
@@ -225,7 +225,7 @@ const TitleCard = memo(function TitleCard({
               onError={() => setPosterError(true)}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm">
+            <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
               {t("titleCard.noPoster")}
             </div>
           )}
@@ -233,29 +233,29 @@ const TitleCard = memo(function TitleCard({
         {blurred && (
           <div
             data-testid="advisory-blur"
-            className="absolute inset-0 bg-zinc-950/50 flex items-center justify-center pointer-events-none"
+            className="absolute inset-0 bg-background/50 flex items-center justify-center pointer-events-none"
           >
-            <span className="text-[10px] font-bold uppercase tracking-wide text-zinc-100 bg-black/70 px-2 py-1 rounded">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-scrim-foreground bg-scrim px-2 py-1 rounded-sm">
               {title.age_certification ?? t("titleCard.sensitive")}
             </span>
           </div>
         )}
         {showProviderBadge && title.offers?.[0]?.provider_name && (
-          <span className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-zinc-100 font-mono text-[10px] font-semibold px-2 py-0.5 rounded">
+          <span className="absolute top-2 left-2 bg-scrim backdrop-blur-sm text-scrim-foreground font-mono text-[11px] font-semibold px-2 py-0.5 rounded-sm">
             {title.offers[0].provider_name}
           </span>
         )}
         {!hideTypeBadge &&
           !showProviderBadge &&
           title.object_type === "SHOW" && (
-            <span className="absolute top-2 left-2 bg-amber-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded">
+            <span className="absolute top-2 left-2 bg-primary text-primary-foreground text-[11px] font-bold px-1.5 py-0.5 rounded-sm">
               {t("titleCard.tv")}
             </span>
           )}
         {effectiveStatus === "completed" && (
           <>
             <div
-              className="absolute inset-0 bg-emerald-900/40 pointer-events-none"
+              className="absolute inset-0 bg-success/40 pointer-events-none"
               data-testid="completed-overlay"
             />
             <StatusBadge
@@ -296,12 +296,12 @@ const TitleCard = memo(function TitleCard({
           />
         )}
         {title.imdb_score && !showVisibilityToggle && !showRating && (
-          <span className="absolute top-2 right-2 bg-yellow-500 text-black text-[11px] font-bold px-1.5 py-0.5 rounded">
+          <span className="absolute top-2 right-2 bg-yellow-500 text-primary-foreground text-[11px] font-bold px-1.5 py-0.5 rounded-sm">
             {title.imdb_score.toFixed(1)}
           </span>
         )}
         {showRating && (title.imdb_score ?? title.tmdb_score) && (
-          <span className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-amber-400 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded">
+          <span className="absolute bottom-2 right-2 bg-scrim backdrop-blur-sm text-primary font-mono text-[11px] font-bold px-1.5 py-0.5 rounded-sm">
             ★ {(title.imdb_score ?? title.tmdb_score)?.toFixed(1)}
           </span>
         )}
@@ -315,7 +315,7 @@ const TitleCard = memo(function TitleCard({
           />
         )}
         {isSnoozed && showNotificationPicker && (
-          <span className="absolute top-2 right-2 bg-blue-600/90 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+          <span className="absolute top-2 right-2 bg-info/90 text-foreground text-[11px] font-bold px-1.5 py-0.5 rounded-sm">
             {t("titleCard.snoozed")}
           </span>
         )}
@@ -326,18 +326,18 @@ const TitleCard = memo(function TitleCard({
         <div className="select-text">
           <Link
             to={`/title/${title.id}`}
-            className="hover:text-amber-400 transition-colors"
+            className="hover:text-primary-text transition-colors"
           >
             <h3 className="font-semibold text-sm leading-tight line-clamp-2">
               {title.title}
             </h3>
           </Link>
           {title.original_title && title.original_title !== title.title && (
-            <p className="text-xs text-zinc-500 mt-0.5 line-clamp-1 italic">
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1 italic">
               {title.original_title}
             </p>
           )}
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             {title.release_year}
             {showRating && title.genres?.[0]
               ? ` \u00B7 ${title.genres[0]}`

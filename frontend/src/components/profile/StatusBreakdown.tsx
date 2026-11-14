@@ -53,14 +53,14 @@ export default function StatusBreakdown({ byStatus }: StatusBreakdownProps) {
         {STATUS_CELLS.map((cell) => (
           <div
             key={cell.key}
-            className="bg-zinc-800 rounded-lg px-3.5 py-3 flex flex-col gap-1"
+            className="bg-muted rounded-md px-3.5 py-3 flex flex-col gap-1"
             style={{ borderLeft: `3px solid ${cell.color}` }}
             data-testid={`status-${cell.key}`}
           >
-            <div className="text-[22px] font-extrabold tracking-[-0.02em] leading-none text-zinc-100">
+            <div className="text-[22px] font-extrabold tracking-[-0.02em] leading-none text-foreground">
               {byStatus[cell.key]}
             </div>
-            <div className="text-xs font-medium text-zinc-500">
+            <div className="text-xs font-medium text-muted-foreground">
               {t(cell.labelKey)}
             </div>
           </div>

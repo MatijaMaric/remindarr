@@ -13,16 +13,16 @@ export default function Crew({ directors, writers }: CrewProps) {
       <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
         {directors.length > 0 && (
           <div>
-            <span className="text-zinc-400">Director: </span>
-            <span className="text-white">
+            <span className="text-muted-foreground">Director: </span>
+            <span className="text-foreground">
               {directors.map((d) => d.name).join(", ")}
             </span>
           </div>
         )}
         {writers.length > 0 && (
           <div>
-            <span className="text-zinc-400">Writers: </span>
-            <span className="text-white">
+            <span className="text-muted-foreground">Writers: </span>
+            <span className="text-foreground">
               {writers.map((w) => w.name).join(", ")}
             </span>
           </div>

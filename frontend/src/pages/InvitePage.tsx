@@ -95,17 +95,19 @@ export default function InvitePage() {
   return (
     <div className="w-full max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <UserPlus className="size-6 text-amber-500" />
-        <h1 className="text-2xl font-bold text-white">{t("invite.title")}</h1>
+        <UserPlus className="size-6 text-primary-text" />
+        <h1 className="text-2xl font-bold text-foreground">
+          {t("invite.title")}
+        </h1>
       </div>
 
       {/* Redeem result banner */}
       {redeemResult && (
         <div
-          className={`p-4 rounded-lg border text-sm ${
+          className={`p-4 rounded-md border text-sm ${
             redeemResult.status === "success"
-              ? "bg-green-900/20 border-green-700 text-green-200"
-              : "bg-red-900/20 border-red-700 text-red-200"
+              ? "bg-success/20 border-success text-success"
+              : "bg-destructive-soft border-destructive/40 text-destructive"
           }`}
         >
           {redeemResult.status === "success"
@@ -115,7 +117,7 @@ export default function InvitePage() {
       )}
 
       {redeeming && (
-        <div className="text-center py-8 text-zinc-400">
+        <div className="text-center py-8 text-muted-foreground">
           {t("invite.redeeming")}
         </div>
       )}
@@ -124,7 +126,7 @@ export default function InvitePage() {
       <button
         onClick={() => createMutation.mutate()}
         disabled={createMutation.isPending}
-        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-md transition-colors disabled:opacity-50 cursor-pointer"
       >
         <Plus className="size-4" />
         {createMutation.isPending
@@ -138,12 +140,14 @@ export default function InvitePage() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="bg-zinc-900 rounded-lg p-4 animate-pulse h-24"
+              className="bg-card rounded-md p-4 animate-pulse h-24"
             />
           ))}
         </div>
       ) : invitations.length === 0 ? (
-        <p className="text-center py-8 text-zinc-400">{t("invite.empty")}</p>
+        <p className="text-center py-8 text-muted-foreground">
+          {t("invite.empty")}
+        </p>
       ) : (
         <div className="space-y-3">
           {invitations.map((inv) => (
@@ -177,19 +181,19 @@ function InvitationCard({
 
   return (
     <div
-      className={`rounded-lg p-4 border transition-colors ${
+      className={`rounded-md p-4 border transition-colors ${
         status === "used"
-          ? "bg-green-900/20 border-green-900/40"
+          ? "bg-success/20 border-success/40"
           : status === "expired"
-            ? "bg-zinc-900 border-white/[0.06] opacity-50"
-            : "bg-zinc-900 border-white/[0.06]"
+            ? "bg-card border-border opacity-50"
+            : "bg-card border-border"
       }`}
     >
       {/* Status badge and code */}
       <div className="flex items-center justify-between gap-2 mb-3">
         <StatusBadge status={status} usedBy={invitation.used_by} />
         <code
-          className={`text-xs font-mono px-2 py-1 rounded bg-zinc-800 text-zinc-300 ${
+          className={`text-xs font-mono px-2 py-1 rounded-sm bg-muted text-foreground-secondary ${
             status === "expired" ? "line-through" : ""
           }`}
         >
@@ -198,7 +202,7 @@ function InvitationCard({
       </div>
 
       {/* Dates */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-400 mb-3">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mb-3">
         <span>
           {t("invite.created_at")}:{" "}
           {formatDate(invitation.created_at, { withTime: true })}
@@ -211,14 +215,14 @@ function InvitationCard({
 
       {/* Used by info */}
       {status === "used" && invitation.used_by && (
-        <div className="text-sm text-green-300 mb-3">
+        <div className="text-sm text-success mb-3">
           {t("invite.usedBy", {
             username:
               invitation.used_by.display_name || invitation.used_by.username,
           })}{" "}
           <Link
             to={`/user/${invitation.used_by.username}`}
-            className="text-amber-500 hover:text-amber-400 transition-colors"
+            className="text-primary-text hover:text-primary-text transition-colors"
           >
             @{invitation.used_by.username}
           </Link>
@@ -236,7 +240,7 @@ function InvitationCard({
           <button
             onClick={() => onRevoke(invitation.id)}
             disabled={revoking}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer bg-red-900/30 text-red-400 hover:bg-red-900/50 hover:text-red-300 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer bg-destructive-soft text-destructive hover:bg-destructive-soft/80 hover:text-destructive disabled:opacity-50"
           >
             <Trash2 className="size-3.5" />
             {revoking ? t("invite.revoking") : t("invite.revoke")}
@@ -258,7 +262,7 @@ function StatusBadge({
 
   if (status === "used") {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-400">
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
         <CheckCircle2 className="size-3.5" />
         {t("invite.statusUsed", {
           username: usedBy?.display_name || usedBy?.username || "",
@@ -269,7 +273,7 @@ function StatusBadge({
 
   if (status === "expired") {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-400">
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
         <XCircle className="size-3.5" />
         {t("invite.statusExpired")}
       </span>
@@ -277,7 +281,7 @@ function StatusBadge({
   }
 
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-400">
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-primary-text">
       <Clock className="size-3.5" />
       {t("invite.statusPending")}
     </span>

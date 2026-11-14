@@ -110,10 +110,10 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       <button
         onClick={toggleWatched}
         aria-pressed={watched}
-        className={`min-h-8 inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+        className={`min-h-8 inline-flex items-center justify-center px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
           watched
-            ? "bg-emerald-500 text-white hover:bg-red-500"
-            : "bg-zinc-800 text-zinc-400 hover:bg-emerald-500 hover:text-white"
+            ? "bg-primary-soft text-primary-text hover:bg-destructive-soft hover:text-destructive"
+            : "bg-muted text-muted-foreground hover:bg-muted-hover hover:text-foreground"
         }`}
       >
         {watched ? t("episodes.markAsUnwatched") : t("episodes.markAsWatched")}
@@ -121,11 +121,13 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       {playCount > 0 && (
         <button
           onClick={() => setHistoryOpen((o) => !o)}
-          className="min-h-8 inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 transition-colors cursor-pointer"
+          className="min-h-8 inline-flex items-center gap-1 px-3 py-1.5 rounded-sm text-xs font-medium bg-muted text-muted-foreground hover:bg-muted-hover transition-colors cursor-pointer"
           title="Watch history"
         >
           <span>Watched {playCount}x</span>
-          <span className="text-zinc-600">{historyOpen ? "▲" : "▼"}</span>
+          <span className="text-muted-foreground">
+            {historyOpen ? "▲" : "▼"}
+          </span>
         </button>
       )}
     </>
@@ -139,20 +141,20 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
         padding="none"
         className="mt-3 overflow-hidden"
       >
-        <div className="px-3 py-2 text-xs font-medium text-zinc-400 border-b border-white/[0.06]">
+        <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b border-border">
           Watch History
         </div>
         <ul>
           {watchHistory.map((entry, i) => (
             <li
               key={entry.id}
-              className={`px-3 py-2 text-xs text-zinc-300 flex items-center gap-2 ${
-                i < watchHistory.length - 1 ? "border-b border-zinc-800/50" : ""
+              className={`px-3 py-2 text-xs text-foreground-secondary flex items-center gap-2 ${
+                i < watchHistory.length - 1 ? "border-b border-border" : ""
               }`}
             >
               <button
                 onClick={() => setEditEntry(entry.id)}
-                className="text-zinc-500 shrink-0 hover:text-zinc-300 cursor-pointer transition-colors underline-offset-2 hover:underline"
+                className="text-muted-foreground shrink-0 hover:text-foreground-secondary cursor-pointer transition-colors underline-offset-2 hover:underline"
               >
                 {new Date(
                   entry.watchedAt.replace(" ", "T") + "Z",
@@ -163,18 +165,20 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
                 })}
               </button>
               {entry.note && (
-                <span className="text-zinc-400 italic">{entry.note}</span>
+                <span className="text-muted-foreground italic">
+                  {entry.note}
+                </span>
               )}
             </li>
           ))}
         </ul>
         {hasMore && (
-          <div className="text-center py-2 border-t border-white/[0.06]">
+          <div className="text-center py-2 border-t border-border">
             <button
               type="button"
               onClick={loadMore}
               disabled={loadingMore}
-              className="text-sm font-semibold text-amber-400 hover:text-amber-300 disabled:opacity-50 transition-colors"
+              className="text-sm font-semibold text-primary-text hover:text-primary-text disabled:opacity-50 transition-colors"
             >
               {loadingMore
                 ? t("titleDetail.watchHistory.loading")
@@ -200,7 +204,7 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       />
 
       {/* Metadata strip */}
-      <div className="bg-zinc-900 -mx-4 px-6 sm:px-12 py-5 flex flex-wrap gap-x-10 gap-y-3 border-b border-white/[0.06]">
+      <div className="bg-card -mx-4 px-6 sm:px-12 py-5 flex flex-wrap gap-x-10 gap-y-3 border-b border-border">
         {[
           { label: "TYPE", value: "Movie" },
           title.runtime_minutes
@@ -217,8 +221,10 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
           .filter(Boolean)
           .map((cell) => (
             <div key={cell!.label}>
-              <div className="text-xs text-zinc-400 mb-1">{cell!.label}</div>
-              <div className="font-mono text-[13px] font-semibold text-zinc-100">
+              <div className="text-xs text-muted-foreground mb-1">
+                {cell!.label}
+              </div>
+              <div className="font-mono text-[13px] font-semibold text-foreground">
                 {cell!.value}
               </div>
             </div>
@@ -228,7 +234,7 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       {/* Overview */}
       {overview && (
         <Section title="Overview">
-          <p className="text-zinc-300 leading-relaxed select-text">
+          <p className="text-foreground-secondary leading-relaxed select-text">
             {overview}
           </p>
         </Section>
@@ -299,48 +305,50 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
             {tmdb.original_language && (
               <div>
-                <span className="text-zinc-400 block">Original Language</span>
-                <span className="text-zinc-300">
+                <span className="text-muted-foreground block">
+                  Original Language
+                </span>
+                <span className="text-foreground-secondary">
                   {tmdb.original_language.toUpperCase()}
                 </span>
               </div>
             )}
             {tmdb.production_countries?.length > 0 && (
               <div>
-                <span className="text-zinc-400 block">Country</span>
-                <span className="text-zinc-300">
+                <span className="text-muted-foreground block">Country</span>
+                <span className="text-foreground-secondary">
                   {tmdb.production_countries.map((c) => c.name).join(", ")}
                 </span>
               </div>
             )}
             {tmdb.spoken_languages?.length > 0 && (
               <div>
-                <span className="text-zinc-400 block">Languages</span>
-                <span className="text-zinc-300">
+                <span className="text-muted-foreground block">Languages</span>
+                <span className="text-foreground-secondary">
                   {tmdb.spoken_languages.map((l) => l.english_name).join(", ")}
                 </span>
               </div>
             )}
             {tmdb.budget > 0 && (
               <div>
-                <span className="text-zinc-400 block">Budget</span>
-                <span className="text-zinc-300">
+                <span className="text-muted-foreground block">Budget</span>
+                <span className="text-foreground-secondary">
                   {formatCurrency(tmdb.budget)}
                 </span>
               </div>
             )}
             {tmdb.revenue > 0 && (
               <div>
-                <span className="text-zinc-400 block">Revenue</span>
-                <span className="text-zinc-300">
+                <span className="text-muted-foreground block">Revenue</span>
+                <span className="text-foreground-secondary">
                   {formatCurrency(tmdb.revenue)}
                 </span>
               </div>
             )}
             {tmdb.production_companies?.length > 0 && (
               <div className="col-span-2 sm:col-span-3">
-                <span className="text-zinc-400 block">Production</span>
-                <span className="text-zinc-300">
+                <span className="text-muted-foreground block">Production</span>
+                <span className="text-foreground-secondary">
                   {tmdb.production_companies.map((c) => c.name).join(", ")}
                 </span>
               </div>

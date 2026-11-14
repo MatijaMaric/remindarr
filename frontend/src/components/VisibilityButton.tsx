@@ -56,8 +56,8 @@ export default function VisibilityButton({
         disabled={visibilityMutation.isPending}
         className={`absolute top-2 right-2 z-10 p-1.5 rounded-full transition-colors ${
           publicState
-            ? "bg-zinc-900/70 text-zinc-300 hover:bg-zinc-900/90 hover:text-white"
-            : "bg-red-500/80 text-white hover:bg-red-500"
+            ? "bg-card/70 text-foreground-secondary hover:bg-card/90 hover:text-foreground"
+            : "bg-destructive-soft text-destructive hover:bg-destructive/20"
         } disabled:opacity-50`}
         title={
           publicState
@@ -74,10 +74,10 @@ export default function VisibilityButton({
     <button
       onClick={toggle}
       disabled={visibilityMutation.isPending}
-      className={`min-h-8 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+      className={`min-h-8 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
         publicState
-          ? "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
-          : "bg-red-500/20 text-red-400 hover:bg-red-500/30"
+          ? "bg-muted text-muted-foreground hover:bg-muted-hover hover:text-foreground"
+          : "bg-destructive-soft text-destructive hover:bg-destructive-soft/80"
       } disabled:opacity-50`}
       title={
         publicState

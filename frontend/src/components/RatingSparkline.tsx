@@ -33,12 +33,12 @@ export default function RatingSparkline({
   return (
     <div data-testid="rating-sparkline" className="space-y-1.5">
       {heading ? (
-        <p className="text-xs font-medium text-zinc-500">{heading}</p>
+        <p className="text-xs font-medium text-muted-foreground">{heading}</p>
       ) : null}
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         preserveAspectRatio="none"
-        className="w-full h-10 text-zinc-500 overflow-visible"
+        className="w-full h-10 text-muted-foreground overflow-visible"
         role="img"
         aria-label={label}
       >

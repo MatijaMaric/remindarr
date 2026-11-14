@@ -7,7 +7,12 @@ interface KickerProps {
 
 export function Kicker({ children, className }: KickerProps) {
   return (
-    <div className={cn("text-sm font-medium text-zinc-500 mb-1", className)}>
+    <div
+      className={cn(
+        "text-sm font-medium text-muted-foreground mb-1",
+        className,
+      )}
+    >
       {children}
     </div>
   );

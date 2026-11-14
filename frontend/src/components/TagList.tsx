@@ -63,13 +63,13 @@ export default function TagList({ titleId, tags, onTagsChange }: Props) {
       {tags.map((tag) => (
         <span
           key={tag}
-          className="inline-flex items-center gap-0.5 bg-zinc-800 text-zinc-300 text-xs px-1.5 py-0.5 rounded"
+          className="inline-flex items-center gap-0.5 bg-muted text-foreground-secondary text-xs px-1.5 py-0.5 rounded-sm"
         >
           {tag}
           <button
             type="button"
             onClick={() => removeTag(tag)}
-            className="min-w-6 min-h-6 text-amber-500 hover:text-amber-400 leading-none ml-0.5"
+            className="min-w-6 min-h-6 text-primary-text hover:text-primary-text leading-none ml-0.5"
             aria-label={`Remove tag ${tag}`}
           >
             ×
@@ -90,11 +90,11 @@ export default function TagList({ titleId, tags, onTagsChange }: Props) {
           if (input.trim()) addTag(input);
         }}
         placeholder={tags.length === 0 ? t("tags.placeholder") : undefined}
-        className="min-h-8 bg-transparent text-xs text-zinc-300 placeholder-zinc-600 outline-none focus-visible:ring-1 focus-visible:ring-zinc-400 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-900 rounded-sm min-w-[60px] max-w-[100px]"
+        className="min-h-8 bg-transparent text-xs text-foreground-secondary placeholder-foreground-disabled outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card rounded-sm min-w-[60px] max-w-[100px]"
         maxLength={31}
       />
       {error && (
-        <span className="text-[10px] text-red-400 w-full">{error}</span>
+        <span className="text-[11px] text-destructive w-full">{error}</span>
       )}
     </div>
   );

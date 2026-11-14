@@ -9,7 +9,7 @@ export default function StreamingRegion({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="text-sm text-zinc-400 space-y-1">
+    <div className="text-sm text-muted-foreground space-y-1">
       {country && <p>{t("streamingRegion.label", { country })}</p>}
       {help && (
         <p>

@@ -51,15 +51,15 @@ export default function DensityPicker({ value, onChange }: Props) {
             className={cn(
               "p-3.5 rounded-[10px] border text-left transition-colors cursor-pointer",
               isActive
-                ? "bg-amber-400/[0.08] border-amber-400/30"
-                : "bg-zinc-800 border-transparent hover:bg-zinc-800/80",
+                ? "bg-primary-soft border-primary-border"
+                : "bg-muted border-transparent hover:bg-muted/80",
             )}
           >
             <div aria-hidden="true" className="flex flex-col gap-1 mb-3 px-1">
               {meta.rows.map((h, i) => (
                 <div
                   key={i}
-                  className="bg-zinc-700 rounded-sm w-full"
+                  className="bg-muted-hover rounded-sm w-full"
                   style={{ height: h }}
                 />
               ))}
@@ -67,12 +67,14 @@ export default function DensityPicker({ value, onChange }: Props) {
             <div
               className={cn(
                 "text-[13px] font-semibold mb-0.5",
-                isActive ? "text-amber-400" : "text-zinc-100",
+                isActive ? "text-primary-text" : "text-foreground",
               )}
             >
               {t(meta.labelKey)}
             </div>
-            <div className="text-[11px] text-zinc-500">{t(meta.descKey)}</div>
+            <div className="text-[11px] text-muted-foreground">
+              {t(meta.descKey)}
+            </div>
           </button>
         );
       })}

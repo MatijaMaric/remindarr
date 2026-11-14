@@ -80,7 +80,7 @@ export default function WrappedPage() {
             </label>
             <select
               id="wrapped-year"
-              className="bg-zinc-900 border border-white/10 rounded-md text-sm px-2 py-1.5 text-zinc-200"
+              className="bg-card border border-input rounded-sm text-sm px-2 py-1.5 text-foreground-secondary"
               value={year}
               onChange={(e) => navigate(`/wrapped/${e.target.value}`)}
             >
@@ -96,7 +96,7 @@ export default function WrappedPage() {
                 void handleShare();
               }}
               disabled={sharing}
-              className="min-h-8 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white disabled:opacity-50"
+              className="min-h-8 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer bg-muted text-muted-foreground hover:bg-muted-hover hover:text-foreground disabled:opacity-50"
               title={t("wrapped.share")}
             >
               <Share2 className="size-3.5" />
@@ -106,7 +106,7 @@ export default function WrappedPage() {
         }
       />
 
-      <p className="text-sm text-zinc-400">
+      <p className="text-sm text-muted-foreground">
         A shared link reveals only your {year} review. Older shared links must
         be recreated; watchlist links remain separate.
       </p>
@@ -133,7 +133,7 @@ export default function WrappedPage() {
         </button>
       )}
       {isError && (
-        <p className="text-zinc-400 text-sm py-12 text-center">
+        <p className="text-muted-foreground text-sm py-12 text-center">
           {t("wrapped.loadError")}
         </p>
       )}
@@ -143,7 +143,7 @@ export default function WrappedPage() {
           {Array.from({ length: 3 }).map((_, i) => (
             <div
               key={i}
-              className="bg-zinc-900 rounded-xl p-4 h-20 animate-pulse"
+              className="bg-card rounded-lg p-4 h-20 animate-pulse"
             />
           ))}
         </div>
@@ -151,8 +151,8 @@ export default function WrappedPage() {
 
       {data && <WrappedSummary data={data} />}
 
-      <p className="text-xs text-zinc-600">
-        <Link to="/tracked?view=stats" className="hover:text-zinc-400">
+      <p className="text-xs text-muted-foreground">
+        <Link to="/tracked?view=stats" className="hover:text-muted-foreground">
           ← {t("nav.stats")}
         </Link>
       </p>

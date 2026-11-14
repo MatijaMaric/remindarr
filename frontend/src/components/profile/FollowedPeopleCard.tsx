@@ -28,23 +28,23 @@ export default function FollowedPeopleCard({
           <li key={p.id} className="flex items-center gap-2.5">
             <Link
               to={`/person/${p.id}`}
-              className="flex flex-1 min-w-0 items-center gap-2.5 py-1 -mx-1 px-1 rounded-md hover:bg-white/[0.03] transition-colors"
+              className="flex flex-1 min-w-0 items-center gap-2.5 py-1 -mx-1 px-1 rounded-sm hover:bg-fill-subtle transition-colors"
             >
               {p.profile_path ? (
                 <img
                   src={profileUrl(p.profile_path, "w185") ?? ""}
                   alt=""
-                  className="w-8 h-8 rounded-full object-cover bg-zinc-800"
+                  className="w-8 h-8 rounded-full object-cover bg-muted"
                   loading="lazy"
                   width={32}
                   height={32}
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-[11px] text-zinc-300">
+                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-[11px] text-foreground-secondary">
                   {p.name.charAt(0)}
                 </div>
               )}
-              <span className="text-[13px] font-semibold text-zinc-200 truncate">
+              <span className="text-[13px] font-semibold text-foreground-secondary truncate">
                 {p.name}
               </span>
             </Link>

@@ -60,24 +60,24 @@ export default function BadgesCard({ achievements, mode }: BadgesCardProps) {
     <DossierCard>
       <div className="flex items-baseline justify-between mb-3">
         <Kicker className="mb-0">Badges</Kicker>
-        <span className="text-[11px] text-zinc-500 font-mono">
+        <span className="text-[11px] text-muted-foreground font-mono">
           {earned.length} / {achievements.length} earned
         </span>
       </div>
 
       {visible.length === 0 ? (
-        <p className="text-xs text-zinc-500">No badges yet.</p>
+        <p className="text-xs text-muted-foreground">No badges yet.</p>
       ) : (
         <div className="grid grid-cols-2 gap-2">
           {earned.map((a) => (
             <div
               key={a.key}
-              className="flex flex-col gap-1.5 p-2.5 rounded-lg bg-amber-400/[0.08] border border-amber-400/20"
+              className="flex flex-col gap-1.5 p-2.5 rounded-md bg-primary-soft border border-primary-border"
               title={a.description}
             >
-              <div className="flex items-center gap-1.5 text-amber-400">
+              <div className="flex items-center gap-1.5 text-primary-text">
                 <BadgeIcon name={a.icon} size={16} />
-                <span className="text-[12px] font-semibold text-zinc-200 truncate leading-tight">
+                <span className="text-[12px] font-semibold text-foreground-secondary truncate leading-tight">
                   {a.title}
                 </span>
               </div>
@@ -88,12 +88,12 @@ export default function BadgesCard({ achievements, mode }: BadgesCardProps) {
             locked.map((a) => (
               <div
                 key={a.key}
-                className="flex flex-col gap-1.5 p-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06] opacity-60"
+                className="flex flex-col gap-1.5 p-2.5 rounded-md bg-fill-subtle border border-border opacity-60"
                 title={a.description}
               >
-                <div className="flex items-center gap-1.5 text-zinc-500">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
                   <BadgeIcon name={a.icon} size={16} />
-                  <span className="text-[12px] font-semibold text-zinc-400 truncate leading-tight">
+                  <span className="text-[12px] font-semibold text-muted-foreground truncate leading-tight">
                     {a.title}
                   </span>
                 </div>

@@ -52,11 +52,11 @@ export const EpisodeShowCard = memo(function EpisodeShowCard({
       subtitleTo={episodeLink}
       subtitle={
         <>
-          <span className="text-amber-400 font-medium">
+          <span className="text-primary-text font-medium">
             {formatEpisodeCode(episode)}
           </span>
           {episode.name && (
-            <span className="text-zinc-400"> · {episode.name}</span>
+            <span className="text-muted-foreground"> · {episode.name}</span>
           )}
         </>
       }
@@ -84,7 +84,7 @@ export const EpisodeShowCard = memo(function EpisodeShowCard({
                 onClick={() =>
                   onToggleWatched(episode.id, !!episode.is_watched)
                 }
-                className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/[0.08] hover:bg-white/[0.14] text-zinc-100 text-xs font-medium rounded-lg transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-fill-subtle hover:bg-accent text-foreground text-xs font-medium rounded-md transition-colors cursor-pointer"
               >
                 <CheckCircle size={14} />
                 {t("home.markWatched")}
@@ -94,8 +94,8 @@ export const EpisodeShowCard = memo(function EpisodeShowCard({
                   onClick={() => onMarkAllWatched(allEpisodeIds)}
                   className={`w-full text-center text-xs transition-colors cursor-pointer ${
                     isConfirming
-                      ? "text-red-400 hover:text-red-300 font-medium"
-                      : "text-zinc-400 hover:text-emerald-400"
+                      ? "text-destructive hover:text-destructive font-medium"
+                      : "text-muted-foreground hover:text-success"
                   }`}
                 >
                   {isConfirming
@@ -125,13 +125,13 @@ export function DeckCardWrapper({
     <div className="relative pb-2">
       {/* Second offset layer (deepest) */}
       {episodeCount > 2 && (
-        <div className="absolute inset-0 translate-y-3 scale-[0.96] opacity-35 bg-zinc-800 border border-white/[0.06] rounded-xl pointer-events-none" />
+        <div className="absolute inset-0 translate-y-3 scale-[0.96] opacity-35 bg-muted border border-border rounded-lg pointer-events-none" />
       )}
       {/* First offset layer */}
       {episodeCount > 1 && (
-        <div className="absolute inset-0 translate-y-1.5 scale-[0.98] opacity-60 bg-zinc-800 border border-white/[0.06] rounded-xl pointer-events-none" />
+        <div className="absolute inset-0 translate-y-1.5 scale-[0.98] opacity-60 bg-muted border border-border rounded-lg pointer-events-none" />
       )}
-      <div className="relative border border-white/[0.06] rounded-xl overflow-hidden">
+      <div className="relative border border-border rounded-lg overflow-hidden">
         {children}
       </div>
     </div>

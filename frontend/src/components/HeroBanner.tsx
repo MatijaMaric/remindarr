@@ -186,7 +186,7 @@ export default function HeroBanner({
         <div className="max-w-[1440px] mx-auto px-4 w-full">
           <div className="max-w-[560px]">
             {/* Kicker */}
-            <p className="text-xs font-medium text-zinc-300 mb-3">
+            <p className="text-xs font-medium text-foreground-secondary mb-3">
               Continue watching
               {current.remainingCount > 0 &&
                 ` · ${current.remainingCount} unwatched`}
@@ -194,13 +194,13 @@ export default function HeroBanner({
 
             {/* Title */}
             <Link to={`/title/${current.featured.title_id}`} className="group">
-              <h2 className="text-5xl sm:text-[56px] font-extrabold tracking-[-0.03em] leading-none text-white group-hover:text-amber-300 transition-colors mb-4 select-text">
+              <h2 className="text-5xl sm:text-[56px] font-extrabold tracking-[-0.03em] leading-none text-foreground group-hover:text-primary-text transition-colors mb-4 select-text">
                 {current.featured.show_title}
               </h2>
             </Link>
 
             {/* Episode info */}
-            <p className="text-base text-zinc-300 leading-relaxed mb-6 line-clamp-2 select-text">
+            <p className="text-base text-foreground-secondary leading-relaxed mb-6 line-clamp-2 select-text">
               {formatEpisodeCode(current.featured)}
               {current.featured.name && ` · ${current.featured.name}`}
               {current.featured.overview && ` — ${current.featured.overview}`}
@@ -210,7 +210,7 @@ export default function HeroBanner({
             <div className="flex items-center gap-3 flex-wrap">
               <Link
                 to={`/title/${current.featured.title_id}`}
-                className="inline-flex items-center bg-amber-400 hover:bg-amber-300 text-black font-bold text-sm px-5 h-10 rounded-lg transition-colors"
+                className="inline-flex items-center bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm px-5 h-10 rounded-md transition-colors"
               >
                 {t("watchAction.viewEpisode", {
                   season: current.featured.season_number,
@@ -220,7 +220,7 @@ export default function HeroBanner({
               <button
                 onClick={handleMarkWatched}
                 disabled={markingWatched}
-                className="inline-flex items-center bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-zinc-100 font-semibold text-sm px-4 h-10 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                className="inline-flex items-center bg-fill-subtle hover:bg-accent border border-border text-foreground font-semibold text-sm px-4 h-10 rounded-md transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {markingWatched ? "Marking…" : t("episodes.markWatchedShort")}
               </button>
@@ -233,7 +233,7 @@ export default function HeroBanner({
             </div>
             {/* Metadata strip */}
             {current.featured.offers && current.featured.offers.length > 0 && (
-              <p className="mt-3 font-mono text-[11px] text-zinc-500 tracking-wide">
+              <p className="mt-3 font-mono text-[11px] text-muted-foreground tracking-wide">
                 {current.featured.offers[0].provider_name}
               </p>
             )}
@@ -252,7 +252,7 @@ export default function HeroBanner({
                     <span
                       className={`block h-1 rounded-full transition-all ${
                         i === safeIndex
-                          ? "w-6 bg-amber-400"
+                          ? "w-6 bg-primary"
                           : "w-2 bg-white/30 hover:bg-white/50"
                       }`}
                     />
@@ -268,13 +268,13 @@ export default function HeroBanner({
           <div className="absolute top-6 right-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={() => goTo(safeIndex - 1)}
-              className="bg-black/50 hover:bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center cursor-pointer"
+              className="bg-scrim hover:bg-scrim/80 text-scrim-foreground rounded-full w-9 h-9 flex items-center justify-center cursor-pointer"
             >
               <ChevronLeft size={18} />
             </button>
             <button
               onClick={() => goTo(safeIndex + 1)}
-              className="bg-black/50 hover:bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center cursor-pointer"
+              className="bg-scrim hover:bg-scrim/80 text-scrim-foreground rounded-full w-9 h-9 flex items-center justify-center cursor-pointer"
             >
               <ChevronRight size={18} />
             </button>

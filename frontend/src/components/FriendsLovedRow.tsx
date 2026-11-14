@@ -31,7 +31,7 @@ export default function FriendsLovedRow({ items }: FriendsLovedRowProps) {
               className="w-32 flex-shrink-0 group"
               style={{ scrollSnapAlign: "start" }}
             >
-              <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800">
+              <div className="relative aspect-[2/3] rounded-md overflow-hidden bg-muted">
                 {src ? (
                   <img
                     src={src}
@@ -42,12 +42,12 @@ export default function FriendsLovedRow({ items }: FriendsLovedRowProps) {
                     height={278}
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs">
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
                     N/A
                   </div>
                 )}
               </div>
-              <p className="text-sm text-white mt-1.5 line-clamp-2 group-hover:text-amber-400 transition-colors">
+              <p className="text-sm text-foreground mt-1.5 line-clamp-2 group-hover:text-primary-text transition-colors">
                 {item.title}
               </p>
             </Link>

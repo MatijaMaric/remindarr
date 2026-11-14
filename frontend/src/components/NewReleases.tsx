@@ -122,13 +122,13 @@ export default function NewReleases({
       )}
 
       {error && (
-        <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">
+        <div className="bg-destructive-soft border border-destructive/40 text-destructive px-4 py-2 rounded-md text-sm">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-zinc-500">
+        <div className="text-center py-12 text-muted-foreground">
           {t("releases.loading")}
         </div>
       ) : (

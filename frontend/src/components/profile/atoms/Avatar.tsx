@@ -54,7 +54,7 @@ export function Avatar({
   return (
     <div
       className={cn(
-        "rounded-full flex items-center justify-center font-extrabold text-black flex-shrink-0 select-none",
+        "rounded-full flex items-center justify-center font-extrabold text-primary-foreground flex-shrink-0 select-none",
         className,
       )}
       style={{

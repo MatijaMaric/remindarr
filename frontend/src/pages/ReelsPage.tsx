@@ -675,8 +675,8 @@ export default function ReelsPage() {
         style={{ minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))" }}
       >
         <div className="text-center">
-          <p className="text-red-400 mb-4">{errorMessage}</p>
-          <Link to="/" className="text-amber-400 hover:text-amber-300">
+          <p className="text-destructive mb-4">{errorMessage}</p>
+          <Link to="/" className="text-primary-text hover:text-primary-text">
             Go back
           </Link>
         </div>
@@ -703,11 +703,11 @@ export default function ReelsPage() {
           <div className="flex items-center gap-2 mb-2">
             <Link
               to="/"
-              className="px-3 py-1.5 rounded-full text-[12px] font-bold text-white/55 border border-transparent"
+              className="px-3 py-1.5 rounded-full text-[12px] font-bold text-foreground/55 border border-transparent"
             >
               Home
             </Link>
-            <span className="px-3 py-1.5 rounded-full bg-white/[0.15] backdrop-blur border border-white/[0.2] text-[12px] font-bold text-white">
+            <span className="px-3 py-1.5 rounded-full bg-accent backdrop-blur border border-border text-[12px] font-bold text-foreground">
               Reels
             </span>
           </div>
@@ -719,8 +719,8 @@ export default function ReelsPage() {
                 className={[
                   "px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors cursor-pointer",
                   s === source
-                    ? "bg-amber-400 text-zinc-950 border border-amber-400"
-                    : "bg-white/[0.15] backdrop-blur-sm border border-white/[0.2] text-white/80 hover:bg-white/[0.25]",
+                    ? "bg-primary text-primary-foreground border border-primary"
+                    : "bg-accent backdrop-blur-sm border border-border text-foreground/80 hover:bg-white/[0.25]",
                 ].join(" ")}
               >
                 {SOURCE_LABELS[s]}
@@ -736,11 +736,15 @@ export default function ReelsPage() {
           }}
         >
           <div className="text-center">
-            <p className="text-zinc-400 text-lg mb-2">No unwatched episodes</p>
-            <p className="text-zinc-600 text-sm mb-6">You're all caught up!</p>
+            <p className="text-muted-foreground text-lg mb-2">
+              No unwatched episodes
+            </p>
+            <p className="text-muted-foreground text-sm mb-6">
+              You're all caught up!
+            </p>
             <Link
               to="/upcoming"
-              className="text-amber-400 hover:text-amber-300"
+              className="text-primary-text hover:text-primary-text"
             >
               View Upcoming
             </Link>
@@ -754,7 +758,7 @@ export default function ReelsPage() {
     <>
       {/* Home / Reels mode switcher + source picker — fixed overlay, edge-to-edge with scrim */}
       <div
-        className="fixed z-40 left-0 right-0 bg-gradient-to-b from-black/55 to-transparent"
+        className="fixed z-40 left-0 right-0 bg-gradient-to-b from-scrim to-transparent"
         style={{
           top: 0,
           paddingTop: "calc(8px + env(safe-area-inset-top, 0px))",
@@ -768,15 +772,15 @@ export default function ReelsPage() {
         >
           <Link
             to="/"
-            className="flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold text-white/60 border border-transparent"
+            className="flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold text-foreground/60 border border-transparent"
           >
             Home
           </Link>
-          <span className="flex-shrink-0 px-3 py-1.5 rounded-full bg-white/[0.15] backdrop-blur border border-white/[0.2] text-[11px] font-bold text-white">
+          <span className="flex-shrink-0 px-3 py-1.5 rounded-full bg-accent backdrop-blur border border-border text-[11px] font-bold text-foreground">
             Reels
           </span>
           <span
-            className="flex-shrink-0 w-px h-4 bg-white/15 mx-1"
+            className="flex-shrink-0 w-px h-4 bg-accent mx-1"
             aria-hidden="true"
           />
           {ALL_SOURCES.map((s) => (
@@ -786,8 +790,8 @@ export default function ReelsPage() {
               className={[
                 "flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors cursor-pointer",
                 s === source
-                  ? "bg-amber-400 text-zinc-950 border border-amber-400"
-                  : "bg-white/[0.15] backdrop-blur-sm border border-white/[0.2] text-white/80 hover:bg-white/[0.25]",
+                  ? "bg-primary text-primary-foreground border border-primary"
+                  : "bg-accent backdrop-blur-sm border border-border text-foreground/80 hover:bg-white/[0.25]",
               ].join(" ")}
             >
               {SOURCE_LABELS[s]}
@@ -806,15 +810,15 @@ export default function ReelsPage() {
           }}
         >
           <div className="text-center max-w-xs">
-            <p className="text-zinc-300 text-lg font-semibold mb-2">
+            <p className="text-foreground-secondary text-lg font-semibold mb-2">
               Nothing here yet
             </p>
-            <p className="text-zinc-500 text-sm mb-6">
+            <p className="text-muted-foreground text-sm mb-6">
               Follow some friends to see what they love this week
             </p>
             <Link
               to="/discover"
-              className="inline-block px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 text-sm font-semibold transition-colors"
+              className="inline-block px-5 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold transition-colors"
             >
               Find people to follow
             </Link>
@@ -889,7 +893,7 @@ export default function ReelsPage() {
           className="fixed left-1/2 -translate-x-1/2 z-[70] max-w-sm w-full px-4"
           style={{ top: "calc(1rem + env(safe-area-inset-top, 0px))" }}
         >
-          <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm text-center">
+          <div className="bg-destructive-soft border border-destructive/40 text-destructive px-4 py-2 rounded-md text-sm text-center">
             {actionError}
           </div>
         </div>

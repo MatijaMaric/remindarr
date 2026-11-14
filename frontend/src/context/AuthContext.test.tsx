@@ -279,8 +279,8 @@ describe("AuthContext production requests", () => {
     );
 
     const startup = screen.getByRole("status", { name: "Loading Remindarr" });
-    expect(startup.style.background).toBe("var(--bg-app)");
-    expect(startup.style.color).toBe("var(--text-app)");
+    expect(startup.style.background).toBe("var(--background)");
+    expect(startup.style.color).toBe("var(--foreground)");
     expect(startup.textContent).toContain("Remindarr");
     expect(screen.queryByTestId("subscriptions-status")).toBeNull();
 

@@ -5,17 +5,17 @@ import { cn } from "@/lib/utils";
 const cardVariants = cva("border", {
   variants: {
     tone: {
-      solid: "bg-zinc-900",
-      translucent: "bg-zinc-900/60",
-      overlay: "bg-zinc-900/95 backdrop-blur-sm",
+      solid: "bg-card",
+      translucent: "bg-card/60",
+      overlay: "bg-card/95 backdrop-blur-sm",
     },
     border: {
-      subtle: "border-white/[0.06]",
+      subtle: "border-border",
     },
     radius: {
-      lg: "rounded-lg",
-      xl: "rounded-xl",
-      "2xl": "rounded-2xl",
+      lg: "rounded-md",
+      xl: "rounded-lg",
+      "2xl": "rounded-xl",
     },
     padding: {
       none: "",

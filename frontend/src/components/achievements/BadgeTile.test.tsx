@@ -56,11 +56,11 @@ describe("BadgeTile", () => {
         progress: 10,
       }),
     );
-    // rungIndex=0 → bronze → ring-2 ring-amber-700/40
+    // rungIndex=0 → bronze → ring-2 ring-primary-border
     const link = container.querySelector("a");
     expect(link).toBeDefined();
     expect(link?.className).toContain("ring-2");
-    expect(link?.className).toContain("ring-amber-700/40");
+    expect(link?.className).toContain("ring-primary-border");
   });
 
   test("locked tile in mode=self renders at 60% opacity", () => {

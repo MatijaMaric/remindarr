@@ -398,14 +398,14 @@ export default function BrowsePage() {
     "9.5",
   ] as const;
   const inputCls =
-    "bg-zinc-800 border border-zinc-700 text-white text-sm rounded-md px-2 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900";
+    "bg-muted border border-border text-foreground text-sm rounded-sm px-2 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card";
   const selectCls =
-    "bg-zinc-800 border border-zinc-700 text-white text-sm rounded-md px-2 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 w-full";
+    "bg-muted border border-border text-foreground text-sm rounded-sm px-2 py-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card w-full";
   const pillBase =
     "px-3 py-1 rounded-full text-sm font-medium border transition-colors cursor-pointer";
-  const pillActive = "bg-white text-black border-white";
+  const pillActive = "bg-primary text-primary-foreground border-transparent";
   const pillInactive =
-    "bg-transparent text-zinc-300 border-zinc-600 hover:border-zinc-400";
+    "bg-transparent text-foreground-secondary border-input hover:border-input";
 
   return (
     <div className="space-y-6 min-w-0 overflow-x-hidden">
@@ -437,8 +437,8 @@ export default function BrowsePage() {
 
       {/* Advanced search filters shown only while search results are displayed */}
       {isSearch && !isImdb && (
-        <div className="space-y-3 rounded-xl bg-zinc-900/60 border border-zinc-800 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+        <div className="space-y-3 rounded-lg bg-card/60 border border-border p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {t("search.advancedFilters")}
           </p>
           <div className="flex flex-wrap gap-4 items-end">
@@ -484,7 +484,7 @@ export default function BrowsePage() {
                     max={2100}
                     onBlur={(e) => setYearMin(e.target.value)}
                   />
-                  <span className="text-zinc-500 text-sm">–</span>
+                  <span className="text-muted-foreground text-sm">–</span>
                   <input
                     type="number"
                     className={inputCls + " w-24"}
@@ -551,7 +551,7 @@ export default function BrowsePage() {
                     ? t("browse.hideFilters")
                     : t("browse.showFilters")
                 }
-                className="relative inline-flex items-center justify-center w-9 h-9 rounded-full border bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:border-zinc-500 transition-colors"
+                className="relative inline-flex items-center justify-center w-9 h-9 rounded-full border bg-accent text-foreground-secondary border-border hover:border-input transition-colors"
               >
                 <svg
                   width="16"
@@ -567,7 +567,7 @@ export default function BrowsePage() {
                   <path d="M3 6h18M6 12h12M10 18h4" />
                 </svg>
                 {activeFilterCount > 0 && (
-                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-amber-400 text-black text-[10px] font-bold leading-none">
+                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-primary text-primary-foreground text-[11px] font-bold leading-none">
                     {activeFilterCount}
                   </span>
                 )}
@@ -577,7 +577,7 @@ export default function BrowsePage() {
                   type="button"
                   onClick={clearFilters}
                   aria-label={t("browse.clearAllFilters")}
-                  className="inline-flex items-center justify-center w-9 h-9 rounded-full border bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:border-zinc-500 hover:text-white transition-colors"
+                  className="inline-flex items-center justify-center w-9 h-9 rounded-full border bg-accent text-foreground-secondary border-border hover:border-input hover:text-foreground transition-colors"
                 >
                   <svg
                     width="14"
@@ -671,8 +671,8 @@ export default function BrowsePage() {
               onClick={() => setOnlyMine(!onlyMine)}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold font-mono border transition-colors ${
                 onlyMine
-                  ? "bg-amber-400 text-black border-amber-400"
-                  : "bg-white/[0.06] text-zinc-300 border-white/[0.08] hover:border-zinc-500"
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-accent text-foreground-secondary border-border hover:border-input"
               }`}
               aria-pressed={onlyMine}
             >
@@ -693,13 +693,13 @@ export default function BrowsePage() {
           browseYearMax !== "" ||
           browseMinRating !== "") && (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-zinc-500 mr-1">Active</span>
+            <span className="text-xs text-muted-foreground mr-1">Active</span>
             {onlyMine && (
               <button
                 type="button"
                 onClick={() => setOnlyMine(false)}
                 aria-label="Remove 'On my services' filter"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-soft text-primary-text border border-primary-border cursor-pointer hover:bg-primary-soft/80 transition-colors"
               >
                 On my services ×
               </button>
@@ -712,7 +712,7 @@ export default function BrowsePage() {
                 aria-label={t("browse.removeFilter", {
                   name: ty === "MOVIE" ? t("filter.movies") : t("filter.shows"),
                 })}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-soft text-primary-text border border-primary-border cursor-pointer hover:bg-primary-soft/80 transition-colors"
               >
                 {ty === "MOVIE" ? t("filter.movies") : t("filter.shows")} ×
               </button>
@@ -723,7 +723,7 @@ export default function BrowsePage() {
                 type="button"
                 onClick={() => setGenre(genre.filter((v) => v !== g))}
                 aria-label={t("browse.removeFilter", { name: g })}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-soft text-primary-text border border-primary-border cursor-pointer hover:bg-primary-soft/80 transition-colors"
               >
                 {g} ×
               </button>
@@ -740,7 +740,7 @@ export default function BrowsePage() {
                   type="button"
                   onClick={() => setProvider(provider.filter((v) => v !== p))}
                   aria-label={t("browse.removeFilter", { name })}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-soft text-primary-text border border-primary-border cursor-pointer hover:bg-primary-soft/80 transition-colors"
                 >
                   {name} ×
                 </button>
@@ -752,7 +752,7 @@ export default function BrowsePage() {
                 type="button"
                 onClick={() => setLanguage(language.filter((v) => v !== l))}
                 aria-label={t("browse.removeLanguageFilter", { name: l })}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-soft text-primary-text border border-primary-border cursor-pointer hover:bg-primary-soft/80 transition-colors"
               >
                 {l} ×
               </button>
@@ -762,7 +762,7 @@ export default function BrowsePage() {
                 type="button"
                 onClick={() => setBrowseYearRange("", "")}
                 aria-label={t("browse.removeYearFilter")}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-soft text-primary-text border border-primary-border cursor-pointer hover:bg-primary-soft/80 transition-colors"
               >
                 {browseYearMin || "…"}–{browseYearMax || "…"} ×
               </button>
@@ -772,7 +772,7 @@ export default function BrowsePage() {
                 type="button"
                 onClick={() => setBrowseMinRating("")}
                 aria-label={t("browse.removeRatingFilter")}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-400/[0.12] text-amber-400 border border-amber-400/[0.25] cursor-pointer hover:bg-amber-400/20 transition-colors"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-soft text-primary-text border border-primary-border cursor-pointer hover:bg-primary-soft/80 transition-colors"
               >
                 ★ {browseMinRating}+ ×
               </button>
@@ -788,7 +788,7 @@ export default function BrowsePage() {
             </h2>
             <button
               onClick={clearSearch}
-              className="text-sm text-zinc-400 hover:text-white cursor-pointer"
+              className="text-sm text-muted-foreground hover:text-foreground cursor-pointer"
             >
               {t("browse.clear")}
             </button>
@@ -796,7 +796,7 @@ export default function BrowsePage() {
           {searchLoading ? (
             <p role="status">{t("browse.searchLoading")}</p>
           ) : searchError ? (
-            <div role="alert" className="space-y-2 text-red-200">
+            <div role="alert" className="space-y-2 text-destructive">
               <p>
                 {t("browse.searchError")} {searchError.message}
               </p>
@@ -828,7 +828,7 @@ export default function BrowsePage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-zinc-400">{t("browse.noResults")}</p>
+              <p className="text-muted-foreground">{t("browse.noResults")}</p>
             )
           ) : (
             <TitleList
@@ -844,7 +844,7 @@ export default function BrowsePage() {
             {t(CATEGORY_LABEL_KEYS[category])}
           </h2>
           {user && subscriptionsStatus === "error" && (
-            <div role="alert" className="space-y-2 text-amber-200">
+            <div role="alert" className="space-y-2 text-primary-text">
               <p>{t("browse.preferencesError")}</p>
               <button
                 type="button"

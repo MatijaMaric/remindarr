@@ -48,7 +48,7 @@ export function RecentlyEarnedStrip({
         <div key={a.key} className="flex-none w-28 flex flex-col gap-1">
           <BadgeTile achievement={a} mode={mode} compact baseHref={baseHref} />
           {a.earnedAt && (
-            <span className="text-[10px] text-zinc-500 text-center font-mono">
+            <span className="text-[11px] text-muted-foreground text-center font-mono">
               {formatRelative(a.earnedAt)}
             </span>
           )}

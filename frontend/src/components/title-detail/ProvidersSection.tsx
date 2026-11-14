@@ -22,7 +22,7 @@ function OfferChip({ offer }: { offer: Title["offers"][number] }) {
       href={url}
       target={useMobileDeepLink ? undefined : "_blank"}
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 hover:opacity-90 transition-opacity"
+      className="inline-flex items-center gap-2 rounded-md px-2.5 py-1.5 hover:opacity-90 transition-opacity"
       style={{
         backgroundColor: `${color.bg}20`,
         borderLeft: `3px solid ${color.bg}`,
@@ -32,10 +32,12 @@ function OfferChip({ offer }: { offer: Title["offers"][number] }) {
       <img
         src={offer.provider_icon_url}
         alt={offer.provider_name}
-        className="w-6 h-6 rounded"
+        className="w-6 h-6 rounded-sm"
         loading="lazy"
       />
-      <span className="text-sm text-zinc-300">{offer.provider_name}</span>
+      <span className="text-sm text-foreground-secondary">
+        {offer.provider_name}
+      </span>
     </a>
   );
 }
@@ -50,7 +52,7 @@ function TmdbProviderChip({
   const color = getProviderColor(provider.provider_id);
   const chip = (
     <div
-      className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5"
+      className="inline-flex items-center gap-2 rounded-md px-2.5 py-1.5"
       style={{
         backgroundColor: `${color.bg}20`,
         borderLeft: `3px solid ${color.bg}`,
@@ -59,12 +61,14 @@ function TmdbProviderChip({
       <img
         src={logoUrl(provider.logo_path, "w45") ?? ""}
         alt={provider.provider_name}
-        className="w-6 h-6 rounded"
+        className="w-6 h-6 rounded-sm"
         loading="lazy"
         width={45}
         height={45}
       />
-      <span className="text-sm text-zinc-300">{provider.provider_name}</span>
+      <span className="text-sm text-foreground-secondary">
+        {provider.provider_name}
+      </span>
     </div>
   );
   if (watchLink) {
@@ -93,12 +97,14 @@ function ProviderRow({
 }) {
   return (
     <div className="flex items-start gap-3.5">
-      <div className="w-[70px] shrink-0 pt-1.5 text-sm text-zinc-400">
+      <div className="w-[70px] shrink-0 pt-1.5 text-sm text-muted-foreground">
         {label}
       </div>
       <div className="flex flex-wrap gap-2 items-center min-h-8">
         {isEmpty ? (
-          <span className="text-xs text-zinc-500 italic">— not available</span>
+          <span className="text-xs text-muted-foreground italic">
+            — not available
+          </span>
         ) : (
           children
         )}

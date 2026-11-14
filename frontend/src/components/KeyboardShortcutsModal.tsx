@@ -44,7 +44,7 @@ export default function KeyboardShortcutsModal({ open, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-scrim backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -64,7 +64,7 @@ export default function KeyboardShortcutsModal({ open, onClose }: Props) {
           <button
             onClick={onClose}
             aria-label={t("shortcuts.close")}
-            className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
           >
             <X className="size-4" />
           </button>
@@ -75,8 +75,10 @@ export default function KeyboardShortcutsModal({ open, onClose }: Props) {
               key={s.key}
               className="flex items-center justify-between gap-4"
             >
-              <span className="text-sm text-zinc-300">{t(s.descKey)}</span>
-              <kbd className="shrink-0 text-xs font-mono bg-zinc-800 border border-white/[0.1] px-2 py-0.5 rounded text-zinc-300">
+              <span className="text-sm text-foreground-secondary">
+                {t(s.descKey)}
+              </span>
+              <kbd className="shrink-0 text-xs font-mono bg-muted border border-border px-2 py-0.5 rounded-sm text-foreground-secondary">
                 {s.key}
               </kbd>
             </div>

@@ -44,28 +44,28 @@ export default function OwnedMediaRow({ titleId, formats }: Props) {
 
   return (
     <div className="flex items-start gap-3.5">
-      <div className="w-[70px] shrink-0 pt-1.5 text-sm text-zinc-400">
+      <div className="w-[70px] shrink-0 pt-1.5 text-sm text-muted-foreground">
         {t("owned.row")}
       </div>
       <div className="flex flex-wrap gap-2 items-center min-h-8">
         {formats.map((f) => (
           <span
             key={f}
-            className="inline-flex items-center rounded-lg px-2.5 py-1.5 text-sm text-zinc-300 bg-amber-400/[0.12] border-l-[3px] border-amber-400"
+            className="inline-flex items-center rounded-md px-2.5 py-1.5 text-sm text-foreground-secondary bg-primary-soft border-l-[3px] border-primary"
           >
             {t(`owned.formats.${f}`)}
           </span>
         ))}
         <details className="relative">
-          <summary className="cursor-pointer list-none rounded-lg px-2.5 py-1.5 text-xs text-zinc-400 hover:text-white border border-white/[0.12]">
+          <summary className="cursor-pointer list-none rounded-md px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground border border-border">
             {formats.length > 0 ? t("owned.edit") : t("owned.add")}
           </summary>
-          <fieldset className="absolute z-10 mt-1 flex flex-col gap-1.5 rounded-lg border border-white/[0.12] bg-zinc-900 p-3 shadow-lg">
+          <fieldset className="absolute z-10 mt-1 flex flex-col gap-1.5 rounded-md border border-border bg-card p-3 shadow-lg">
             <legend className="sr-only">{t("owned.pickerLabel")}</legend>
             {OWNED_FORMATS.map((f) => (
               <label
                 key={f}
-                className="flex items-center gap-2 whitespace-nowrap text-sm text-zinc-200 cursor-pointer"
+                className="flex items-center gap-2 whitespace-nowrap text-sm text-foreground-secondary cursor-pointer"
               >
                 <input
                   type="checkbox"

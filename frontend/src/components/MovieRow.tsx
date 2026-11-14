@@ -126,7 +126,7 @@ export default function MovieRow({ variant, movies }: MovieRowProps) {
                     e.preventDefault();
                     watchMutation.mutate(movie.id);
                   }}
-                  className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/[0.08] hover:bg-white/[0.14] text-zinc-100 text-xs font-medium rounded-lg transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-fill-subtle hover:bg-accent text-foreground text-xs font-medium rounded-md transition-colors cursor-pointer"
                 >
                   <CheckCircle size={14} />
                   Mark watched

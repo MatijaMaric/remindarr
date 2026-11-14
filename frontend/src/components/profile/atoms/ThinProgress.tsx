@@ -18,7 +18,7 @@ export function ThinProgress({
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
     <div
-      className={cn("rounded-full overflow-hidden bg-white/[0.08]", className)}
+      className={cn("rounded-full overflow-hidden bg-accent", className)}
       style={{ height: `${height}px` }}
     >
       <div

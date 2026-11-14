@@ -14,11 +14,11 @@ const FADE_WIDTH = "max(1rem, calc((100vw - 90rem) / 2))";
 
 const LEFT_FADE_STYLE: React.CSSProperties = {
   width: FADE_WIDTH,
-  background: "linear-gradient(to right, var(--bg-app), transparent)",
+  background: "linear-gradient(to right, var(--background), transparent)",
 };
 const RIGHT_FADE_STYLE: React.CSSProperties = {
   width: FADE_WIDTH,
-  background: "linear-gradient(to left, var(--bg-app), transparent)",
+  background: "linear-gradient(to left, var(--background), transparent)",
 };
 const LEFT_ARROW_STYLE: React.CSSProperties = { left: ARROW_OFFSET };
 const RIGHT_ARROW_STYLE: React.CSSProperties = { right: ARROW_OFFSET };
@@ -113,7 +113,7 @@ function FullBleedCarouselImpl({ children }: FullBleedCarouselProps) {
           aria-label={t("common.scrollLeft")}
           onClick={() => scroll("left")}
           style={LEFT_ARROW_STYLE}
-          className="absolute top-1/2 -translate-y-1/2 z-20 bg-zinc-800/90 hover:bg-zinc-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover/fullbleed:opacity-100 focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-opacity"
+          className="absolute top-1/2 -translate-y-1/2 z-20 bg-muted/90 hover:bg-muted-hover text-foreground rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover/fullbleed:opacity-100 focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-opacity"
         >
           <svg
             className="w-4 h-4"
@@ -138,7 +138,7 @@ function FullBleedCarouselImpl({ children }: FullBleedCarouselProps) {
           aria-label={t("common.scrollRight")}
           onClick={() => scroll("right")}
           style={RIGHT_ARROW_STYLE}
-          className="absolute top-1/2 -translate-y-1/2 z-20 bg-zinc-800/90 hover:bg-zinc-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover/fullbleed:opacity-100 focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-opacity"
+          className="absolute top-1/2 -translate-y-1/2 z-20 bg-muted/90 hover:bg-muted-hover text-foreground rounded-full w-8 h-8 flex items-center justify-center shadow-lg cursor-pointer opacity-0 group-hover/fullbleed:opacity-100 focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-opacity"
         >
           <svg
             className="w-4 h-4"

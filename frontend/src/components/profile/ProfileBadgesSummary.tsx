@@ -35,7 +35,7 @@ export default function ProfileBadgesSummary({
     <DossierCard>
       <div className="flex items-baseline justify-between mb-3">
         <Kicker className="mb-0">Achievements</Kicker>
-        <span className="text-[11px] text-zinc-500 font-mono">
+        <span className="text-[11px] text-muted-foreground font-mono">
           {earned.length}/{achievements.length} · {totalXp} XP
         </span>
       </div>
@@ -56,7 +56,7 @@ export default function ProfileBadgesSummary({
 
       <Link
         to={viewAllHref}
-        className="text-xs text-zinc-400 hover:text-white transition-colors"
+        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
       >
         View all achievements →
       </Link>

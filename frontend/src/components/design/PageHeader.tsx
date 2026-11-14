@@ -23,7 +23,7 @@ export function PageHeader({
     >
       <div className="min-w-0">
         <Kicker>{kicker}</Kicker>
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight text-zinc-100">
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight text-foreground">
           {title}
         </h1>
       </div>

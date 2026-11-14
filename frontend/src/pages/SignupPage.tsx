@@ -38,12 +38,12 @@ export default function SignupPage() {
   return (
     <div className="min-h-[70vh] flex items-center justify-center">
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-white text-center mb-8">
+        <h1 className="text-2xl font-bold text-foreground text-center mb-8">
           {t("signup.title")}
         </h1>
 
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm">
+          <div className="mb-4 p-3 rounded-md bg-destructive-soft border border-destructive/40 text-destructive text-sm">
             {error}
           </div>
         )}
@@ -52,7 +52,7 @@ export default function SignupPage() {
           <div>
             <label
               htmlFor="username"
-              className="block text-sm font-medium text-zinc-300 mb-1"
+              className="block text-sm font-medium text-foreground-secondary mb-1"
             >
               {t("signup.username")}
             </label>
@@ -61,7 +61,7 @@ export default function SignupPage() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:border-transparent"
+              className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border focus-visible:border-transparent"
               autoComplete="username"
               required
             />
@@ -70,7 +70,7 @@ export default function SignupPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-zinc-300 mb-1"
+              className="block text-sm font-medium text-foreground-secondary mb-1"
             >
               {t("signup.email")}
             </label>
@@ -79,7 +79,7 @@ export default function SignupPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:border-transparent"
+              className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border focus-visible:border-transparent"
               autoComplete="email"
               required
             />
@@ -88,10 +88,10 @@ export default function SignupPage() {
           <div>
             <label
               htmlFor="name"
-              className="block text-sm font-medium text-zinc-300 mb-1"
+              className="block text-sm font-medium text-foreground-secondary mb-1"
             >
               {t("signup.displayName")}{" "}
-              <span className="text-zinc-500 font-normal">
+              <span className="text-muted-foreground font-normal">
                 ({t("common.optional")})
               </span>
             </label>
@@ -100,7 +100,7 @@ export default function SignupPage() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:border-transparent"
+              className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border focus-visible:border-transparent"
               autoComplete="name"
             />
           </div>
@@ -108,7 +108,7 @@ export default function SignupPage() {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-zinc-300 mb-1"
+              className="block text-sm font-medium text-foreground-secondary mb-1"
             >
               {t("signup.password")}
             </label>
@@ -118,7 +118,7 @@ export default function SignupPage() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 pr-10 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:border-transparent"
+                className="w-full px-3 py-2 pr-10 bg-muted border border-border rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border focus-visible:border-transparent"
                 autoComplete="new-password"
                 required
               />
@@ -130,12 +130,12 @@ export default function SignupPage() {
                     ? t("signup.hidePassword")
                     : t("signup.showPassword")
                 }
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors p-1"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground-secondary transition-colors p-1"
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               {t("signup.passwordHint")}
             </p>
           </div>
@@ -143,28 +143,34 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+            className="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md transition-colors disabled:opacity-50 cursor-pointer"
           >
             {loading ? t("signup.creating") : t("signup.signUp")}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-zinc-400">
+        <p className="mt-6 text-center text-sm text-muted-foreground">
           {t("signup.alreadyHaveAccount")}{" "}
           <Link
             to="/login"
-            className="text-amber-400 hover:text-amber-300 transition-colors underline underline-offset-2"
+            className="text-primary-text hover:text-primary-text transition-colors underline underline-offset-2"
           >
             {t("signup.signIn")}
           </Link>
         </p>
 
-        <p className="mt-6 text-center text-xs text-zinc-500">
-          <Link to="/privacy" className="hover:text-zinc-300 transition-colors">
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          <Link
+            to="/privacy"
+            className="hover:text-foreground-secondary transition-colors"
+          >
             {t("privacy.title")}
           </Link>
           <span className="mx-2">·</span>
-          <Link to="/terms" className="hover:text-zinc-300 transition-colors">
+          <Link
+            to="/terms"
+            className="hover:text-foreground-secondary transition-colors"
+          >
             {t("terms.title")}
           </Link>
         </p>
