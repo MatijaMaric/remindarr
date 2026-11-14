@@ -58,8 +58,8 @@ function CollectionRowInner({
                 className={`w-28 flex-shrink-0 group${isCurrent ? " pointer-events-none" : ""}`}
               >
                 <div
-                  className={`aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800${
-                    isCurrent ? " ring-2 ring-amber-400" : ""
+                  className={`aspect-[2/3] rounded-md overflow-hidden bg-muted${
+                    isCurrent ? " ring-2 ring-primary" : ""
                   }`}
                 >
                   {imgSrc ? (
@@ -72,7 +72,7 @@ function CollectionRowInner({
                       height={168}
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs">
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
                       N/A
                     </div>
                   )}
@@ -80,14 +80,14 @@ function CollectionRowInner({
                 <p
                   className={`text-xs mt-1.5 line-clamp-2 transition-colors${
                     isCurrent
-                      ? " text-amber-400"
-                      : " text-zinc-300 group-hover:text-amber-400"
+                      ? " text-primary-text"
+                      : " text-foreground-secondary group-hover:text-primary-text"
                   }`}
                 >
                   {part.title}
                 </p>
                 {part.release_date && (
-                  <p className="font-mono text-[10px] text-zinc-500">
+                  <p className="font-mono text-[11px] text-muted-foreground">
                     {part.release_date.slice(0, 4)}
                   </p>
                 )}

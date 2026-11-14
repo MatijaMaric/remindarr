@@ -21,7 +21,7 @@ const RATING_CONFIG: {
     value: "HATE",
     Icon: HeartCrack,
     label: "Hate",
-    activeColor: "text-white",
+    activeColor: "text-foreground",
     activeBg: "bg-red-500",
     filled: true,
   },
@@ -29,21 +29,21 @@ const RATING_CONFIG: {
     value: "DISLIKE",
     Icon: ThumbsDown,
     label: "Dislike",
-    activeColor: "text-white",
+    activeColor: "text-foreground",
     activeBg: "bg-orange-500",
   },
   {
     value: "LIKE",
     Icon: ThumbsUp,
     label: "Like",
-    activeColor: "text-white",
+    activeColor: "text-foreground",
     activeBg: "bg-blue-500",
   },
   {
     value: "LOVE",
     Icon: Heart,
     label: "Love",
-    activeColor: "text-white",
+    activeColor: "text-foreground",
     activeBg: "bg-pink-500",
     filled: true,
   },
@@ -95,7 +95,7 @@ export default function RatingButtons({ titleId }: RatingButtonsProps) {
         {RATING_CONFIG.map(({ value }) => (
           <div
             key={value}
-            className="h-9 w-16 rounded-lg bg-zinc-800 animate-pulse"
+            className="h-9 w-16 rounded-md bg-muted animate-pulse"
           />
         ))}
       </div>
@@ -121,10 +121,10 @@ export default function RatingButtons({ titleId }: RatingButtonsProps) {
                 disabled={submitting || isReadOnly}
                 aria-label={label}
                 aria-pressed={isActive}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                   isActive
                     ? `${activeBg} ${activeColor}`
-                    : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-300"
+                    : "bg-muted text-muted-foreground hover:bg-muted-hover hover:text-foreground-secondary"
                 } disabled:cursor-default ${isReadOnly ? "" : "disabled:opacity-50"}`}
               >
                 <Icon
@@ -168,7 +168,7 @@ function FriendsRatings({
   const remaining = parts.length - visible.length;
 
   return (
-    <p className="text-xs text-zinc-400" data-testid="friends-ratings">
+    <p className="text-xs text-muted-foreground" data-testid="friends-ratings">
       Friends: {visible.join(", ")}
       {remaining > 0 && ` +${remaining} more`}
     </p>

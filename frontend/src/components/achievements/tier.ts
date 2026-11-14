@@ -20,36 +20,36 @@ export function tierFromRung(rungIndex: number): {
 
 // Tailwind classes for each tier — all use ring + bg + text tokens
 export interface TierStyle {
-  ring: string; // e.g. "ring-2 ring-amber-700/40"
-  bg: string; // e.g. "bg-amber-900/10"
-  text: string; // e.g. "text-amber-700"
+  ring: string; // e.g. "ring-2 ring-primary-border"
+  bg: string; // e.g. "bg-primary-soft"
+  text: string; // e.g. "text-primary-text"
   icon: string; // icon color class
 }
 
 export const TIER_COLORS: Record<Tier, TierStyle> = {
   bronze: {
-    ring: "ring-2 ring-amber-700/40",
-    bg: "bg-amber-900/10",
-    text: "text-amber-600",
-    icon: "text-amber-600",
+    ring: "ring-2 ring-primary-border",
+    bg: "bg-primary-soft",
+    text: "text-primary-text",
+    icon: "text-primary-text",
   },
   silver: {
-    ring: "ring-2 ring-zinc-300/40",
-    bg: "bg-zinc-700/10",
-    text: "text-zinc-300",
-    icon: "text-zinc-300",
+    ring: "ring-2 ring-ring",
+    bg: "bg-muted-hover/10",
+    text: "text-foreground-secondary",
+    icon: "text-foreground-secondary",
   },
   gold: {
-    ring: "ring-2 ring-amber-400/50",
-    bg: "bg-amber-400/10",
-    text: "text-amber-400",
-    icon: "text-amber-400",
+    ring: "ring-2 ring-primary-border",
+    bg: "bg-primary-soft",
+    text: "text-primary-text",
+    icon: "text-primary-text",
   },
   platinum: {
-    ring: "ring-2 ring-sky-200/50",
-    bg: "bg-sky-900/10",
-    text: "text-sky-200",
-    icon: "text-sky-200",
+    ring: "ring-2 ring-info/50",
+    bg: "bg-info/10",
+    text: "text-info",
+    icon: "text-info",
   },
   diamond: {
     ring: "ring-2 ring-cyan-300/50",

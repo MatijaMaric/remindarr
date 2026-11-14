@@ -247,13 +247,15 @@ export default function CategoryBrowse({
       )}
 
       {errorMessage && (
-        <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">
+        <div className="bg-destructive-soft border border-destructive/40 text-destructive px-4 py-2 rounded-md text-sm">
           {errorMessage}
         </div>
       )}
 
       {isLoading && titles.length === 0 ? (
-        <div className="text-center py-12 text-zinc-500">Loading...</div>
+        <div className="text-center py-12 text-muted-foreground">
+          Loading...
+        </div>
       ) : (
         <>
           <TitleList
@@ -263,11 +265,11 @@ export default function CategoryBrowse({
             applyContentAdvisory
           />
           {errorMessage && (
-            <div className="text-center py-4 text-red-400">
+            <div className="text-center py-4 text-destructive">
               <p>{errorMessage}</p>
               <button
                 onClick={() => void fetchNextPage()}
-                className="mt-2 text-sm underline hover:text-red-300"
+                className="mt-2 text-sm underline hover:text-destructive"
               >
                 Retry
               </button>
@@ -276,11 +278,11 @@ export default function CategoryBrowse({
           {!errorMessage && page < totalPages && (
             <div ref={sentinelRef} className="text-center py-4">
               {isFetchingNextPage ? (
-                <div className="text-zinc-500 text-sm">Loading...</div>
+                <div className="text-muted-foreground text-sm">Loading...</div>
               ) : (
                 <button
                   onClick={() => void fetchNextPage()}
-                  className="bg-white/[0.05] border border-white/[0.08] text-zinc-300 px-6 py-2.5 rounded-xl text-[13px] font-semibold sm:hidden"
+                  className="bg-fill-subtle border border-border text-foreground-secondary px-6 py-2.5 rounded-lg text-[13px] font-semibold sm:hidden"
                 >
                   Load more
                 </button>

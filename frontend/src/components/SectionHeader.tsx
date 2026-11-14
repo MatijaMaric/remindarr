@@ -32,7 +32,7 @@ export function SectionHeader({
       {href && linkLabel != null ? (
         <Link
           to={href}
-          className="text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           {linkLabel}
         </Link>

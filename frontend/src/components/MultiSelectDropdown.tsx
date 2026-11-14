@@ -85,13 +85,13 @@ export default function MultiSelectDropdown({
     return (
       <label
         key={opt.value}
-        className="flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 cursor-pointer"
+        className="flex items-center gap-2 px-3 py-1.5 text-xs text-foreground-secondary hover:bg-muted-hover cursor-pointer"
       >
         <input
           type="checkbox"
           checked={selected.includes(opt.value)}
           onChange={() => toggle(opt.value)}
-          className="rounded border-white/[0.10] bg-zinc-700 text-amber-500 focus:ring-0 cursor-pointer"
+          className="rounded-sm border-border bg-muted-hover text-primary-text focus:ring-0 cursor-pointer"
         />
         {opt.label}
       </label>
@@ -110,9 +110,9 @@ export default function MultiSelectDropdown({
         if (filtered.length === 0) return null;
         return (
           <div key={idx}>
-            {idx > 0 && <hr className="border-white/[0.08] my-1" />}
+            {idx > 0 && <hr className="border-border my-1" />}
             {section.label && (
-              <div className="px-3 py-1 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">
+              <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                 {section.label}
               </div>
             )}
@@ -133,7 +133,7 @@ export default function MultiSelectDropdown({
         onClick={handleToggleOpen}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className="bg-zinc-800 text-zinc-300 text-xs rounded-lg px-3 py-1.5 border-0 outline-none cursor-pointer hover:text-white focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 flex items-center gap-1"
+        className="bg-muted text-foreground-secondary text-xs rounded-md px-3 py-1.5 border-0 outline-none cursor-pointer hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card flex items-center gap-1"
       >
         {summary}
         <svg
@@ -152,21 +152,21 @@ export default function MultiSelectDropdown({
         </svg>
       </button>
       {open && (
-        <div className="absolute z-50 mt-1 bg-zinc-800 border border-white/[0.08] rounded-lg shadow-lg min-w-[160px] flex flex-col max-h-72">
-          <div className="sticky top-0 bg-zinc-800 z-10 rounded-t-lg">
+        <div className="absolute z-50 mt-1 bg-muted border border-border rounded-md shadow-lg min-w-[160px] flex flex-col max-h-72">
+          <div className="sticky top-0 bg-muted z-10 rounded-t-md">
             <input
               ref={searchRef}
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t("filter.search")}
-              className="w-full bg-zinc-700 text-zinc-300 text-xs rounded-t-lg px-3 py-1.5 border-0 outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset placeholder-zinc-500"
+              className="w-full bg-muted-hover text-foreground-secondary text-xs rounded-t-md px-3 py-1.5 border-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset placeholder-muted-foreground"
             />
             {selected.length > 0 && (
               <button
                 type="button"
                 onClick={() => onChange([])}
-                className="w-full text-left px-3 py-1.5 text-xs text-zinc-400 hover:text-white hover:bg-zinc-700 cursor-pointer"
+                className="w-full text-left px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted-hover cursor-pointer"
               >
                 Clear all
               </button>

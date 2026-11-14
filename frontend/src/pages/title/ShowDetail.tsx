@@ -59,7 +59,7 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       <ShowHero title={title} tmdb={tmdb} country={country} />
 
       {/* Metadata strip — mobile only; desktop ShowHero already renders these fields inline */}
-      <div className="sm:hidden bg-zinc-900 -mx-4 px-6 py-5 flex flex-wrap gap-x-8 gap-y-3 border-b border-white/[0.06]">
+      <div className="sm:hidden bg-card -mx-4 px-6 py-5 flex flex-wrap gap-x-8 gap-y-3 border-b border-border">
         {[
           { label: "TYPE", value: "TV Show" },
           tmdb?.status ? { label: "STATUS", value: tmdb.status } : null,
@@ -88,8 +88,10 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
           .filter(Boolean)
           .map((cell) => (
             <div key={cell!.label}>
-              <div className="text-xs text-zinc-400 mb-1">{cell!.label}</div>
-              <div className="font-mono text-[13px] font-semibold text-zinc-100">
+              <div className="text-xs text-muted-foreground mb-1">
+                {cell!.label}
+              </div>
+              <div className="font-mono text-[13px] font-semibold text-foreground">
                 {cell!.value}
               </div>
             </div>
@@ -99,7 +101,7 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       {/* Overview */}
       {overview && (
         <Section title="Overview">
-          <p className="text-zinc-300 leading-relaxed select-text">
+          <p className="text-foreground-secondary leading-relaxed select-text">
             {overview}
           </p>
         </Section>
@@ -146,7 +148,7 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       {seasons.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <h2 className="text-[18px] font-semibold text-white tracking-tight leading-tight">
+            <h2 className="text-[18px] font-semibold text-foreground tracking-tight leading-tight">
               Seasons
             </h2>
             <BackdateWatchedButton
@@ -162,13 +164,13 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
                 <Link
                   key={s.season_number}
                   to={`/title/${title.id}/season/${s.season_number}`}
-                  className={`rounded-xl overflow-hidden border transition-colors group ${
+                  className={`rounded-lg overflow-hidden border transition-colors group ${
                     airingToday
-                      ? "bg-amber-400/[0.06] border-amber-400/25 hover:border-amber-400/50"
-                      : "bg-zinc-900 border-white/[0.06] hover:border-amber-500/50"
+                      ? "bg-primary-soft border-primary-border hover:border-primary-border"
+                      : "bg-card border-border hover:border-primary-border"
                   }`}
                 >
-                  <div className="aspect-[2/3] bg-zinc-800">
+                  <div className="aspect-[2/3] bg-muted">
                     {s.poster_path ? (
                       <img
                         src={mkPosterUrl(s.poster_path, "w342") ?? ""}
@@ -179,23 +181,23 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
                         height={513}
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-zinc-600 text-sm">
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
                         Season {s.season_number}
                       </div>
                     )}
                   </div>
                   <div className="p-3">
                     <div className="flex items-center gap-1.5">
-                      <h3 className="text-sm font-medium text-white group-hover:text-amber-400 transition-colors truncate">
+                      <h3 className="text-sm font-medium text-foreground group-hover:text-primary-text transition-colors truncate">
                         {s.name}
                       </h3>
                       {airingToday && (
-                        <span className="text-[11px] text-amber-400 tracking-[0.12em] shrink-0">
+                        <span className="text-[11px] text-primary-text tracking-[0.12em] shrink-0">
                           AIRING NOW
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-zinc-400 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       {s.episode_count} episode
                       {s.episode_count !== 1 ? "s" : ""}
                       {s.air_date && ` · ${s.air_date.slice(0, 4)}`}
@@ -243,38 +245,40 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
             {tmdb.type && (
               <div>
-                <span className="text-zinc-400 block">Type</span>
-                <span className="text-zinc-300">{tmdb.type}</span>
+                <span className="text-muted-foreground block">Type</span>
+                <span className="text-foreground-secondary">{tmdb.type}</span>
               </div>
             )}
             {tmdb.original_language && (
               <div>
-                <span className="text-zinc-400 block">Original Language</span>
-                <span className="text-zinc-300">
+                <span className="text-muted-foreground block">
+                  Original Language
+                </span>
+                <span className="text-foreground-secondary">
                   {tmdb.original_language.toUpperCase()}
                 </span>
               </div>
             )}
             {tmdb.production_countries?.length > 0 && (
               <div>
-                <span className="text-zinc-400 block">Country</span>
-                <span className="text-zinc-300">
+                <span className="text-muted-foreground block">Country</span>
+                <span className="text-foreground-secondary">
                   {tmdb.production_countries.map((c) => c.name).join(", ")}
                 </span>
               </div>
             )}
             {tmdb.spoken_languages?.length > 0 && (
               <div>
-                <span className="text-zinc-400 block">Languages</span>
-                <span className="text-zinc-300">
+                <span className="text-muted-foreground block">Languages</span>
+                <span className="text-foreground-secondary">
                   {tmdb.spoken_languages.map((l) => l.english_name).join(", ")}
                 </span>
               </div>
             )}
             {tmdb.production_companies?.length > 0 && (
               <div className="col-span-2 sm:col-span-3">
-                <span className="text-zinc-400 block">Production</span>
-                <span className="text-zinc-300">
+                <span className="text-muted-foreground block">Production</span>
+                <span className="text-foreground-secondary">
                   {tmdb.production_companies.map((c) => c.name).join(", ")}
                 </span>
               </div>

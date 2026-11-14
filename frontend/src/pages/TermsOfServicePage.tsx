@@ -10,17 +10,17 @@ export default function TermsOfServicePage() {
     <div className="max-w-3xl mx-auto pb-16">
       <PageHeader kicker={t("legal.kicker")} title={t("terms.title")} />
 
-      <div className="space-y-8 text-sm text-zinc-300 leading-relaxed">
-        <p className="text-zinc-400">Last updated: May 25, 2026</p>
+      <div className="space-y-8 text-sm text-foreground-secondary leading-relaxed">
+        <p className="text-muted-foreground">Last updated: May 25, 2026</p>
 
-        <p className="rounded-lg border border-white/[0.08] bg-zinc-900/50 p-4 text-zinc-400">
+        <p className="rounded-md border border-border bg-card/50 p-4 text-muted-foreground">
           Remindarr is open-source software. These Terms apply to the official
           instance hosted at{" "}
           <a
             href="https://remindarr.app"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-amber-400 underline underline-offset-2 hover:text-amber-300"
+            className="text-primary-text underline underline-offset-2 hover:text-primary-text"
           >
             remindarr.app
           </a>
@@ -58,7 +58,7 @@ export default function TermsOfServicePage() {
 
         <LegalSection title="4. Acceptable use">
           <p>You agree not to:</p>
-          <ul className="list-disc space-y-1 pl-5 marker:text-zinc-600">
+          <ul className="list-disc space-y-1 pl-5 marker:text-muted-foreground">
             <li>use the Service for any unlawful purpose;</li>
             <li>
               attempt to disrupt, overload, scrape, reverse engineer, or gain
@@ -88,7 +88,7 @@ export default function TermsOfServicePage() {
               href="https://www.themoviedb.org/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-amber-400 underline underline-offset-2 hover:text-amber-300"
+              className="text-primary-text underline underline-offset-2 hover:text-primary-text"
             >
               The Movie Database (TMDB)
             </a>
@@ -149,7 +149,7 @@ export default function TermsOfServicePage() {
             Questions about these Terms can be directed to us at{" "}
             <a
               href="mailto:legal@remindarr.app"
-              className="text-amber-400 underline underline-offset-2 hover:text-amber-300"
+              className="text-primary-text underline underline-offset-2 hover:text-primary-text"
             >
               legal@remindarr.app
             </a>
@@ -157,11 +157,11 @@ export default function TermsOfServicePage() {
           </p>
         </LegalSection>
 
-        <p className="text-zinc-400">
+        <p className="text-muted-foreground">
           See also our{" "}
           <Link
             to="/privacy"
-            className="text-amber-400 underline underline-offset-2 hover:text-amber-300"
+            className="text-primary-text underline underline-offset-2 hover:text-primary-text"
           >
             {t("privacy.title")}
           </Link>

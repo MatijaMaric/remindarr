@@ -72,24 +72,24 @@ describe("WatchedToggleButton", () => {
     expect(button.className).toContain("rounded-full");
   });
 
-  it("uses rounded-lg for md size", () => {
+  it("uses rounded-md for md size", () => {
     render(
       <WatchedToggleButton watched={false} onClick={() => {}} size="md" />,
     );
     const button = screen.getByRole("button");
-    expect(button.className).toContain("rounded-lg");
+    expect(button.className).toContain("rounded-md");
   });
 
   it("shows emerald styling when watched", () => {
     render(<WatchedToggleButton watched={true} onClick={() => {}} />);
     const button = screen.getByRole("button");
-    expect(button.className).toContain("text-emerald-400");
+    expect(button.className).toContain("text-success");
   });
 
   it("shows zinc styling when unwatched", () => {
     render(<WatchedToggleButton watched={false} onClick={() => {}} />);
     const button = screen.getByRole("button");
-    expect(button.className).toContain("text-zinc-400");
+    expect(button.className).toContain("text-muted-foreground");
   });
 
   it("hides label on mobile when compactOnMobile is true", () => {

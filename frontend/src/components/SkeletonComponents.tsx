@@ -3,7 +3,7 @@ import { Skeleton } from "./ui/skeleton";
 /** Single title card skeleton matching TitleCard layout */
 export function TitleCardSkeleton() {
   return (
-    <div className="bg-zinc-900 rounded-xl overflow-hidden flex flex-col">
+    <div className="bg-card rounded-lg overflow-hidden flex flex-col">
       {/* Poster */}
       <Skeleton className="aspect-[2/3] w-full rounded-none" />
       {/* Title + meta */}
@@ -29,9 +29,9 @@ export function TitleGridSkeleton({ count = 12 }: { count?: number }) {
 /** Single episode row skeleton */
 function EpisodeRowSkeleton({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`bg-zinc-900 rounded-xl ${compact ? "p-3" : "p-4"}`}>
+    <div className={`bg-card rounded-lg ${compact ? "p-3" : "p-4"}`}>
       <div className="flex gap-4">
-        <Skeleton className="w-16 h-24 rounded-lg flex-shrink-0" />
+        <Skeleton className="w-16 h-24 rounded-md flex-shrink-0" />
         <div className="flex-1 space-y-2 pt-1">
           <Skeleton className="h-4 w-40" />
           <Skeleton className="h-3 w-24" />
@@ -84,7 +84,7 @@ export function DetailPageSkeleton() {
       <Skeleton className="h-4 w-48" />
       {/* Hero */}
       <div className="flex flex-col sm:flex-row gap-6">
-        <Skeleton className="w-40 aspect-[2/3] rounded-xl mx-auto sm:mx-0 shrink-0" />
+        <Skeleton className="w-40 aspect-[2/3] rounded-lg mx-auto sm:mx-0 shrink-0" />
         <div className="flex-1 space-y-3 pt-1">
           <Skeleton className="h-7 w-3/4" />
           <Skeleton className="h-4 w-1/2" />
@@ -98,8 +98,8 @@ export function DetailPageSkeleton() {
         <Skeleton className="h-5 w-24" />
         <div className="space-y-2">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex gap-4 bg-zinc-900 rounded-xl p-3">
-              <Skeleton className="w-36 aspect-video rounded-lg shrink-0" />
+            <div key={i} className="flex gap-4 bg-card rounded-lg p-3">
+              <Skeleton className="w-36 aspect-video rounded-md shrink-0" />
               <div className="flex-1 space-y-2 pt-1">
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-3 w-1/2" />
@@ -124,10 +124,10 @@ export function CalendarSkeleton() {
             {Array.from({ length: 3 }).map((_, j) => (
               <div
                 key={j}
-                className="flex items-center gap-3 p-2.5 rounded-lg bg-zinc-900/60"
+                className="flex items-center gap-3 p-2.5 rounded-md bg-card/60"
               >
                 <Skeleton className="w-5 h-5 rounded-full shrink-0" />
-                <Skeleton className="w-12 h-8 rounded shrink-0" />
+                <Skeleton className="w-12 h-8 rounded-sm shrink-0" />
                 <div className="flex-1 space-y-1">
                   <Skeleton className="h-3 w-3/4" />
                   <Skeleton className="h-3 w-1/2" />
@@ -145,12 +145,12 @@ export function CalendarSkeleton() {
 export function GridCalendarSkeleton() {
   const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   return (
-    <div className="border border-white/[0.06] rounded-xl overflow-hidden">
-      <div className="grid grid-cols-7 bg-zinc-900 border-b border-white/[0.06]">
+    <div className="border border-border rounded-lg overflow-hidden">
+      <div className="grid grid-cols-7 bg-card border-b border-border">
         {WEEKDAYS.map((d) => (
           <div
             key={d}
-            className="px-2 py-2 text-center text-xs font-medium text-zinc-500 uppercase"
+            className="px-2 py-2 text-center text-xs font-medium text-muted-foreground uppercase"
           >
             {d}
           </div>
@@ -159,12 +159,12 @@ export function GridCalendarSkeleton() {
       {Array.from({ length: 5 }).map((_, wi) => (
         <div
           key={wi}
-          className="grid grid-cols-7 border-b border-white/[0.06] last:border-b-0"
+          className="grid grid-cols-7 border-b border-border last:border-b-0"
         >
           {Array.from({ length: 7 }).map((_, di) => (
             <div
               key={di}
-              className="min-h-28 p-1.5 border-r border-white/[0.06] last:border-r-0"
+              className="min-h-28 p-1.5 border-r border-border last:border-r-0"
             >
               <Skeleton className="h-4 w-4 rounded-full mb-1.5" />
               {di % 3 === 0 && (
@@ -184,7 +184,7 @@ export function GridCalendarSkeleton() {
 /** Hero banner skeleton — matches the 520px hero container on desktop */
 export function HeroBannerSkeleton() {
   return (
-    <div className="hidden lg:block w-[100vw] relative left-[50%] ml-[-50vw] h-[520px] bg-zinc-900 overflow-hidden">
+    <div className="hidden lg:block w-[100vw] relative left-[50%] ml-[-50vw] h-[520px] bg-card overflow-hidden">
       <Skeleton className="absolute inset-0 rounded-none" />
     </div>
   );
@@ -196,7 +196,7 @@ export function ScrollableRowSkeleton({ count = 4 }: { count?: number }) {
     <div className="flex gap-3 overflow-hidden">
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="w-80 flex-shrink-0">
-          <div className="bg-zinc-900 rounded-xl overflow-hidden">
+          <div className="bg-card rounded-lg overflow-hidden">
             <Skeleton className="w-full aspect-video rounded-none" />
             <div className="p-3 space-y-2">
               <Skeleton className="h-4 w-3/4" />
@@ -243,7 +243,7 @@ export function HomeAuthSkeleton() {
 export function SettingsTabSkeleton() {
   return (
     <div className="min-h-[480px] space-y-4">
-      <div className="bg-zinc-900 rounded-xl p-5 space-y-3.5">
+      <div className="bg-card rounded-lg p-5 space-y-3.5">
         <Skeleton className="h-5 w-40" />
         <Skeleton className="h-3 w-64" />
         <div className="space-y-3 pt-1">
@@ -252,13 +252,13 @@ export function SettingsTabSkeleton() {
           <Skeleton className="h-10 w-full max-w-sm" />
         </div>
       </div>
-      <div className="bg-zinc-900 rounded-xl p-5 space-y-3.5">
+      <div className="bg-card rounded-lg p-5 space-y-3.5">
         <Skeleton className="h-5 w-36" />
         <Skeleton className="h-3 w-56" />
         <div className="space-y-2 pt-1">
-          <Skeleton className="h-14 w-full rounded-lg" />
-          <Skeleton className="h-14 w-full rounded-lg" />
-          <Skeleton className="h-14 w-full rounded-lg" />
+          <Skeleton className="h-14 w-full rounded-md" />
+          <Skeleton className="h-14 w-full rounded-md" />
+          <Skeleton className="h-14 w-full rounded-md" />
         </div>
       </div>
     </div>
@@ -273,7 +273,7 @@ export function ReelsSkeleton() {
       style={{ minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))" }}
     >
       <div className="w-full max-w-sm space-y-4 px-4">
-        <Skeleton className="w-full aspect-[2/3] rounded-2xl" />
+        <Skeleton className="w-full aspect-[2/3] rounded-xl" />
         <Skeleton className="h-5 w-3/4 mx-auto" />
         <Skeleton className="h-4 w-1/2 mx-auto" />
       </div>

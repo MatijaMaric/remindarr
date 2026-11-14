@@ -75,7 +75,7 @@ export default function SettingsPage() {
           {t("settings.kicker")}
           {user.username ? ` · ${user.username}` : ""}
         </Kicker>
-        <h1 className="text-4xl md:text-[44px] font-extrabold tracking-[-0.03em] leading-none text-zinc-100">
+        <h1 className="text-4xl md:text-[44px] font-extrabold tracking-[-0.03em] leading-none text-foreground">
           {t("settings.title")}
         </h1>
       </div>
@@ -83,13 +83,13 @@ export default function SettingsPage() {
       {/* Breadcrumb */}
       <nav
         aria-label={t("settings.breadcrumb")}
-        className="pb-4 font-mono text-xs text-zinc-400 tracking-wide"
+        className="pb-4 font-mono text-xs text-muted-foreground tracking-wide"
       >
         <span>/settings</span>
-        <span className="mx-2 text-zinc-600" aria-hidden="true">
+        <span className="mx-2 text-muted-foreground" aria-hidden="true">
           ›
         </span>
-        <span className="text-amber-400" aria-current="location">
+        <span className="text-primary-text" aria-current="location">
           {breadcrumbLabel}
         </span>
       </nav>
@@ -102,7 +102,7 @@ export default function SettingsPage() {
           buildInfo={
             <div className="space-y-0.5">
               <div>{t("settings.buildInfo")}</div>
-              <div className="text-zinc-400">
+              <div className="text-muted-foreground">
                 TMDB · {navigator.language || "en"}
               </div>
             </div>

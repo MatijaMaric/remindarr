@@ -37,7 +37,7 @@ describe("MediaCard", () => {
       </MemoryRouter>,
     );
     expect(queryByAltText("Test image")).toBeNull();
-    expect(hasClass(container, "from-zinc-800")).toBe(true);
+    expect(hasClass(container, "from-muted")).toBe(true);
   });
 
   it("applies aspect-video class for video aspect", () => {
@@ -58,18 +58,18 @@ describe("MediaCard", () => {
     expect(hasClass(container, "aspect-[2/3]")).toBe(true);
   });
 
-  it("renders neutral badge with bg-black/75 at top-right by default", () => {
+  it("renders neutral badge with bg-scrim at top-right by default", () => {
     const { container } = render(
       <MemoryRouter>
         <MediaCard {...baseProps} badge={{ label: "3 new", tone: "neutral" }} />
       </MemoryRouter>,
     );
     expect(screen.getByText("3 new")).toBeTruthy();
-    expect(hasClass(container, "bg-black/75")).toBe(true);
+    expect(hasClass(container, "bg-scrim")).toBe(true);
     expect(hasClass(container, "right-2")).toBe(true);
   });
 
-  it("renders accent badge with bg-amber-400", () => {
+  it("renders accent badge with bg-primary", () => {
     const { container } = render(
       <MemoryRouter>
         <MediaCard
@@ -79,7 +79,7 @@ describe("MediaCard", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText("in 5 days")).toBeTruthy();
-    expect(hasClass(container, "bg-amber-400")).toBe(true);
+    expect(hasClass(container, "bg-primary")).toBe(true);
   });
 
   it("renders badge at left-2 when position is top-left", () => {
@@ -100,7 +100,7 @@ describe("MediaCard", () => {
         <MediaCard {...baseProps} unread />
       </MemoryRouter>,
     );
-    expect(hasClass(container, "ring-amber-500/60")).toBe(true);
+    expect(hasClass(container, "ring-primary/60")).toBe(true);
   });
 
   it("renders unread dot when unread and no badge", () => {
@@ -109,7 +109,7 @@ describe("MediaCard", () => {
         <MediaCard {...baseProps} unread />
       </MemoryRouter>,
     );
-    expect(hasClass(container, "bg-amber-500")).toBe(true);
+    expect(hasClass(container, "bg-primary")).toBe(true);
   });
 
   it("renders overlayAction inside the media surface", () => {
@@ -152,13 +152,13 @@ describe("MediaCard", () => {
     expect(hrefs).toContain("/title/abc/season/1");
   });
 
-  it("always renders chrome (bg-zinc-900)", () => {
+  it("always renders chrome (bg-card)", () => {
     const { container } = render(
       <MemoryRouter>
         <MediaCard {...baseProps} />
       </MemoryRouter>,
     );
-    expect(hasClass(container, "bg-zinc-900")).toBe(true);
+    expect(hasClass(container, "bg-card")).toBe(true);
   });
 
   it("renders footer content pinned below the body", () => {

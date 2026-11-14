@@ -20,7 +20,7 @@ export default function SharedWatchlistPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-8 w-64 bg-zinc-800 rounded animate-pulse" />
+        <div className="h-8 w-64 bg-muted rounded-sm animate-pulse" />
         <TitleGridSkeleton count={12} />
       </div>
     );
@@ -30,15 +30,15 @@ export default function SharedWatchlistPage() {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
         <div className="text-4xl">🔗</div>
-        <h1 className="text-xl font-bold text-zinc-100">
+        <h1 className="text-xl font-bold text-foreground">
           This link is invalid or has been revoked
         </h1>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted-foreground">
           The watchlist you are looking for is no longer available.
         </p>
         <Link
           to="/"
-          className="text-amber-400 hover:text-amber-300 text-sm transition-colors"
+          className="text-primary-text hover:text-primary-text text-sm transition-colors"
         >
           Go to Remindarr
         </Link>
@@ -51,18 +51,20 @@ export default function SharedWatchlistPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-zinc-100">
+        <h1 className="text-2xl font-bold text-foreground">
           {titles.length} title{titles.length !== 1 ? "s" : ""} shared by{" "}
-          <span className="text-amber-400">@{username}</span>
+          <span className="text-primary-text">@{username}</span>
         </h1>
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted-foreground">
           Read-only view — sign in to track these titles
         </p>
       </div>
 
       {titles.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center space-y-2">
-          <p className="text-zinc-400 text-sm">This watchlist is empty</p>
+          <p className="text-muted-foreground text-sm">
+            This watchlist is empty
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
@@ -70,9 +72,9 @@ export default function SharedWatchlistPage() {
             <Link
               key={title.id}
               to={`/title/${title.id}`}
-              className="group bg-zinc-900 rounded-xl overflow-hidden flex flex-col hover:ring-2 hover:ring-amber-400/40 transition-all"
+              className="group bg-card rounded-lg overflow-hidden flex flex-col hover:ring-2 hover:ring-primary-border transition-all"
             >
-              <div className="aspect-[2/3] w-full bg-zinc-800 overflow-hidden">
+              <div className="aspect-[2/3] w-full bg-muted overflow-hidden">
                 {title.poster_url ? (
                   <img
                     src={`https://image.tmdb.org/t/p/w342${title.poster_url}`}
@@ -81,17 +83,17 @@ export default function SharedWatchlistPage() {
                     loading="lazy"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-zinc-400 text-xs font-medium px-2 text-center">
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs font-medium px-2 text-center">
                     {title.title}
                   </div>
                 )}
               </div>
               <div className="p-2 space-y-0.5">
-                <div className="text-xs font-semibold text-zinc-100 line-clamp-2 leading-tight">
+                <div className="text-xs font-semibold text-foreground line-clamp-2 leading-tight">
                   {title.title}
                 </div>
                 {title.release_year && (
-                  <div className="text-[10px] text-zinc-400">
+                  <div className="text-[11px] text-muted-foreground">
                     {title.release_year}
                   </div>
                 )}
@@ -101,11 +103,11 @@ export default function SharedWatchlistPage() {
         </div>
       )}
 
-      <footer className="text-center text-xs text-zinc-400 pt-8 pb-4">
+      <footer className="text-center text-xs text-muted-foreground pt-8 pb-4">
         Powered by{" "}
         <a
           href="/"
-          className="text-amber-400 hover:text-amber-300 transition-colors"
+          className="text-primary-text hover:text-primary-text transition-colors"
         >
           Remindarr
         </a>

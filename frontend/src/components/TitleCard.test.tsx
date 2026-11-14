@@ -342,7 +342,7 @@ describe("TitleCard", () => {
     // Green overlay
     const overlay = screen.getByTestId("completed-overlay");
     expect(overlay).toBeDefined();
-    expect(overlay.className).toContain("bg-emerald-900/40");
+    expect(overlay.className).toContain("bg-success/40");
 
     // "Completed" badge text
     expect(screen.getByText("Completed")).toBeDefined();
@@ -400,7 +400,7 @@ describe("TitleCard", () => {
     });
 
     const progressTrack = container.querySelector(
-      ".bg-zinc-700",
+      ".bg-muted-hover",
     ) as HTMLElement;
     expect(progressTrack).not.toBeNull();
     expect(progressTrack.getAttribute("role")).toBe("progressbar");
@@ -408,7 +408,7 @@ describe("TitleCard", () => {
     expect(progressTrack.getAttribute("aria-valuemin")).toBe("0");
     expect(progressTrack.getAttribute("aria-valuemax")).toBe("12");
     const progressFill = progressTrack!.querySelector(
-      ".bg-amber-500",
+      ".bg-primary",
     ) as HTMLElement;
     expect(progressFill).not.toBeNull();
     // 6/12 = 50%
@@ -499,14 +499,14 @@ describe("TitleCard", () => {
     });
 
     const progressTrack = container.querySelector(
-      ".bg-zinc-700",
+      ".bg-muted-hover",
     ) as HTMLElement;
     expect(progressTrack).not.toBeNull();
     expect(progressTrack.getAttribute("role")).toBe("progressbar");
     expect(progressTrack.getAttribute("aria-valuenow")).toBe("3");
     expect(progressTrack.getAttribute("aria-valuemin")).toBe("0");
     expect(progressTrack.getAttribute("aria-valuemax")).toBe("10");
-    const progressFill = progressTrack!.querySelector(".bg-amber-500");
+    const progressFill = progressTrack!.querySelector(".bg-primary");
     expect(progressFill).not.toBeNull();
   });
 
@@ -546,7 +546,7 @@ describe("TitleCard", () => {
       wrapper: NoUserWrapper,
     });
 
-    const progressBar = container.querySelector(".bg-amber-500");
+    const progressBar = container.querySelector(".bg-primary");
     expect(progressBar).toBeNull();
   });
 

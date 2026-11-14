@@ -103,7 +103,7 @@ function BackgroundJobsSection() {
   if (loading) {
     return (
       <SCard title="Background jobs" subtitle="Cron + queue workers.">
-        <div className="text-zinc-500 text-sm">Loading jobs...</div>
+        <div className="text-muted-foreground text-sm">Loading jobs...</div>
       </SCard>
     );
   }
@@ -118,7 +118,9 @@ function BackgroundJobsSection() {
         {err && <SMessage kind="error">{err}</SMessage>}
 
         {data?.crons.length === 0 && (
-          <p className="text-zinc-500 text-sm">No scheduled jobs configured.</p>
+          <p className="text-muted-foreground text-sm">
+            No scheduled jobs configured.
+          </p>
         )}
 
         {data && (
@@ -131,7 +133,7 @@ function BackgroundJobsSection() {
 
         {data && data.crons.length > 0 && (
           <>
-            <div className="hidden lg:grid grid-cols-[1.5fr_1fr_1.5fr_90px_100px] gap-3 px-3.5 pb-2 text-xs font-medium text-zinc-500">
+            <div className="hidden lg:grid grid-cols-[1.5fr_1fr_1.5fr_90px_100px] gap-3 px-3.5 pb-2 text-xs font-medium text-muted-foreground">
               <div>Job</div>
               <div>Schedule</div>
               <div>Last run</div>
@@ -160,20 +162,20 @@ function BackgroundJobsSection() {
                 return (
                   <div
                     key={cron.name}
-                    className="px-3.5 py-3 bg-zinc-800 border border-white/[0.08] rounded-[10px] grid grid-cols-1 lg:grid-cols-[1.5fr_1fr_1.5fr_90px_100px] gap-2 lg:gap-3 lg:items-center"
+                    className="px-3.5 py-3 bg-muted border border-border rounded-[10px] grid grid-cols-1 lg:grid-cols-[1.5fr_1fr_1.5fr_90px_100px] gap-2 lg:gap-3 lg:items-center"
                   >
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-zinc-100 truncate">
+                      <div className="text-sm font-semibold text-foreground truncate">
                         {formatJobName(cron.name)}
                       </div>
-                      <div className="text-[11px] text-zinc-500 font-mono truncate lg:hidden">
+                      <div className="text-[11px] text-muted-foreground font-mono truncate lg:hidden">
                         {cron.cron}
                       </div>
                     </div>
-                    <code className="hidden lg:block text-[12px] text-zinc-400 font-mono truncate">
+                    <code className="hidden lg:block text-[12px] text-muted-foreground font-mono truncate">
                       {cron.cron}
                     </code>
-                    <div className="text-[11px] text-zinc-400 font-mono">
+                    <div className="text-[11px] text-muted-foreground font-mono">
                       <div>
                         Last:{" "}
                         {formatDate(cron.last_run, {
@@ -182,7 +184,7 @@ function BackgroundJobsSection() {
                           utcAssumed: true,
                         })}
                       </div>
-                      <div className="text-zinc-500">
+                      <div className="text-muted-foreground">
                         Next:{" "}
                         {formatDate(cron.next_run, {
                           withTime: true,
@@ -201,12 +203,12 @@ function BackgroundJobsSection() {
                               </span>
                             )}
                             {stats.running > 0 && (
-                              <span className="text-blue-400">
+                              <span className="text-info">
                                 {stats.running} running
                               </span>
                             )}
                             {stats.failed > 0 && (
-                              <span className="text-red-400">
+                              <span className="text-destructive">
                                 {stats.failed} failed
                               </span>
                             )}
@@ -250,37 +252,37 @@ function BackgroundJobsSection() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left">
-                    <th className="pb-2 px-2 text-xs font-medium text-zinc-500">
+                    <th className="pb-2 px-2 text-xs font-medium text-muted-foreground">
                       Job
                     </th>
-                    <th className="pb-2 px-2 text-xs font-medium text-zinc-500">
+                    <th className="pb-2 px-2 text-xs font-medium text-muted-foreground">
                       Status
                     </th>
-                    <th className="pb-2 px-2 text-xs font-medium text-zinc-500">
+                    <th className="pb-2 px-2 text-xs font-medium text-muted-foreground">
                       Started
                     </th>
-                    <th className="pb-2 px-2 text-xs font-medium text-zinc-500">
+                    <th className="pb-2 px-2 text-xs font-medium text-muted-foreground">
                       Completed
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/[0.04]">
+                <tbody className="divide-y divide-border">
                   {data.recentJobs.map((job) => (
                     <tr key={job.id}>
-                      <td className="py-2 px-2 text-zinc-100 text-sm">
+                      <td className="py-2 px-2 text-foreground text-sm">
                         {formatJobName(job.name)}
                       </td>
                       <td className="py-2 px-2">
                         <JobStatusBadge status={job.status} />
                       </td>
-                      <td className="py-2 px-2 text-zinc-400 text-xs font-mono">
+                      <td className="py-2 px-2 text-muted-foreground text-xs font-mono">
                         {formatDate(job.started_at, {
                           withTime: true,
                           nullLabel: "Never",
                           utcAssumed: true,
                         })}
                       </td>
-                      <td className="py-2 px-2 text-zinc-400 text-xs font-mono">
+                      <td className="py-2 px-2 text-muted-foreground text-xs font-mono">
                         {formatDate(job.completed_at, {
                           withTime: true,
                           nullLabel: "Never",
@@ -325,9 +327,11 @@ function SettingField({
         {isEnv && <SStatusPill kind="amber">ENV</SStatusPill>}
       </div>
       {isEnv ? (
-        <div className="px-3 py-2.5 bg-zinc-800/50 border border-white/[0.08] rounded-lg text-zinc-400 text-[13px]">
+        <div className="px-3 py-2.5 bg-muted/50 border border-border rounded-md text-muted-foreground text-[13px]">
           {envValue}{" "}
-          <span className="text-zinc-600">(set via environment variable)</span>
+          <span className="text-muted-foreground">
+            (set via environment variable)
+          </span>
         </div>
       ) : (
         <SInput
@@ -410,7 +414,7 @@ function AdminSection() {
   if (loading) {
     return (
       <SCard title="Admin settings" subtitle="Server and user management">
-        <div className="text-zinc-500 text-sm">Loading settings...</div>
+        <div className="text-muted-foreground text-sm">Loading settings...</div>
       </SCard>
     );
   }
@@ -426,7 +430,7 @@ function AdminSection() {
           </SStatusPill>
           <Link
             to="/admin/users"
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] font-semibold rounded-lg bg-white/[0.06] text-zinc-300 border border-white/[0.08] hover:bg-white/[0.1] transition-colors"
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] font-semibold rounded-md bg-fill-subtle text-foreground-secondary border border-border hover:bg-accent transition-colors"
           >
             Manage users →
           </Link>
@@ -512,11 +516,13 @@ function RuntimeConfigSection() {
       title="Runtime configuration"
       subtitle="Current server config. Secret values show only whether they are set."
     >
-      {loading && <div className="text-zinc-500 text-sm">Loading...</div>}
+      {loading && (
+        <div className="text-muted-foreground text-sm">Loading...</div>
+      )}
       {config && (
         <div className="space-y-4">
           <div>
-            <div className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2 pb-1 text-xs font-medium text-zinc-500">
+            <div className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2 pb-1 text-xs font-medium text-muted-foreground">
               <div>Key</div>
               <div>Value</div>
               <div>Source</div>
@@ -525,12 +531,16 @@ function RuntimeConfigSection() {
               {config.safe.map((entry) => (
                 <div
                   key={entry.key}
-                  className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2 py-1.5 bg-zinc-800/60 rounded text-sm font-mono"
+                  className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2 py-1.5 bg-muted/60 rounded-sm text-sm font-mono"
                 >
-                  <span className="text-zinc-300 truncate">{entry.key}</span>
-                  <span className="text-zinc-400 truncate">
+                  <span className="text-foreground-secondary truncate">
+                    {entry.key}
+                  </span>
+                  <span className="text-muted-foreground truncate">
                     {String(entry.value) || (
-                      <span className="text-zinc-600 italic">empty</span>
+                      <span className="text-muted-foreground italic">
+                        empty
+                      </span>
                     )}
                   </span>
                   <SStatusPill
@@ -544,17 +554,19 @@ function RuntimeConfigSection() {
           </div>
           {config.secrets.length > 0 && (
             <div>
-              <div className="text-xs font-medium text-zinc-500 px-2 pb-1">
+              <div className="text-xs font-medium text-muted-foreground px-2 pb-1">
                 Secrets
               </div>
               <div className="space-y-0.5">
                 {config.secrets.map((entry) => (
                   <div
                     key={entry.key}
-                    className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2 py-1.5 bg-zinc-800/60 rounded text-sm font-mono"
+                    className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2 py-1.5 bg-muted/60 rounded-sm text-sm font-mono"
                   >
-                    <span className="text-zinc-300 truncate">{entry.key}</span>
-                    <span className="text-zinc-600 italic">
+                    <span className="text-foreground-secondary truncate">
+                      {entry.key}
+                    </span>
+                    <span className="text-muted-foreground italic">
                       {entry.source === "env" ? "•••••• (set)" : "not set"}
                     </span>
                     <SStatusPill
@@ -574,10 +586,10 @@ function RuntimeConfigSection() {
 }
 
 const LOG_LEVEL_COLORS: Record<string, string> = {
-  debug: "text-zinc-500",
-  info: "text-zinc-300",
+  debug: "text-muted-foreground",
+  info: "text-foreground-secondary",
   warn: "text-yellow-400",
-  error: "text-red-400",
+  error: "text-destructive",
 };
 
 function LogTailSection() {
@@ -603,10 +615,10 @@ function LogTailSection() {
             <button
               key={lvl || "all"}
               onClick={() => setLevelFilter(lvl)}
-              className={`px-2.5 py-1 rounded text-[11px] font-mono font-semibold transition-colors ${
+              className={`px-2.5 py-1 rounded-sm text-[11px] font-mono font-semibold transition-colors ${
                 levelFilter === lvl
-                  ? "bg-white/10 text-zinc-100"
-                  : "text-zinc-500 hover:text-zinc-300"
+                  ? "bg-accent text-foreground"
+                  : "text-muted-foreground hover:text-foreground-secondary"
               }`}
             >
               {lvl || "all"}
@@ -614,31 +626,33 @@ function LogTailSection() {
           ))}
         </div>
         {loading && (
-          <div className="text-zinc-500 text-sm">Loading logs...</div>
+          <div className="text-muted-foreground text-sm">Loading logs...</div>
         )}
         {!loading && entries.length === 0 && (
-          <div className="text-zinc-600 text-sm font-mono italic">
+          <div className="text-muted-foreground text-sm font-mono italic">
             No entries
           </div>
         )}
         {entries.length > 0 && (
-          <pre className="overflow-auto max-h-96 rounded bg-zinc-900 p-3 text-[11px] font-mono space-y-0.5">
+          <pre className="overflow-auto max-h-96 rounded-sm bg-card p-3 text-[11px] font-mono space-y-0.5">
             {entries.map((e, i) => (
               <div key={i} className="flex gap-2 min-w-0">
-                <span className="text-zinc-600 shrink-0">
+                <span className="text-muted-foreground shrink-0">
                   {e.time.slice(11, 19)}
                 </span>
                 <span
-                  className={`uppercase w-[38px] shrink-0 ${LOG_LEVEL_COLORS[e.level] ?? "text-zinc-400"}`}
+                  className={`uppercase w-[38px] shrink-0 ${LOG_LEVEL_COLORS[e.level] ?? "text-muted-foreground"}`}
                 >
                   {e.level}
                 </span>
                 {e.module && (
-                  <span className="text-zinc-500 shrink-0">
+                  <span className="text-muted-foreground shrink-0">
                     [{String(e.module)}]
                   </span>
                 )}
-                <span className="text-zinc-300 break-all">{e.msg}</span>
+                <span className="text-foreground-secondary break-all">
+                  {e.msg}
+                </span>
               </div>
             ))}
           </pre>

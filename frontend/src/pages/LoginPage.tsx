@@ -125,12 +125,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-[70vh] flex items-center justify-center">
       <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-white text-center mb-8">
+        <h1 className="text-2xl font-bold text-foreground text-center mb-8">
           {t("login.title")}
         </h1>
 
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-900/50 border border-red-700 text-red-200 text-sm select-text">
+          <div className="mb-4 p-3 rounded-md bg-destructive-soft border border-destructive/40 text-destructive text-sm select-text">
             {error}
           </div>
         )}
@@ -140,7 +140,7 @@ export default function LoginPage() {
             type="button"
             onClick={handlePasskeyLogin}
             disabled={passkeyLoading}
-            className="block w-full py-3 px-4 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors text-center cursor-pointer disabled:opacity-50 mb-3"
+            className="block w-full py-3 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md transition-colors text-center cursor-pointer disabled:opacity-50 mb-3"
           >
             {passkeyLoading
               ? t("login.signingIn")
@@ -152,7 +152,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={handleOidcLogin}
-            className={`block w-full py-3 px-4 ${passkeyAvailable ? "bg-zinc-700 hover:bg-zinc-600 text-white" : "bg-amber-500 hover:bg-amber-400 text-zinc-950"} font-medium rounded-lg transition-colors text-center cursor-pointer`}
+            className={`block w-full py-3 px-4 ${passkeyAvailable ? "bg-muted-hover hover:bg-muted-hover/80 text-foreground" : "bg-primary hover:bg-primary/90 text-primary-foreground"} font-medium rounded-md transition-colors text-center cursor-pointer`}
           >
             {t("login.signInWith", { provider: providers.oidc!.name })}
           </button>
@@ -162,7 +162,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setShowLocalLogin(true)}
-            className="mt-4 w-full text-center text-sm text-zinc-300 underline underline-offset-2 hover:text-white transition-colors cursor-pointer"
+            className="mt-4 w-full text-center text-sm text-foreground-secondary underline underline-offset-2 hover:text-foreground transition-colors cursor-pointer"
           >
             {t("login.signInWithUsername")}
           </button>
@@ -172,11 +172,11 @@ export default function LoginPage() {
           <>
             {(oidcConfigured || passkeyAvailable) && (
               <div className="my-6 flex items-center gap-3">
-                <div className="flex-1 h-px bg-zinc-700" />
-                <span className="text-xs text-zinc-500 uppercase">
+                <div className="flex-1 h-px bg-muted-hover" />
+                <span className="text-xs text-muted-foreground uppercase">
                   {t("login.or")}
                 </span>
-                <div className="flex-1 h-px bg-zinc-700" />
+                <div className="flex-1 h-px bg-muted-hover" />
               </div>
             )}
 
@@ -184,7 +184,7 @@ export default function LoginPage() {
               <div>
                 <label
                   htmlFor="username"
-                  className="block text-sm font-medium text-zinc-300 mb-1"
+                  className="block text-sm font-medium text-foreground-secondary mb-1"
                 >
                   {t("login.username")}
                 </label>
@@ -193,7 +193,7 @@ export default function LoginPage() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:border-transparent"
+                  className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border focus-visible:border-transparent"
                   placeholder={usernamePlaceholder}
                   autoComplete="username webauthn"
                   required
@@ -203,7 +203,7 @@ export default function LoginPage() {
               <div>
                 <label
                   htmlFor="password"
-                  className="block text-sm font-medium text-zinc-300 mb-1"
+                  className="block text-sm font-medium text-foreground-secondary mb-1"
                 >
                   {t("login.password")}
                 </label>
@@ -212,7 +212,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:border-transparent"
+                  className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border focus-visible:border-transparent"
                   autoComplete="current-password"
                   required
                 />
@@ -221,12 +221,12 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+                className="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {loading ? t("login.signingIn") : t("login.signIn")}
               </button>
             </form>
-            <details className="mt-4 text-sm text-zinc-300">
+            <details className="mt-4 text-sm text-foreground-secondary">
               <summary className="cursor-pointer underline">
                 {t("login.recoveryTitle")}
               </summary>
@@ -235,22 +235,28 @@ export default function LoginPage() {
           </>
         )}
 
-        <p className="mt-6 text-center text-sm text-zinc-400">
+        <p className="mt-6 text-center text-sm text-muted-foreground">
           {t("login.noAccount")}{" "}
           <Link
             to="/signup"
-            className="text-amber-400 hover:text-amber-300 transition-colors underline underline-offset-2"
+            className="text-primary-text hover:text-primary-text transition-colors underline underline-offset-2"
           >
             {t("login.signUp")}
           </Link>
         </p>
 
-        <p className="mt-6 text-center text-xs text-zinc-500">
-          <Link to="/privacy" className="hover:text-zinc-300 transition-colors">
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          <Link
+            to="/privacy"
+            className="hover:text-foreground-secondary transition-colors"
+          >
             {t("privacy.title")}
           </Link>
           <span className="mx-2">·</span>
-          <Link to="/terms" className="hover:text-zinc-300 transition-colors">
+          <Link
+            to="/terms"
+            className="hover:text-foreground-secondary transition-colors"
+          >
             {t("terms.title")}
           </Link>
         </p>

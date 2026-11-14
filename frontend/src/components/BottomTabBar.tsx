@@ -34,15 +34,15 @@ export default function BottomTabBar() {
 
   const tabClass = (isActive: boolean) =>
     `flex min-w-0 flex-col items-center justify-center flex-1 gap-1 py-2 transition-colors ${
-      isActive ? "text-amber-400" : "text-zinc-400"
+      isActive ? "text-primary-text" : "text-muted-foreground"
     }`;
 
   return (
     <nav
       aria-label="Mobile navigation"
-      className="fixed left-3 right-3 bottom-[calc(18px+env(safe-area-inset-bottom,0px))] z-50 xl:hidden"
+      className="fixed left-3 right-3 bottom-[calc(18px+env(safe-area-inset-bottom,0px))] z-50 md:hidden"
     >
-      <div className="flex items-center bg-zinc-900 backdrop-blur-xl backdrop-saturate-150 border border-white/[0.08] rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.6)] px-1.5">
+      <div className="flex items-center bg-card backdrop-blur-xl backdrop-saturate-150 border border-border rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.6)] px-1.5">
         {user ? (
           <>
             <NavLink
@@ -99,7 +99,7 @@ export default function BottomTabBar() {
                     aria-label={t("bottomNav.unreadRecommendations", {
                       count: unreadCount,
                     })}
-                    className="absolute -top-1 -right-2 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-amber-500 text-zinc-950 text-[9px] font-bold leading-none"
+                    className="absolute -top-1 -right-2 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold leading-none"
                   >
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>

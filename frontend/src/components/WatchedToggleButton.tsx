@@ -29,12 +29,12 @@ export default function WatchedToggleButton({
   if (disabled) {
     return (
       <span
-        className={`inline-flex items-center flex-shrink-0 border cursor-not-allowed opacity-50 bg-zinc-800/50 text-zinc-600 border-zinc-800 ${
+        className={`inline-flex items-center flex-shrink-0 border cursor-not-allowed opacity-50 bg-muted/50 text-muted-foreground border-border ${
           size === "sm"
             ? "px-2 py-0.5 text-xs rounded-full gap-1"
             : compactOnMobile
-              ? "px-1.5 sm:px-2.5 py-1 text-xs rounded-lg gap-1.5"
-              : "px-2.5 py-1 text-xs rounded-lg gap-1.5"
+              ? "px-1.5 sm:px-2.5 py-1 text-xs rounded-md gap-1.5"
+              : "px-2.5 py-1 text-xs rounded-md gap-1.5"
         }`}
         aria-label={t("episodes.notYetReleased")}
         role="img"
@@ -61,14 +61,14 @@ export default function WatchedToggleButton({
       }
       className={`inline-flex items-center flex-shrink-0 border cursor-pointer transition-colors ${
         watched
-          ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-zinc-800 hover:text-zinc-400 hover:border-zinc-700"
-          : "bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-emerald-500/15 hover:text-emerald-400 hover:border-emerald-500/30"
+          ? "bg-success/15 text-success border-success/30 hover:bg-muted hover:text-muted-foreground hover:border-border"
+          : "bg-muted text-muted-foreground border-border hover:bg-success/15 hover:text-success hover:border-success/30"
       } ${
         size === "sm"
           ? "px-2 py-0.5 text-xs rounded-full gap-1"
           : compactOnMobile
-            ? "px-1.5 sm:px-2.5 py-1 text-xs rounded-lg gap-1.5"
-            : "px-2.5 py-1 text-xs rounded-lg gap-1.5"
+            ? "px-1.5 sm:px-2.5 py-1 text-xs rounded-md gap-1.5"
+            : "px-2.5 py-1 text-xs rounded-md gap-1.5"
       }`}
     >
       {watched ? (

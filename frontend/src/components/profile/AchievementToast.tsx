@@ -68,20 +68,20 @@ export function ToastItem({ achievement, onDismiss }: ToastItemProps) {
 
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3 rounded-xl bg-zinc-900 border border-amber-400/30 shadow-lg max-w-xs"
+      className="flex items-center gap-3 px-4 py-3 rounded-lg bg-card border border-primary-border shadow-lg max-w-xs"
       role="alert"
     >
-      <div className="w-9 h-9 rounded-lg bg-amber-400/20 flex items-center justify-center shrink-0">
-        <Trophy size={18} className="text-amber-400" />
+      <div className="w-9 h-9 rounded-md bg-primary-soft flex items-center justify-center shrink-0">
+        <Trophy size={18} className="text-primary-text" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-xs font-semibold text-amber-400 mb-0.5">
+        <div className="text-xs font-semibold text-primary-text mb-0.5">
           Achievement unlocked
         </div>
-        <div className="text-sm font-bold text-zinc-100 truncate">
+        <div className="text-sm font-bold text-foreground truncate">
           {achievement.title}
         </div>
-        <div className="text-xs text-zinc-400 truncate">
+        <div className="text-xs text-muted-foreground truncate">
           {achievement.description}
         </div>
       </div>
@@ -89,7 +89,7 @@ export function ToastItem({ achievement, onDismiss }: ToastItemProps) {
         type="button"
         onClick={onDismiss}
         aria-label="Dismiss achievement notification"
-        className="shrink-0 text-zinc-500 hover:text-zinc-300 transition-colors p-1 -mr-1"
+        className="shrink-0 text-muted-foreground hover:text-foreground-secondary transition-colors p-1 -mr-1"
       >
         <X size={14} />
       </button>

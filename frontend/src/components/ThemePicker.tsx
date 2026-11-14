@@ -94,13 +94,13 @@ export default function ThemePicker() {
               className={cn(
                 "p-3 rounded-[10px] border text-left transition-colors cursor-pointer",
                 isActive
-                  ? "bg-amber-400/[0.08] border-amber-400/30"
-                  : "bg-zinc-800 border-transparent hover:bg-zinc-800/80",
+                  ? "bg-primary-soft border-primary-border"
+                  : "bg-muted border-transparent hover:bg-muted/80",
               )}
             >
               <div
                 aria-hidden="true"
-                className="relative h-[70px] rounded-md mb-2.5 overflow-hidden border border-white/[0.06]"
+                className="relative h-[70px] rounded-sm mb-2.5 overflow-hidden border border-border"
                 style={{ background: meta.bg }}
               >
                 <div
@@ -112,11 +112,11 @@ export default function ThemePicker() {
                   style={{ background: meta.grid }}
                 />
                 <div
-                  className="absolute bottom-2 left-2 right-[40px] h-[22px] rounded"
+                  className="absolute bottom-2 left-2 right-[40px] h-[22px] rounded-sm"
                   style={{ background: meta.grid }}
                 />
                 <div
-                  className="absolute bottom-2 right-2 w-[26px] h-[22px] rounded opacity-40"
+                  className="absolute bottom-2 right-2 w-[26px] h-[22px] rounded-sm opacity-40"
                   style={{ background: meta.fg }}
                 />
               </div>
@@ -124,7 +124,7 @@ export default function ThemePicker() {
                 <span
                   className={cn(
                     "text-[12px] font-semibold truncate",
-                    isActive ? "text-amber-400" : "text-zinc-100",
+                    isActive ? "text-primary-text" : "text-foreground",
                   )}
                 >
                   {label}
@@ -132,7 +132,7 @@ export default function ThemePicker() {
                 {isActive && (
                   <span
                     aria-hidden="true"
-                    className="shrink-0 text-[11px] font-bold tracking-[0.08em] px-1.5 py-[2px] rounded-full bg-amber-400/10 text-amber-400 border border-amber-400/30"
+                    className="shrink-0 text-[11px] font-bold tracking-[0.08em] px-1.5 py-[2px] rounded-full bg-primary-soft text-primary-text border border-primary-border"
                   >
                     ✓
                   </span>

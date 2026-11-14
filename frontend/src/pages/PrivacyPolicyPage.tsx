@@ -10,17 +10,17 @@ export default function PrivacyPolicyPage() {
     <div className="max-w-3xl mx-auto pb-16">
       <PageHeader kicker={t("legal.kicker")} title={t("privacy.title")} />
 
-      <div className="space-y-8 text-sm text-zinc-300 leading-relaxed">
-        <p className="text-zinc-400">Last updated: May 25, 2026</p>
+      <div className="space-y-8 text-sm text-foreground-secondary leading-relaxed">
+        <p className="text-muted-foreground">Last updated: May 25, 2026</p>
 
-        <p className="rounded-lg border border-white/[0.08] bg-zinc-900/50 p-4 text-zinc-400">
+        <p className="rounded-md border border-border bg-card/50 p-4 text-muted-foreground">
           Remindarr is open-source software. This policy applies to the official
           instance hosted at{" "}
           <a
             href="https://remindarr.app"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-amber-400 underline underline-offset-2 hover:text-amber-300"
+            className="text-primary-text underline underline-offset-2 hover:text-primary-text"
           >
             remindarr.app
           </a>
@@ -37,7 +37,7 @@ export default function PrivacyPolicyPage() {
 
         <LegalSection title="Information we collect">
           <p>We collect the information needed to operate the Service:</p>
-          <ul className="list-disc space-y-1 pl-5 marker:text-zinc-600">
+          <ul className="list-disc space-y-1 pl-5 marker:text-muted-foreground">
             <li>
               <strong>Account information:</strong> your username, optional
               display name, and email address if you provide one. Depending on
@@ -80,7 +80,7 @@ export default function PrivacyPolicyPage() {
               href="https://www.themoviedb.org/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-amber-400 underline underline-offset-2 hover:text-amber-300"
+              className="text-primary-text underline underline-offset-2 hover:text-primary-text"
             >
               The Movie Database (TMDB)
             </a>
@@ -98,7 +98,7 @@ export default function PrivacyPolicyPage() {
 
         <LegalSection title="How we use information">
           <p>We use the information we collect to:</p>
-          <ul className="list-disc space-y-1 pl-5 marker:text-zinc-600">
+          <ul className="list-disc space-y-1 pl-5 marker:text-muted-foreground">
             <li>provide, maintain, and secure the Service;</li>
             <li>
               remember the titles you track and deliver the release reminders
@@ -114,7 +114,7 @@ export default function PrivacyPolicyPage() {
             We do not sell your personal information. Information is only
             exposed to others in the ways you choose:
           </p>
-          <ul className="list-disc space-y-1 pl-5 marker:text-zinc-600">
+          <ul className="list-disc space-y-1 pl-5 marker:text-muted-foreground">
             <li>
               Your public profile and achievements are visible to others
               according to the visibility settings you control.
@@ -169,7 +169,7 @@ export default function PrivacyPolicyPage() {
             Questions about this policy can be directed to us at{" "}
             <a
               href="mailto:privacy@remindarr.app"
-              className="text-amber-400 underline underline-offset-2 hover:text-amber-300"
+              className="text-primary-text underline underline-offset-2 hover:text-primary-text"
             >
               privacy@remindarr.app
             </a>
@@ -177,11 +177,11 @@ export default function PrivacyPolicyPage() {
           </p>
         </LegalSection>
 
-        <p className="text-zinc-400">
+        <p className="text-muted-foreground">
           See also our{" "}
           <Link
             to="/terms"
-            className="text-amber-400 underline underline-offset-2 hover:text-amber-300"
+            className="text-primary-text underline underline-offset-2 hover:text-primary-text"
           >
             {t("terms.title")}
           </Link>

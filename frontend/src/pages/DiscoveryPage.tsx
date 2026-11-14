@@ -76,7 +76,7 @@ function FriendDot({
         src={friend.image}
         alt={name}
         title={name}
-        className="rounded-full object-cover ring-[1.5px] ring-zinc-900 flex-shrink-0"
+        className="rounded-full object-cover ring-[1.5px] ring-border flex-shrink-0"
         style={{ width: size, height: size }}
       />
     );
@@ -85,7 +85,7 @@ function FriendDot({
   return (
     <div
       title={name}
-      className="rounded-full ring-[1.5px] ring-zinc-900 flex items-center justify-center flex-shrink-0 font-bold text-zinc-950"
+      className="rounded-full ring-[1.5px] ring-border flex items-center justify-center flex-shrink-0 font-bold text-primary-foreground"
       style={{
         width: size,
         height: size,
@@ -116,7 +116,7 @@ function FriendStack({
       ))}
       {extra > 0 && (
         <div
-          className="ring-[1.5px] ring-zinc-900 rounded-full bg-zinc-700 text-zinc-300 flex items-center justify-center"
+          className="ring-[1.5px] ring-border rounded-full bg-muted-hover text-foreground-secondary flex items-center justify-center"
           style={{
             marginLeft: -7,
             height: 18,
@@ -138,13 +138,13 @@ function StateBadge({ state }: { state: "tracked" | "dismissed" | null }) {
   if (!state) return null;
   if (state === "tracked") {
     return (
-      <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-amber-400/90 text-zinc-950 text-[11px] font-semibold">
+      <div className="absolute top-2 right-2 px-2 py-0.5 rounded-sm bg-primary/90 text-primary-foreground text-[11px] font-semibold">
         ✓ {t("discovery.trackedBadge")}
       </div>
     );
   }
   return (
-    <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-zinc-950/85 text-zinc-400 border border-white/[0.12] text-[11px] font-bold">
+    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-sm bg-background/85 text-muted-foreground border border-border text-[11px] font-bold">
       {t("discovery.dismissed")}
     </div>
   );
@@ -206,7 +206,7 @@ function SuggestionCard({
         }
         subtitle={
           friends.length > 0 && !state ? (
-            <span className="flex items-center gap-1.5 text-zinc-400">
+            <span className="flex items-center gap-1.5 text-muted-foreground">
               <FriendStack friends={friends} max={3} />
               <span className="truncate">
                 {t("discovery.friendCount", { count: friends.length })}
@@ -222,7 +222,7 @@ function SuggestionCard({
                   e.preventDefault();
                   onTrack();
                 }}
-                className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-400/[0.16] text-amber-400 border border-amber-400/[0.35] cursor-pointer"
+                className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-semibold bg-primary-soft text-primary-text border border-primary-border cursor-pointer"
               >
                 ✓ {t("discovery.trackedBadge")}
               </button>
@@ -232,7 +232,7 @@ function SuggestionCard({
                   e.preventDefault();
                   onTrack();
                 }}
-                className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-black hover:bg-amber-400 transition-colors cursor-pointer"
+                className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
               >
                 {t("discovery.track")}
               </button>
@@ -243,7 +243,7 @@ function SuggestionCard({
                   e.preventDefault();
                   onUndismiss();
                 }}
-                className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.04] text-zinc-400 border border-white/[0.08] hover:bg-white/[0.08] transition-colors cursor-pointer"
+                className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium bg-fill-subtle text-muted-foreground border border-border hover:bg-accent transition-colors cursor-pointer"
               >
                 {t("discovery.undo")}
               </button>
@@ -253,7 +253,7 @@ function SuggestionCard({
                   e.preventDefault();
                   onDismiss();
                 }}
-                className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-medium bg-zinc-800 text-zinc-300 hover:bg-zinc-700 transition-colors cursor-pointer"
+                className="flex-1 flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium bg-muted text-foreground-secondary hover:bg-muted-hover transition-colors cursor-pointer"
               >
                 {t("discovery.dismiss")}
               </button>
@@ -314,7 +314,7 @@ function DiscoveryHero({
               height={513}
             />
           ) : (
-            <div className="w-full h-full bg-zinc-800" />
+            <div className="w-full h-full bg-muted" />
           )}
         </Link>
         <StateBadge state={state} />
@@ -326,7 +326,7 @@ function DiscoveryHero({
           <Kicker>{t("discovery.hero.kicker")}</Kicker>
         </div>
 
-        <h2 className="text-[26px] sm:text-[36px] lg:text-[40px] font-extrabold tracking-[-0.03em] leading-[1.02] text-zinc-100 mb-3">
+        <h2 className="text-[26px] sm:text-[36px] lg:text-[40px] font-extrabold tracking-[-0.03em] leading-[1.02] text-foreground mb-3">
           {hero.title}
         </h2>
 
@@ -354,19 +354,19 @@ function DiscoveryHero({
         {/* Two-source signal grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
           {/* Algo source */}
-          <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3.5 flex flex-col gap-2.5">
+          <div className="bg-fill-subtle border border-border rounded-lg p-3.5 flex flex-col gap-2.5">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-amber-400/[0.14] text-amber-400 border border-amber-400/[0.3]">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm text-[11px] font-semibold bg-primary-soft text-primary-text border border-primary-border">
                 Remindarr
               </span>
-              <span className="text-[11px] text-zinc-500 font-mono">
+              <span className="text-[11px] text-muted-foreground font-mono">
                 {t("discovery.hero.algo")}
               </span>
             </div>
             {algoGroup ? (
               <div className="flex gap-2.5 items-center">
                 {sourceSrc && (
-                  <div className="w-8 h-12 rounded overflow-hidden flex-shrink-0 bg-zinc-800">
+                  <div className="w-8 h-12 rounded-sm overflow-hidden flex-shrink-0 bg-muted">
                     <img
                       src={sourceSrc}
                       alt={algoGroup.source.title}
@@ -378,28 +378,28 @@ function DiscoveryHero({
                   </div>
                 )}
                 <div className="min-w-0">
-                  <p className="text-[11px] text-zinc-500 mb-0.5">
+                  <p className="text-[11px] text-muted-foreground mb-0.5">
                     {becausePrefix(algoGroup.source.reason, t)}
                   </p>
-                  <p className="text-[13px] text-zinc-200 font-semibold truncate">
+                  <p className="text-[13px] text-foreground-secondary font-semibold truncate">
                     {algoGroup.source.title}
                   </p>
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-zinc-400 leading-snug">
+              <p className="text-xs text-muted-foreground leading-snug">
                 {t("discovery.hero.tasteProfile")}
               </p>
             )}
           </div>
 
           {/* Friends source */}
-          <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-3.5 flex flex-col gap-2.5">
+          <div className="bg-fill-subtle border border-border rounded-lg p-3.5 flex flex-col gap-2.5">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-blue-400/[0.10] text-blue-300 border border-blue-400/[0.2]">
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm text-[11px] font-semibold bg-info/[0.10] text-info border border-info/[0.2]">
                 {t("discovery.hero.friends")}
               </span>
-              <span className="text-[11px] text-zinc-500 font-mono">
+              <span className="text-[11px] text-muted-foreground font-mono">
                 {t("discovery.hero.recCount", { count: friendRecs.length })}
               </span>
             </div>
@@ -414,7 +414,7 @@ function DiscoveryHero({
                     }))}
                     max={4}
                   />
-                  <span className="text-xs text-zinc-300 truncate">
+                  <span className="text-xs text-foreground-secondary truncate">
                     {friendRecs
                       .slice(0, 2)
                       .map(
@@ -428,22 +428,22 @@ function DiscoveryHero({
                   </span>
                 </div>
                 {topFriend?.message && (
-                  <p className="text-xs text-zinc-400 italic leading-snug line-clamp-2 select-text">
+                  <p className="text-xs text-muted-foreground italic leading-snug line-clamp-2 select-text">
                     &ldquo;{topFriend.message}&rdquo;
-                    <span className="not-italic text-zinc-500">
+                    <span className="not-italic text-muted-foreground">
                       {" "}
                       — @{topFriend.from_user.username}
                     </span>
                   </p>
                 )}
                 {friendRecs.some((r) => r.is_targeted) && (
-                  <span className="inline-flex items-center self-start px-1.5 py-0.5 rounded text-[11px] font-bold bg-amber-400/[0.15] text-amber-400 border border-amber-400/[0.3]">
+                  <span className="inline-flex items-center self-start px-1.5 py-0.5 rounded-sm text-[11px] font-bold bg-primary-soft text-primary-text border border-primary-border">
                     {t("discovery.direct")}
                   </span>
                 )}
               </div>
             ) : (
-              <p className="text-xs text-zinc-500 leading-snug">
+              <p className="text-xs text-muted-foreground leading-snug">
                 {t("discovery.hero.noFriendRecs")}
               </p>
             )}
@@ -455,35 +455,35 @@ function DiscoveryHero({
           {isTracked ? (
             <button
               onClick={onTrack}
-              className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-bold bg-amber-400/[0.16] text-amber-400 border border-amber-400/[0.35] cursor-pointer"
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-md text-sm font-bold bg-primary-soft text-primary-text border border-primary-border cursor-pointer"
             >
               ✓ {t("discovery.trackedBadge")}
             </button>
           ) : (
             <button
               onClick={onTrack}
-              className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg text-sm font-bold bg-amber-400 text-black hover:bg-amber-300 transition-colors cursor-pointer"
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-md text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
             >
               {t("discovery.track")}
             </button>
           )}
           <Link
             to={`/title/${hero.id}`}
-            className="inline-flex items-center justify-center px-[18px] py-2.5 rounded-lg text-sm font-semibold bg-white/[0.08] border border-white/[0.14] text-zinc-100 hover:bg-white/[0.14] transition-colors"
+            className="inline-flex items-center justify-center px-[18px] py-2.5 rounded-md text-sm font-semibold bg-fill-subtle border border-border text-foreground hover:bg-accent transition-colors"
           >
             {t("discovery.hero.viewDetails")}
           </Link>
           {isDismissed ? (
             <button
               onClick={onUndismiss}
-              className="inline-flex items-center justify-center px-[14px] py-2.5 rounded-lg text-sm font-medium bg-white/[0.04] text-zinc-500 border border-white/[0.08] cursor-pointer"
+              className="inline-flex items-center justify-center px-[14px] py-2.5 rounded-md text-sm font-medium bg-fill-subtle text-muted-foreground border border-border cursor-pointer"
             >
               {t("discovery.hero.undoDismiss")}
             </button>
           ) : (
             <button
               onClick={onDismiss}
-              className="inline-flex items-center justify-center px-[14px] py-2.5 rounded-lg text-sm font-semibold text-zinc-500 border border-white/[0.08] hover:text-zinc-300 hover:border-white/[0.16] transition-colors cursor-pointer"
+              className="inline-flex items-center justify-center px-[14px] py-2.5 rounded-md text-sm font-semibold text-muted-foreground border border-border hover:text-foreground-secondary hover:border-border transition-colors cursor-pointer"
             >
               {t("discovery.hero.notInterested")}
             </button>
@@ -516,7 +516,7 @@ function SectionHead({
           <img
             src={sourcePosterUrl}
             alt=""
-            className="w-8 h-12 rounded object-cover"
+            className="w-8 h-12 rounded-sm object-cover"
             loading="lazy"
             width={32}
             height={48}
@@ -525,10 +525,10 @@ function SectionHead({
       )}
       <div>
         {kicker && <Kicker>{kicker}</Kicker>}
-        <h2 className="text-base font-bold tracking-[-0.01em] text-zinc-100 leading-snug">
+        <h2 className="text-base font-bold tracking-[-0.01em] text-foreground leading-snug">
           {title}
         </h2>
-        {sub && <p className="text-xs text-zinc-500 mt-0.5">{sub}</p>}
+        {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
       </div>
     </div>
   );
@@ -540,13 +540,13 @@ function DiscoverySkeleton() {
   return (
     <div className="space-y-3">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="bg-zinc-900 rounded-lg p-4">
+        <div key={i} className="bg-card rounded-md p-4">
           <div className="flex gap-3">
             <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-32" />
               <div className="flex gap-3">
-                <Skeleton className="w-12 h-[72px] rounded flex-shrink-0" />
+                <Skeleton className="w-12 h-[72px] rounded-sm flex-shrink-0" />
                 <div className="flex-1 space-y-1.5">
                   <Skeleton className="h-4 w-48" />
                   <Skeleton className="h-3 w-20" />
@@ -603,7 +603,7 @@ function RecommendationCard({
   return (
     <div
       ref={cardRef}
-      className={`bg-zinc-900 rounded-lg p-4 ${isUnread ? "border-l-2 border-l-amber-500" : ""}`}
+      className={`bg-card rounded-md p-4 ${isUnread ? "border-l-2 border-l-primary" : ""}`}
     >
       <div className="flex items-center gap-2 mb-3">
         {rec.from_user.image ? (
@@ -613,19 +613,19 @@ function RecommendationCard({
             className="w-7 h-7 rounded-full object-cover flex-shrink-0"
           />
         ) : (
-          <div className="w-7 h-7 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-medium text-zinc-300 flex-shrink-0">
+          <div className="w-7 h-7 rounded-full bg-muted-hover flex items-center justify-center text-xs font-medium text-foreground-secondary flex-shrink-0">
             {senderInitial}
           </div>
         )}
-        <span className="text-sm text-zinc-300 font-medium select-text">
+        <span className="text-sm text-foreground-secondary font-medium select-text">
           {senderName}
         </span>
         {rec.is_targeted && (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30">
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm text-[11px] font-medium bg-primary-soft text-primary-text border border-primary-border">
             {t("discovery.direct")}
           </span>
         )}
-        <span className="text-xs text-zinc-500 ml-auto">
+        <span className="text-xs text-muted-foreground ml-auto">
           {formatRelativeTime(rec.created_at, t)}
         </span>
       </div>
@@ -636,13 +636,13 @@ function RecommendationCard({
             <img
               src={src}
               alt={rec.title.title}
-              className="w-12 h-[72px] rounded object-cover"
+              className="w-12 h-[72px] rounded-sm object-cover"
               loading="lazy"
               width={92}
               height={138}
             />
           ) : (
-            <div className="w-12 h-[72px] rounded bg-zinc-800 flex items-center justify-center text-zinc-600 text-xs">
+            <div className="w-12 h-[72px] rounded-sm bg-muted flex items-center justify-center text-muted-foreground text-xs">
               {t("discovery.noPoster")}
             </div>
           )}
@@ -650,11 +650,11 @@ function RecommendationCard({
         <div className="flex-1 min-w-0">
           <Link
             to={`/title/${rec.title.id}`}
-            className="text-sm font-medium text-white hover:text-amber-400 transition-colors line-clamp-2"
+            className="text-sm font-medium text-foreground hover:text-primary-text transition-colors line-clamp-2"
           >
             {rec.title.title}
           </Link>
-          <p className="text-xs text-zinc-500 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             {rec.title.object_type === "MOVIE"
               ? t("discovery.movie")
               : t("discovery.tv")}
@@ -663,7 +663,7 @@ function RecommendationCard({
       </div>
 
       {rec.message && (
-        <p className="text-sm text-zinc-400 mb-3 italic select-text">
+        <p className="text-sm text-muted-foreground mb-3 italic select-text">
           &ldquo;{rec.message}&rdquo;
         </p>
       )}
@@ -671,13 +671,13 @@ function RecommendationCard({
       <div className="flex gap-2">
         <button
           onClick={() => onTrack(rec)}
-          className="inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium bg-amber-500 text-zinc-950 hover:bg-amber-400 transition-colors cursor-pointer"
+          className="inline-flex items-center justify-center px-3 py-1.5 rounded-sm text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
         >
           {t("discovery.track")}
         </button>
         <button
           onClick={() => onDismiss(rec)}
-          className="inline-flex items-center justify-center px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-700 text-zinc-300 hover:bg-zinc-600 transition-colors cursor-pointer"
+          className="inline-flex items-center justify-center px-3 py-1.5 rounded-sm text-xs font-medium bg-muted-hover text-foreground-secondary hover:bg-muted-hover/80 transition-colors cursor-pointer"
         >
           {t("discovery.dismiss")}
         </button>
@@ -946,7 +946,7 @@ export default function DiscoveryPage() {
         title={t("discovery.forYou")}
         right={
           trackedSet.size > 0 || dismissedSet.size > 0 ? (
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-muted-foreground">
               {t("discovery.sessionCounts", {
                 tracked: trackedSet.size,
                 dismissed: dismissedSet.size,
@@ -964,7 +964,7 @@ export default function DiscoveryPage() {
         <Pill active={tab === "activity"} onClick={() => setTab("activity")}>
           {t("discovery.activity")}
           {unreadCount > 0 && (
-            <span className="ml-1.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-amber-500 text-zinc-950 text-[9px] font-bold">
+            <span className="ml-1.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-primary text-primary-foreground text-[11px] font-bold">
               {unreadCount}
             </span>
           )}
@@ -976,11 +976,11 @@ export default function DiscoveryPage() {
         (loading ? (
           <DiscoverySkeleton />
         ) : error ? (
-          <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">
+          <div className="bg-destructive-soft border border-destructive/40 text-destructive px-4 py-2 rounded-md text-sm">
             {t("discovery.loadFailed", "Failed to load recommendations")}
           </div>
         ) : isEmpty ? (
-          <p className="text-zinc-500 text-sm py-8 text-center">
+          <p className="text-muted-foreground text-sm py-8 text-center">
             {t("discovery.empty")}{" "}
             <Link to="/browse" className="underline">
               Find and track titles, then rate a few to improve recommendations.
@@ -1126,7 +1126,7 @@ export default function DiscoveryPage() {
                       ))}
                     </ScrollableRow>
                   ) : (
-                    <p className="text-xs text-zinc-500 py-2">
+                    <p className="text-xs text-muted-foreground py-2">
                       {t("discovery.allHandled")}
                     </p>
                   )}
@@ -1141,7 +1141,7 @@ export default function DiscoveryPage() {
         (loading ? (
           <DiscoverySkeleton />
         ) : recommendations.length === 0 ? (
-          <p className="text-zinc-500 text-sm py-8 text-center">
+          <p className="text-muted-foreground text-sm py-8 text-center">
             {t("discovery.empty")}{" "}
             <Link to="/browse" className="underline">
               Find and track titles, then rate a few to improve recommendations.

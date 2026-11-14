@@ -26,7 +26,7 @@ function AlertDialogBackdrop({
   return (
     <AlertDialogPrimitive.Backdrop
       className={cn(
-        "fixed inset-0 z-50 bg-black/50 transition-opacity",
+        "fixed inset-0 z-50 bg-scrim transition-opacity",
         "data-[ending-style]:opacity-0 data-[starting-style]:opacity-0",
         className,
       )}
@@ -45,7 +45,7 @@ function AlertDialogPopup({
       <AlertDialogBackdrop />
       <AlertDialogPrimitive.Popup
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-zinc-800 bg-zinc-950 p-6 shadow-lg transition-all",
+          "fixed top-1/2 left-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-md border border-border bg-background p-6 shadow-lg transition-all",
           "data-[ending-style]:scale-95 data-[ending-style]:opacity-0",
           "data-[starting-style]:scale-95 data-[starting-style]:opacity-0",
           className,
@@ -64,7 +64,7 @@ function AlertDialogTitle({
 }: ComponentProps<typeof AlertDialogPrimitive.Title>) {
   return (
     <AlertDialogPrimitive.Title
-      className={cn("text-lg font-semibold text-zinc-100", className)}
+      className={cn("text-lg font-semibold text-foreground", className)}
       {...props}
     />
   );
@@ -76,7 +76,7 @@ function AlertDialogDescription({
 }: ComponentProps<typeof AlertDialogPrimitive.Description>) {
   return (
     <AlertDialogPrimitive.Description
-      className={cn("mt-2 text-sm text-zinc-400", className)}
+      className={cn("mt-2 text-sm text-muted-foreground", className)}
       {...props}
     />
   );

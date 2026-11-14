@@ -81,14 +81,16 @@ function TrackedStatsBand({ titles }: { titles: Title[] }) {
     <div className="hidden sm:grid grid-cols-4 gap-3 mb-6">
       {stats.map((s) => (
         <Card key={s.label} padding="none" className="p-3 lg:p-[18px] min-w-0">
-          <div className="text-xs text-zinc-400 font-medium mb-2">
+          <div className="text-xs text-muted-foreground font-medium mb-2">
             {s.label}
           </div>
           <div className="flex flex-wrap items-baseline gap-2">
             <div className="text-[30px] sm:text-[36px] font-extrabold tracking-[-0.03em] leading-none">
               {s.value}
             </div>
-            <div className="font-mono text-[11px] text-zinc-400">{s.sub}</div>
+            <div className="font-mono text-[11px] text-muted-foreground">
+              {s.sub}
+            </div>
           </div>
         </Card>
       ))}
@@ -341,7 +343,7 @@ export default function TrackedPage() {
 
       {view !== "stats" && allTitles.length > 0 && (
         <details
-          className="rounded-lg border border-white/[0.08] p-2"
+          className="rounded-md border border-border p-2"
           open={hasFilters || undefined}
         >
           <summary className="cursor-pointer min-h-8 text-sm font-medium">
@@ -354,13 +356,13 @@ export default function TrackedPage() {
               placeholder={t("tracked.filters.search")}
               value={search}
               onChange={(event) => setFilter("q", event.target.value)}
-              className="min-w-0 min-h-10 rounded bg-zinc-800 px-3 text-sm"
+              className="min-w-0 min-h-10 rounded-sm bg-muted px-3 text-sm"
             />
             <select
               aria-label={t("tracked.filters.tag")}
               value={tag}
               onChange={(event) => setFilter("tag", event.target.value)}
-              className="min-w-0 min-h-10 rounded bg-zinc-800 px-3 text-sm"
+              className="min-w-0 min-h-10 rounded-sm bg-muted px-3 text-sm"
             >
               <option value="">{t("tracked.filters.allTags")}</option>
               {tags.map((value) => (
@@ -373,7 +375,7 @@ export default function TrackedPage() {
               aria-label={t("tracked.filters.provider")}
               value={provider}
               onChange={(event) => setFilter("provider", event.target.value)}
-              className="min-w-0 min-h-10 rounded bg-zinc-800 px-3 text-sm"
+              className="min-w-0 min-h-10 rounded-sm bg-muted px-3 text-sm"
             >
               <option value="">{t("tracked.filters.allProviders")}</option>
               {providers.map(([id, name]) => (
@@ -387,7 +389,7 @@ export default function TrackedPage() {
             <button
               type="button"
               onClick={resetFilters}
-              className="min-h-10 text-sm text-amber-400"
+              className="min-h-10 text-sm text-primary-text"
             >
               {t("tracked.filters.reset")}
             </button>
@@ -396,7 +398,7 @@ export default function TrackedPage() {
       )}
 
       {view !== "stats" && (
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-white/[0.06] mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 border-b border-border mb-4">
           <div
             role="tablist"
             aria-label={t("tracked.filterTabs")}
@@ -423,12 +425,12 @@ export default function TrackedPage() {
                   }
                   className={`shrink-0 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
                     isActive
-                      ? "text-zinc-100 border-amber-400 font-semibold"
-                      : "text-zinc-400 border-transparent hover:text-zinc-100"
+                      ? "text-foreground border-primary font-semibold"
+                      : "text-muted-foreground border-transparent hover:text-foreground"
                   }`}
                 >
                   {t(tab.labelKey)}
-                  <span className="ml-2 font-mono text-[11px] text-zinc-400">
+                  <span className="ml-2 font-mono text-[11px] text-muted-foreground">
                     {count}
                   </span>
                 </button>
@@ -439,7 +441,7 @@ export default function TrackedPage() {
             value={sort}
             onChange={(e) => setFilter("sort", e.target.value)}
             aria-label={t("tracked.sortBy")}
-            className="self-end sm:self-auto font-mono text-[11px] bg-white/[0.04] border border-white/[0.06] text-zinc-400 rounded-md px-3 py-1.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 mb-2 sm:mb-0.5 shrink-0"
+            className="self-end sm:self-auto font-mono text-[11px] bg-fill-subtle border border-border text-muted-foreground rounded-sm px-3 py-1.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card mb-2 sm:mb-0.5 shrink-0"
           >
             <option value="last_aired">{t("tracked.sort.lastAired")}</option>
             <option value="title">{t("tracked.sort.title")}</option>
@@ -460,7 +462,7 @@ export default function TrackedPage() {
           {loading ? (
             <TitleGridSkeleton />
           ) : isError ? (
-            <p className="text-zinc-400 text-sm py-12 text-center">
+            <p className="text-muted-foreground text-sm py-12 text-center">
               {t("common.error")}
             </p>
           ) : filteredTitles.length === 0 && allTitles.length > 0 ? (
@@ -469,7 +471,7 @@ export default function TrackedPage() {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="min-h-11 text-amber-400"
+                className="min-h-11 text-primary-text"
               >
                 {t("tracked.filters.reset")}
               </button>
@@ -502,7 +504,7 @@ export default function TrackedPage() {
             <div className="space-y-6">
               {showGroups.map((group) => (
                 <div key={group.key}>
-                  <h3 className="text-sm font-semibold text-zinc-400 mb-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3">
                     {t(group.labelKey)} ({group.titles.length})
                   </h3>
                   <TitleList
@@ -518,7 +520,7 @@ export default function TrackedPage() {
               ))}
               {movies.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-zinc-400 mb-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3">
                     {t("tracked.sections.movies")} ({movies.length})
                   </h3>
                   <TitleList
@@ -570,7 +572,7 @@ function RowActionsMenu({
     <Popover.Root>
       <Popover.Trigger
         aria-label={t("tracked.row.moreActions", { title: title.title })}
-        className="min-w-11 min-h-11 rounded text-zinc-300 hover:bg-zinc-800"
+        className="min-w-11 min-h-11 rounded-sm text-foreground-secondary hover:bg-muted"
       >
         ···
       </Popover.Trigger>
@@ -581,12 +583,12 @@ function RowActionsMenu({
           sideOffset={4}
           className="z-50"
         >
-          <Popover.Popup className="w-64 max-w-[calc(100vw-2rem)] rounded-lg bg-zinc-900 border border-white/[0.08] shadow-xl p-3 space-y-3">
+          <Popover.Popup className="w-64 max-w-[calc(100vw-2rem)] rounded-md bg-card border border-border shadow-xl p-3 space-y-3">
             <Popover.Title className="font-semibold text-sm break-words">
               {title.title}
             </Popover.Title>
             <div className="space-y-1">
-              <p className="text-xs text-zinc-400">
+              <p className="text-xs text-muted-foreground">
                 {t("tracked.columns.status")}
               </p>
               <StatusPicker
@@ -597,7 +599,7 @@ function RowActionsMenu({
               />
             </div>
             <div className="space-y-1">
-              <p className="text-xs text-zinc-400">
+              <p className="text-xs text-muted-foreground">
                 {t("notifications.label")}
               </p>
               <NotificationModePicker
@@ -628,7 +630,7 @@ function RowActionsMenu({
             )}
             <button
               type="button"
-              className="text-sm text-red-400 min-h-10"
+              className="text-sm text-destructive min-h-10"
               onClick={async () => {
                 try {
                   await api.untrackTitle(title.id);
@@ -666,7 +668,7 @@ function TrackedTable({
   onSelectionChange,
 }: TrackedTableProps) {
   const { t } = useTranslation();
-  const isMobile = useIsMobile("(max-width: 1279px)");
+  const isMobile = useIsMobile("(max-width: 767px)");
   const statusText = (key: string | null) => {
     const labelKey = statusLabelKey(key);
     return labelKey ? t(labelKey) : (key ?? "—");
@@ -689,7 +691,7 @@ function TrackedTable({
             : new Set(),
         )
       }
-      className="w-4 h-4 accent-amber-400 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+      className="w-4 h-4 accent-primary cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     />
   );
 
@@ -708,7 +710,7 @@ function TrackedTable({
     return (
       <div className="flex flex-col gap-2">
         {selectMode && (
-          <label className="flex items-center gap-3 px-3 py-2 text-sm text-zinc-300 cursor-pointer">
+          <label className="flex items-center gap-3 px-3 py-2 text-sm text-foreground-secondary cursor-pointer">
             {selectAll}
             {t("tracked.row.selectAll")}
           </label>
@@ -734,11 +736,11 @@ function TrackedTable({
                     aria-label={t("tracked.row.select", { title: title.title })}
                     checked={isSelected}
                     onChange={() => toggleId(title.id)}
-                    className="w-4 h-4 accent-amber-400 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+                    className="w-4 h-4 accent-primary cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   />
                 </div>
               )}
-              <div className="w-[48px] h-[68px] rounded-lg overflow-hidden shrink-0 bg-zinc-800">
+              <div className="w-[48px] h-[68px] rounded-md overflow-hidden shrink-0 bg-muted">
                 {title.poster_url && (
                   <img
                     src={title.poster_url}
@@ -758,7 +760,7 @@ function TrackedTable({
                     {title.title}
                   </span>
                 </div>
-                <div className="font-mono text-[10px] text-zinc-400 mb-1.5">
+                <div className="font-mono text-[11px] text-muted-foreground mb-1.5">
                   {title.offers[0]?.provider_name ?? ""}
                   {statusKey ? ` · ${statusLabel}` : ""}
                   {title.next_episode_air_date && statusKey !== "completed"
@@ -767,19 +769,19 @@ function TrackedTable({
                 </div>
                 {total > 0 && (
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 h-[3px] bg-white/[0.08] rounded-full overflow-hidden">
+                    <div className="flex-1 h-[3px] bg-accent rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full"
                         style={{ width: `${pct}%`, background: statusColor }}
                       />
                     </div>
-                    <span className="font-mono text-[10px] text-zinc-400 shrink-0">
+                    <span className="font-mono text-[11px] text-muted-foreground shrink-0">
                       {watched}/{total}
                     </span>
                   </div>
                 )}
                 {title.eta_days != null && (
-                  <span className="font-mono text-[10px] text-zinc-400">
+                  <span className="font-mono text-[11px] text-muted-foreground">
                     {t("tracked.row.eta", { eta: formatEta(title.eta_days) })}
                   </span>
                 )}
@@ -791,7 +793,7 @@ function TrackedTable({
             return (
               <label
                 key={title.id}
-                className={`flex gap-3 items-center rounded-xl p-2.5 w-full text-left transition-colors ${isSelected ? "bg-amber-500/10 border border-amber-500/30" : "bg-zinc-900 border border-white/[0.05]"}`}
+                className={`flex gap-3 items-center rounded-lg p-2.5 w-full text-left transition-colors ${isSelected ? "bg-primary-soft border border-primary-border" : "bg-card border border-border"}`}
               >
                 {rowContent}
               </label>
@@ -801,7 +803,7 @@ function TrackedTable({
           return (
             <div
               key={title.id}
-              className="flex items-center gap-1 bg-zinc-900 border border-white/[0.05] rounded-xl p-2.5"
+              className="flex items-center gap-1 bg-card border border-border rounded-lg p-2.5"
             >
               <Link
                 to={`/title/${title.id}`}
@@ -823,7 +825,7 @@ function TrackedTable({
     <div>
       {/* Column header */}
       <div
-        className="grid gap-4 px-4 py-2.5 text-xs text-zinc-400"
+        className="grid gap-4 px-4 py-2.5 text-xs text-muted-foreground"
         style={{
           gridTemplateColumns: selectMode
             ? "32px 38px minmax(0,1fr) 110px 140px 100px 75px 105px"
@@ -840,7 +842,7 @@ function TrackedTable({
         <div className="text-right">{t("tracked.columns.actions")}</div>
       </div>
       {/* Rows */}
-      <div className="rounded-xl border border-white/[0.06] divide-y divide-white/[0.04]">
+      <div className="rounded-lg border border-border divide-y divide-border">
         {titles.map((title) => {
           const statusKey = getEffectiveStatus(title);
           const statusColor = statusKey
@@ -866,7 +868,7 @@ function TrackedTable({
           return (
             <Row
               key={title.id}
-              className={`grid gap-4 px-4 py-3 items-center transition-colors ${selectMode ? (isSelected ? "bg-amber-500/10 cursor-pointer" : "bg-zinc-900 hover:bg-zinc-800/60 cursor-pointer") : "bg-zinc-900 hover:bg-zinc-800/60"}`}
+              className={`grid gap-4 px-4 py-3 items-center transition-colors ${selectMode ? (isSelected ? "bg-primary-soft cursor-pointer" : "bg-card hover:bg-muted/60 cursor-pointer") : "bg-card hover:bg-muted/60"}`}
               style={{
                 gridTemplateColumns: selectMode
                   ? "32px 38px minmax(0,1fr) 110px 140px 100px 75px 105px"
@@ -881,12 +883,12 @@ function TrackedTable({
                     aria-label={t("tracked.row.select", { title: title.title })}
                     checked={isSelected}
                     onChange={() => toggleId(title.id)}
-                    className="w-4 h-4 accent-amber-400 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+                    className="w-4 h-4 accent-primary cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   />
                 </div>
               )}
               {/* Poster thumbnail */}
-              <div className="w-[38px] h-[56px] rounded overflow-hidden shrink-0 bg-zinc-800">
+              <div className="w-[38px] h-[56px] rounded-sm overflow-hidden shrink-0 bg-muted">
                 {title.poster_url && (
                   <img
                     src={title.poster_url}
@@ -905,12 +907,12 @@ function TrackedTable({
                 ) : (
                   <Link
                     to={`/title/${title.id}`}
-                    className="text-sm font-semibold hover:text-amber-300 transition-colors line-clamp-1"
+                    className="text-sm font-semibold hover:text-primary-text transition-colors line-clamp-1"
                   >
                     {title.title}
                   </Link>
                 )}
-                <div className="font-mono text-[11px] text-zinc-400 mt-0.5">
+                <div className="font-mono text-[11px] text-muted-foreground mt-0.5">
                   {title.release_year}
                   {" · "}
                   {title.object_type === "SHOW"
@@ -936,18 +938,18 @@ function TrackedTable({
               {total > 0 ? (
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <div className="flex-1 h-1 rounded-full bg-white/[0.08] overflow-hidden">
+                    <div className="flex-1 h-1 rounded-full bg-accent overflow-hidden">
                       <div
                         className="h-full rounded-full"
                         style={{ width: `${pct}%`, background: statusColor }}
                       />
                     </div>
-                    <span className="font-mono text-[11px] text-zinc-400 shrink-0">
+                    <span className="font-mono text-[11px] text-muted-foreground shrink-0">
                       {watched}/{total}
                     </span>
                   </div>
                   {title.eta_days != null && (
-                    <span className="font-mono text-[10px] text-zinc-400">
+                    <span className="font-mono text-[11px] text-muted-foreground">
                       {t("tracked.row.eta", {
                         eta: formatEta(title.eta_days),
                       })}
@@ -955,10 +957,12 @@ function TrackedTable({
                   )}
                 </div>
               ) : (
-                <div className="font-mono text-[11px] text-zinc-400">—</div>
+                <div className="font-mono text-[11px] text-muted-foreground">
+                  —
+                </div>
               )}
               {/* Next air date */}
-              <div className="font-mono text-[12px] text-zinc-300">
+              <div className="font-mono text-[12px] text-foreground-secondary">
                 {nextDate ?? "—"}
               </div>
               {/* Rating */}
@@ -974,7 +978,7 @@ function TrackedTable({
                   <>
                     <Link
                       to={`/title/${title.id}`}
-                      className="px-2.5 py-1 text-[11px] font-medium bg-white/[0.06] border border-white/[0.08] rounded text-zinc-300 hover:text-white transition-colors"
+                      className="px-2.5 py-1 text-[11px] font-medium bg-accent border border-border rounded-sm text-foreground-secondary hover:text-foreground transition-colors"
                     >
                       {t("tracked.row.open")}
                     </Link>
@@ -1071,16 +1075,16 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
 
   if (count === 0) {
     return (
-      <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] xl:bottom-4 left-0 right-0 z-30 flex justify-center pointer-events-none">
-        <div className="mx-4 mb-4 max-w-xl w-full bg-zinc-900 border border-white/[0.08] rounded-2xl px-4 py-3 shadow-2xl pointer-events-auto">
+      <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] md:bottom-4 left-0 right-0 z-30 flex justify-center pointer-events-none">
+        <div className="mx-4 mb-4 max-w-xl w-full bg-card border border-border rounded-xl px-4 py-3 shadow-2xl pointer-events-auto">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-zinc-400">
+            <span className="text-sm text-muted-foreground">
               {t("tracked.bulk.hint")}
             </span>
             <button
               type="button"
               onClick={onCancel}
-              className="text-xs text-zinc-500 hover:text-white transition-colors cursor-pointer"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
               {t("common.cancel")}
             </button>
@@ -1092,10 +1096,10 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
 
   return (
     <>
-      <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] xl:bottom-4 left-0 right-0 z-30 flex justify-center">
-        <div className="mx-4 mb-4 max-w-2xl w-full bg-zinc-900 border border-white/[0.1] rounded-2xl px-4 py-3 shadow-2xl">
+      <div className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] md:bottom-4 left-0 right-0 z-30 flex justify-center">
+        <div className="mx-4 mb-4 max-w-2xl w-full bg-card border border-border rounded-xl px-4 py-3 shadow-2xl">
           <div className="flex items-center gap-3 flex-wrap">
-            <span className="font-mono text-[11px] text-amber-400 font-semibold shrink-0">
+            <span className="font-mono text-[11px] text-primary-text font-semibold shrink-0">
               {t("filter.selectedCount", { count })}
             </span>
 
@@ -1106,7 +1110,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
               onClick={() =>
                 count > 10 ? setConfirmUntrack(true) : void handleUntrack()
               }
-              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-600/20 border border-red-500/30 text-red-400 hover:bg-red-600/30 transition-colors cursor-pointer disabled:opacity-50"
+              className="px-3 py-1.5 text-xs font-medium rounded-md bg-destructive-soft border border-destructive/30 text-destructive hover:bg-destructive-soft/80 transition-colors cursor-pointer disabled:opacity-50"
             >
               {t("tracked.row.untrack")}
             </button>
@@ -1122,7 +1126,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
                 aria-expanded={statusOpen}
                 aria-disabled={loading}
                 aria-busy={loading}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.06] border border-white/[0.08] text-zinc-300 hover:text-white transition-colors cursor-pointer aria-disabled:opacity-50"
+                className="px-3 py-1.5 text-xs font-medium rounded-md bg-accent border border-border text-foreground-secondary hover:text-foreground transition-colors cursor-pointer aria-disabled:opacity-50"
               >
                 {t("tracked.bulk.setStatus")} ▾
               </Menu.Trigger>
@@ -1133,12 +1137,12 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
                   sideOffset={8}
                   className="z-50"
                 >
-                  <Menu.Popup className="min-w-[160px] bg-zinc-800 border border-white/[0.08] rounded-xl shadow-2xl py-1">
+                  <Menu.Popup className="min-w-[160px] bg-muted border border-border rounded-lg shadow-2xl py-1">
                     {BULK_STATUS_OPTIONS.map((opt) => (
                       <Menu.Item
                         key={opt.value}
                         onClick={() => void handleSetStatus(opt.value)}
-                        className="w-full text-left px-3 py-2 text-xs text-zinc-300 outline-none data-[highlighted]:bg-white/[0.06] transition-colors cursor-pointer"
+                        className="w-full text-left px-3 py-2 text-xs text-foreground-secondary outline-none data-[highlighted]:bg-accent transition-colors cursor-pointer"
                       >
                         {t(opt.labelKey)}
                       </Menu.Item>
@@ -1154,7 +1158,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
                 type="button"
                 disabled={loading}
                 onClick={() => setTagOpen((v) => !v)}
-                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.06] border border-white/[0.08] text-zinc-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+                className="px-3 py-1.5 text-xs font-medium rounded-md bg-accent border border-border text-foreground-secondary hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
               >
                 {t("tracked.bulk.addTag")}
               </button>
@@ -1164,7 +1168,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
                     className="fixed inset-0 z-10"
                     onClick={() => setTagOpen(false)}
                   />
-                  <div className="absolute bottom-full mb-2 left-0 z-20 w-[220px] bg-zinc-800 border border-white/[0.08] rounded-xl shadow-2xl p-3">
+                  <div className="absolute bottom-full mb-2 left-0 z-20 w-[220px] bg-muted border border-border rounded-lg shadow-2xl p-3">
                     <div className="flex gap-2">
                       <input
                         autoFocus
@@ -1177,12 +1181,12 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
                         }}
                         placeholder={t("tracked.bulk.tagPlaceholder")}
                         maxLength={30}
-                        className="flex-1 bg-zinc-900 border border-white/[0.08] rounded-md px-2 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 outline-none focus-visible:ring-1 focus-visible:ring-amber-400"
+                        className="flex-1 bg-card border border-border rounded-sm px-2 py-1.5 text-xs text-foreground-secondary placeholder-foreground-disabled outline-none focus-visible:ring-1 focus-visible:ring-primary"
                       />
                       <button
                         type="button"
                         onClick={() => void handleAddTag()}
-                        className="px-2.5 py-1.5 text-xs font-medium bg-amber-500 text-zinc-900 rounded-md hover:bg-amber-400 transition-colors cursor-pointer"
+                        className="px-2.5 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 transition-colors cursor-pointer"
                       >
                         {t("tracked.bulk.add")}
                       </button>
@@ -1197,7 +1201,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
               type="button"
               disabled={loading}
               onClick={() => void handleMuteNotifications()}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.06] border border-white/[0.08] text-zinc-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+              className="px-3 py-1.5 text-xs font-medium rounded-md bg-accent border border-border text-foreground-secondary hover:text-foreground transition-colors cursor-pointer disabled:opacity-50"
             >
               {t("tracked.bulk.mute")}
             </button>
@@ -1207,7 +1211,7 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
             <button
               type="button"
               onClick={onCancel}
-              className="text-xs text-zinc-500 hover:text-white transition-colors cursor-pointer shrink-0"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
             >
               {t("common.cancel")}
             </button>
@@ -1225,12 +1229,12 @@ function BulkActionBar({ selectedIds, onDone, onCancel }: BulkActionBarProps) {
             {t("tracked.bulk.confirmDescription", { count })}
           </AlertDialogDescription>
           <div className="mt-4 flex justify-end gap-2">
-            <AlertDialogClose className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer transition-colors">
+            <AlertDialogClose className="inline-flex items-center justify-center rounded-sm px-3 py-1.5 text-xs font-medium bg-muted text-muted-foreground hover:bg-muted-hover cursor-pointer transition-colors">
               {t("common.cancel")}
             </AlertDialogClose>
             <button
               onClick={() => void handleUntrack()}
-              className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-red-600 text-white hover:bg-red-700 cursor-pointer transition-colors"
+              className="inline-flex items-center justify-center rounded-sm px-3 py-1.5 text-xs font-medium bg-destructive-soft text-destructive hover:bg-destructive/20 cursor-pointer transition-colors"
             >
               {t("tracked.bulk.untrackAll")}
             </button>

@@ -250,7 +250,7 @@ function PushNotificationsSection() {
         title={t("profile.pushNotifications")}
         subtitle="Native notifications directly from the browser. Works even when Remindarr is closed."
       >
-        <div className="text-zinc-500 text-sm">
+        <div className="text-muted-foreground text-sm">
           {t("profile.loadingPushStatus")}
         </div>
       </SCard>
@@ -273,8 +273,8 @@ function PushNotificationsSection() {
           className={cn(
             "flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-[10px] border",
             isEnabled
-              ? "bg-gradient-to-br from-amber-400/[0.08] to-amber-400/[0.02] border-amber-400/30"
-              : "bg-zinc-800 border-white/[0.06]",
+              ? "bg-gradient-to-br from-primary-soft to-primary-soft border-primary-border"
+              : "bg-muted border-border",
           )}
         >
           <div
@@ -282,22 +282,22 @@ function PushNotificationsSection() {
             className={cn(
               "w-14 h-14 rounded-[14px] flex items-center justify-center font-mono font-extrabold text-2xl shrink-0",
               isEnabled
-                ? "bg-amber-400 text-black"
-                : "bg-zinc-700 text-zinc-400",
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted-hover text-muted-foreground",
             )}
           >
             ◉
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2.5 mb-1 flex-wrap">
-              <div className="text-base font-bold text-zinc-100">
+              <div className="text-base font-bold text-foreground">
                 {isEnabled
                   ? "Push notifications are enabled"
                   : "Get notified about new releases"}
               </div>
               {isEnabled && <SStatusPill kind="ok">Active</SStatusPill>}
             </div>
-            <div className="text-xs text-zinc-400 font-mono leading-relaxed">
+            <div className="text-xs text-muted-foreground font-mono leading-relaxed">
               {isEnabled
                 ? "You'll receive notifications on this device"
                 : isDenied
@@ -360,7 +360,7 @@ function NotifierDeliveryHistory({ notifierId }: { notifierId: string }) {
 
   if (loading) {
     return (
-      <div className="text-zinc-500 text-xs font-mono mt-3">
+      <div className="text-muted-foreground text-xs font-mono mt-3">
         Loading history...
       </div>
     );
@@ -368,11 +368,11 @@ function NotifierDeliveryHistory({ notifierId }: { notifierId: string }) {
 
   if (!history || history.rows.length === 0) {
     return (
-      <div className="mt-3 pt-3 border-t border-white/[0.04]">
-        <div className="text-xs font-medium text-zinc-500 mb-1.5">
+      <div className="mt-3 pt-3 border-t border-border">
+        <div className="text-xs font-medium text-muted-foreground mb-1.5">
           Delivery History
         </div>
-        <div className="text-zinc-500 text-xs font-mono">
+        <div className="text-muted-foreground text-xs font-mono">
           No deliveries recorded yet.
         </div>
       </div>
@@ -380,9 +380,9 @@ function NotifierDeliveryHistory({ notifierId }: { notifierId: string }) {
   }
 
   return (
-    <div className="mt-3 pt-3 border-t border-white/[0.04]">
+    <div className="mt-3 pt-3 border-t border-border">
       <div className="flex items-center gap-2 mb-2">
-        <div className="text-xs font-medium text-zinc-500">
+        <div className="text-xs font-medium text-muted-foreground">
           Delivery History
         </div>
         <SStatusPill kind={statusPillKind(history.successRate)}>
@@ -393,7 +393,7 @@ function NotifierDeliveryHistory({ notifierId }: { notifierId: string }) {
         {history.rows.map((row) => (
           <div
             key={row.id}
-            className="flex items-start gap-2 text-xs font-mono py-1 border-b border-white/[0.03] last:border-b-0"
+            className="flex items-start gap-2 text-xs font-mono py-1 border-b border-border last:border-b-0"
           >
             <span
               className={cn(
@@ -402,20 +402,27 @@ function NotifierDeliveryHistory({ notifierId }: { notifierId: string }) {
                   ? "bg-emerald-400"
                   : row.status === "failure"
                     ? "bg-red-400"
-                    : "bg-zinc-500",
+                    : "bg-muted-hover",
               )}
             />
-            <span className="text-zinc-500 shrink-0">
+            <span className="text-muted-foreground shrink-0">
               {formatAttemptedAt(row.attemptedAt)}
             </span>
             {row.eventKind && (
-              <span className="text-zinc-400 shrink-0">{row.eventKind}</span>
+              <span className="text-muted-foreground shrink-0">
+                {row.eventKind}
+              </span>
             )}
             {row.latencyMs != null && (
-              <span className="text-zinc-600 shrink-0">{row.latencyMs}ms</span>
+              <span className="text-muted-foreground shrink-0">
+                {row.latencyMs}ms
+              </span>
             )}
             {row.status === "failure" && row.errorMessage && (
-              <span className="text-red-400 truncate" title={row.errorMessage}>
+              <span
+                className="text-destructive truncate"
+                title={row.errorMessage}
+              >
                 {row.errorMessage}
               </span>
             )}
@@ -672,7 +679,9 @@ function NotificationsSection() {
   if (loading) {
     return (
       <SCard title="Notifiers" subtitle="How and when you receive alerts">
-        <div className="text-zinc-500 text-sm">Loading notifications...</div>
+        <div className="text-muted-foreground text-sm">
+          Loading notifications...
+        </div>
       </SCard>
     );
   }
@@ -720,7 +729,7 @@ function NotificationsSection() {
           {err && <SMessage kind="error">{err}</SMessage>}
 
           {notifiers.length === 0 && !showForm && (
-            <p className="text-zinc-500 text-sm py-1">
+            <p className="text-muted-foreground text-sm py-1">
               No notifiers configured.
             </p>
           )}
@@ -731,21 +740,21 @@ function NotificationsSection() {
               <div
                 key={n.id}
                 className={cn(
-                  "p-4 bg-zinc-800 border border-white/[0.08] rounded-[10px]",
+                  "p-4 bg-muted border border-border rounded-[10px]",
                   !n.enabled && "opacity-60",
                 )}
               >
                 <div className="flex items-center gap-3 mb-3 flex-wrap">
                   <div
                     aria-hidden="true"
-                    className="w-9 h-9 rounded-lg flex items-center justify-center font-mono font-extrabold text-black text-sm shrink-0"
+                    className="w-9 h-9 rounded-md flex items-center justify-center font-mono font-extrabold text-primary-foreground text-sm shrink-0"
                     style={{ background: meta.color }}
                   >
                     {meta.icon}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <div className="text-[15px] font-bold text-zinc-100">
+                      <div className="text-[15px] font-bold text-foreground">
                         {meta.label}
                       </div>
                       <SStatusPill kind={n.enabled ? "ok" : "neutral"}>
@@ -797,22 +806,22 @@ function NotificationsSection() {
                     </SButton>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-white/[0.04]">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-border">
                   <SKeyValue k="Time" v={`${n.notify_time} ${n.timezone}`} />
                   <SKeyValue k="Frequency" v={describeDigest(n)} />
                   <SKeyValue k="Last sent" v={n.last_sent_date ?? "—"} />
                 </div>
                 {previewContent[n.id] && (
-                  <div className="mt-3 pt-3 border-t border-white/[0.04]">
-                    <div className="text-xs font-medium text-zinc-500 mb-2">
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <div className="text-xs font-medium text-muted-foreground mb-2">
                       Content Preview · {previewContent[n.id].date}
                     </div>
-                    <pre className="text-[11px] text-zinc-300 font-mono whitespace-pre-wrap overflow-auto max-h-48 bg-zinc-900 rounded-lg p-3 leading-relaxed">
+                    <pre className="text-[11px] text-foreground-secondary font-mono whitespace-pre-wrap overflow-auto max-h-48 bg-card rounded-md p-3 leading-relaxed">
                       {JSON.stringify(previewContent[n.id], null, 2)}
                     </pre>
                     <button
                       type="button"
-                      className="mt-1.5 text-[11px] text-zinc-500 hover:text-zinc-300 font-mono transition-colors"
+                      className="mt-1.5 text-[11px] text-muted-foreground hover:text-foreground-secondary font-mono transition-colors"
                       onClick={() =>
                         setPreviewContent((prev) => {
                           const next = { ...prev };
@@ -850,10 +859,10 @@ function NotificationsSection() {
                     disabled={!!editingId && !isActive}
                     onClick={() => !editingId && setFormProvider(p)}
                     className={cn(
-                      "px-3.5 py-2 rounded-lg text-[13px] font-semibold transition-colors cursor-pointer",
+                      "px-3.5 py-2 rounded-md text-[13px] font-semibold transition-colors cursor-pointer",
                       isActive
-                        ? "bg-amber-400 text-black"
-                        : "bg-zinc-800 text-zinc-200 border border-white/[0.08] hover:bg-white/[0.1]",
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-foreground-secondary border border-border hover:bg-accent",
                       !!editingId &&
                         !isActive &&
                         "opacity-30 cursor-not-allowed",
@@ -1029,7 +1038,7 @@ function NotificationsSection() {
                 <select
                   value={formDigestDay}
                   onChange={(e) => setFormDigestDay(Number(e.target.value))}
-                  className="w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40"
+                  className="w-full px-3 py-2.5 bg-muted border border-border rounded-md text-foreground text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border"
                 >
                   <option value={0}>Sunday</option>
                   <option value={1}>Monday</option>
@@ -1039,7 +1048,7 @@ function NotificationsSection() {
                   <option value={5}>Friday</option>
                   <option value={6}>Saturday</option>
                 </select>
-                <div className="text-[11px] text-zinc-500 mt-1 font-mono">
+                <div className="text-[11px] text-muted-foreground mt-1 font-mono">
                   Covers the next 7 days of releases
                 </div>
               </SFormRow>
@@ -1072,7 +1081,7 @@ function NotificationsSection() {
             </div>
             <div className="mb-1">
               <SLabel>Days active</SLabel>
-              <div className="text-[11px] text-zinc-500 mb-2">
+              <div className="text-[11px] text-muted-foreground mb-2">
                 Leave all unchecked to apply every day
               </div>
               <div className="flex gap-1.5 flex-wrap">
@@ -1090,10 +1099,10 @@ function NotificationsSection() {
                       )
                     }
                     className={cn(
-                      "px-2.5 py-1 rounded-md text-[12px] font-semibold transition-colors cursor-pointer",
+                      "px-2.5 py-1 rounded-sm text-[12px] font-semibold transition-colors cursor-pointer",
                       formQuietDays.includes(idx)
-                        ? "bg-amber-400 text-black"
-                        : "bg-zinc-800 text-zinc-300 border border-white/[0.08] hover:bg-white/[0.1]",
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-foreground-secondary border border-border hover:bg-accent",
                     )}
                   >
                     {day}
@@ -1212,7 +1221,7 @@ function DepartureAlertsControls({
             <select
               value={leadDays}
               onChange={(e) => handleLeadDaysChange(Number(e.target.value))}
-              className="w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40"
+              className="w-full px-3 py-2.5 bg-muted border border-border rounded-md text-foreground text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border"
             >
               {DEPARTURE_LEAD_DAY_OPTIONS.map((d) => (
                 <option key={d} value={d}>
@@ -1220,7 +1229,7 @@ function DepartureAlertsControls({
                 </option>
               ))}
             </select>
-            <div className="text-[11px] text-zinc-500 mt-1 font-mono">
+            <div className="text-[11px] text-muted-foreground mt-1 font-mono">
               Only applies when the provider sets a known departure date
             </div>
           </SFormRow>
@@ -1242,7 +1251,7 @@ function DepartureAlertsSection() {
         title="Streaming departure alerts"
         subtitle="Get notified when a tracked title is leaving a streaming service."
       >
-        <div className="text-zinc-500 text-sm">Loading...</div>
+        <div className="text-muted-foreground text-sm">Loading...</div>
       </SCard>
     );
   }

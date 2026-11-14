@@ -22,8 +22,8 @@ export function MediaCardBadge({
         "absolute top-2 z-10 inline-flex items-center rounded-full px-2 py-0.5 font-mono text-[11px] font-semibold leading-none select-none",
         position === "top-left" ? "left-2" : "right-2",
         tone === "accent"
-          ? "bg-amber-400 text-zinc-950"
-          : "bg-black/75 backdrop-blur-sm text-zinc-100",
+          ? "bg-primary text-primary-foreground"
+          : "bg-scrim backdrop-blur-sm text-scrim-foreground",
       )}
     >
       {label}
@@ -83,7 +83,7 @@ export function MediaCard({
       tone="solid"
       border="subtle"
       className={cn(
-        "group/mediacard flex h-full w-full flex-col overflow-hidden",
+        "group/mediacard flex h-full w-full flex-col overflow-hidden transition-colors hover:border-foreground-disabled",
         className,
       )}
     >
@@ -91,7 +91,7 @@ export function MediaCard({
       <Link to={to} className="relative block">
         <div
           className={cn(
-            "relative w-full overflow-hidden bg-zinc-800",
+            "relative w-full overflow-hidden bg-muted",
             aspect === "video" ? "aspect-video" : "aspect-[2/3]",
           )}
         >
@@ -107,17 +107,17 @@ export function MediaCard({
               )}
             />
           ) : (
-            <div className="h-full w-full bg-gradient-to-b from-zinc-800 to-zinc-950" />
+            <div className="h-full w-full bg-gradient-to-b from-muted to-background" />
           )}
 
           {unread && (
-            <div className="pointer-events-none absolute inset-0 rounded-[inherit] ring-2 ring-amber-500/60" />
+            <div className="pointer-events-none absolute inset-0 rounded-[inherit] ring-2 ring-primary/60" />
           )}
 
           {progressPercent != null && (
-            <div className="absolute inset-x-0 bottom-0 h-[3px] bg-black/40">
+            <div className="absolute inset-x-0 bottom-0 h-[3px] bg-scrim">
               <div
-                className="h-full bg-amber-400"
+                className="h-full bg-primary"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -127,7 +127,7 @@ export function MediaCard({
         {badge && <MediaCardBadge {...badge} />}
 
         {unread && !badge && (
-          <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-amber-500" />
+          <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />
         )}
 
         {overlayAction && (
@@ -138,10 +138,7 @@ export function MediaCard({
       {hasBody && (
         <div className="flex flex-1 flex-col p-3">
           {title != null && (
-            <Link
-              to={titleTo ?? to}
-              className="block text-white transition-colors hover:text-amber-400 group-hover/mediacard:text-amber-400"
-            >
+            <Link to={titleTo ?? to} className="block text-foreground">
               <h3
                 className={cn(
                   "text-sm font-semibold",
@@ -157,7 +154,7 @@ export function MediaCard({
             (subtitleTo ? (
               <Link
                 to={subtitleTo}
-                className="block transition-colors hover:text-amber-400"
+                className="block transition-colors hover:text-primary-text"
               >
                 <div className="mt-0.5 text-xs">{subtitle}</div>
               </Link>
@@ -166,7 +163,7 @@ export function MediaCard({
             ))}
 
           {meta != null && (
-            <div className="mt-1.5 text-xs text-zinc-400">{meta}</div>
+            <div className="mt-1.5 text-xs text-muted-foreground">{meta}</div>
           )}
 
           {footer != null && <div className="mt-auto pt-3">{footer}</div>}

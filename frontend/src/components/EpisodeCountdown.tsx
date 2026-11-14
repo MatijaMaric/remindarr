@@ -49,14 +49,14 @@ export default function EpisodeCountdown({ airDate }: Props) {
 
   if (!text) {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-zinc-800/80 border border-white/[0.08] text-zinc-400 font-mono text-[11px] font-semibold select-none">
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted/80 border border-border text-muted-foreground font-mono text-[11px] font-semibold select-none">
         TBA
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-[11px] font-semibold select-none">
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary-soft border border-primary-border text-primary-text font-mono text-[11px] font-semibold select-none">
       <span aria-hidden="true">⏱</span>
       {text}
     </span>

@@ -9,7 +9,7 @@ export function Section({
 }) {
   return (
     <section className="space-y-4">
-      <h2 className="text-[18px] font-semibold text-white tracking-tight leading-tight">
+      <h2 className="text-[18px] font-semibold text-foreground tracking-tight leading-tight">
         {title}
       </h2>
       {children}

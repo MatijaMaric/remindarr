@@ -81,10 +81,10 @@ export default function SnoozePicker({
         aria-pressed={isSnoozed}
         aria-disabled={snoozeMutation.isPending}
         aria-busy={snoozeMutation.isPending}
-        className={`flex items-center justify-center gap-1 rounded px-1.5 py-1 text-xs transition-colors border ${
+        className={`flex items-center justify-center gap-1 rounded-sm px-1.5 py-1 text-xs transition-colors border ${
           isSnoozed
-            ? "bg-blue-500/20 text-blue-400 border-blue-500/40"
-            : "text-zinc-500 hover:text-zinc-300 border-transparent hover:border-zinc-700"
+            ? "bg-info/20 text-info border-info/40"
+            : "text-muted-foreground hover:text-foreground-secondary border-transparent hover:border-border"
         }`}
       >
         {isSnoozed ? (
@@ -101,7 +101,7 @@ export default function SnoozePicker({
           sideOffset={4}
           className="z-50"
         >
-          <Menu.Popup className="min-w-[140px] bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl overflow-hidden">
+          <Menu.Popup className="min-w-[140px] bg-muted border border-border rounded-md shadow-xl overflow-hidden">
             {visibleOptions.map((opt) => (
               <Menu.Item
                 key={opt.labelKey}
@@ -110,7 +110,7 @@ export default function SnoozePicker({
                     until: computeUntil(opt.type, releaseDate),
                   })
                 }
-                className="w-full text-left text-xs px-3 py-2 outline-none data-[highlighted]:bg-zinc-700 transition-colors text-zinc-300"
+                className="w-full text-left text-xs px-3 py-2 outline-none data-[highlighted]:bg-muted-hover transition-colors text-foreground-secondary"
               >
                 {t(opt.labelKey)}
               </Menu.Item>

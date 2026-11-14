@@ -116,7 +116,7 @@ function CreditCard({
       to={`/title/${creditTitleId(credit)}`}
       className="flex-shrink-0 w-32 sm:w-36 group"
     >
-      <div className="aspect-[2/3] rounded-lg overflow-hidden bg-zinc-800 mb-2">
+      <div className="aspect-[2/3] rounded-md overflow-hidden bg-muted mb-2">
         {credit.poster_path ? (
           <img
             src={mkPosterUrl(credit.poster_path, "w342") ?? ""}
@@ -127,17 +127,17 @@ function CreditCard({
             height={513}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-zinc-300 text-sm px-2 text-center">
+          <div className="w-full h-full flex items-center justify-center text-foreground-secondary text-sm px-2 text-center">
             {creditTitle(credit)}
           </div>
         )}
       </div>
-      <p className="text-sm font-medium text-white truncate group-hover:text-amber-400 transition-colors">
+      <p className="text-sm font-medium text-foreground truncate group-hover:text-primary-text transition-colors">
         {creditTitle(credit)}
       </p>
-      <p className="text-xs text-zinc-400 truncate">{subtitle}</p>
+      <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
       {getYear(credit.release_date || credit.first_air_date) && (
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-muted-foreground">
           {getYear(credit.release_date || credit.first_air_date)}
         </p>
       )}
@@ -173,7 +173,7 @@ export default function PersonPage() {
   if (error || !data) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-red-400">Person not found</div>
+        <div className="text-destructive">Person not found</div>
       </div>
     );
   }
@@ -203,7 +203,7 @@ export default function PersonPage() {
       <button
         type="button"
         onClick={() => window.history.back()}
-        className="flex items-center gap-1 text-sm text-zinc-400 hover:text-white transition-colors"
+        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ChevronLeft size={16} />
         Back
@@ -212,7 +212,7 @@ export default function PersonPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-6">
         <div className="flex-shrink-0">
-          <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-2xl overflow-hidden bg-zinc-800">
+          <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-xl overflow-hidden bg-muted">
             {person.profile_path ? (
               <img
                 src={profileUrl(person.profile_path, "w185") ?? ""}
@@ -223,7 +223,7 @@ export default function PersonPage() {
                 height={278}
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-zinc-300 text-5xl">
+              <div className="w-full h-full flex items-center justify-center text-foreground-secondary text-5xl">
                 {person.name.charAt(0)}
               </div>
             )}
@@ -231,7 +231,7 @@ export default function PersonPage() {
         </div>
         <div className="flex-1 space-y-3">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white select-text">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground select-text">
               {person.name}
             </h1>
             <FollowButton
@@ -242,27 +242,27 @@ export default function PersonPage() {
           </div>
           <div className="flex flex-wrap gap-2 text-sm">
             {person.known_for_department && (
-              <span className="bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded">
+              <span className="bg-primary-soft text-primary-text px-2 py-0.5 rounded-sm">
                 {person.known_for_department}
               </span>
             )}
           </div>
-          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-zinc-400">
+          <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
             {person.birthday && (
               <div>
-                <span className="text-zinc-400">Born: </span>
+                <span className="text-muted-foreground">Born: </span>
                 <span>{formatDate(person.birthday)}</span>
               </div>
             )}
             {person.deathday && (
               <div>
-                <span className="text-zinc-400">Died: </span>
+                <span className="text-muted-foreground">Died: </span>
                 <span>{formatDate(person.deathday)}</span>
               </div>
             )}
             {person.place_of_birth && (
               <div>
-                <span className="text-zinc-400">From: </span>
+                <span className="text-muted-foreground">From: </span>
                 <span>{person.place_of_birth}</span>
               </div>
             )}
@@ -278,14 +278,14 @@ export default function PersonPage() {
       {/* Biography */}
       {biography && (
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-white">Biography</h2>
-          <p className="text-zinc-300 leading-relaxed whitespace-pre-line select-text">
+          <h2 className="text-lg font-semibold text-foreground">Biography</h2>
+          <p className="text-foreground-secondary leading-relaxed whitespace-pre-line select-text">
             {displayBio}
           </p>
           {showBioToggle && (
             <button
               onClick={() => setBioExpanded(!bioExpanded)}
-              className="text-sm text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
+              className="text-sm text-primary-text hover:text-primary-text transition-colors cursor-pointer"
             >
               {bioExpanded ? "Show less" : "Show more"}
             </button>
@@ -296,7 +296,7 @@ export default function PersonPage() {
       {/* Known For */}
       {knownForCredits.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-white">Known For</h2>
+          <h2 className="text-lg font-semibold text-foreground">Known For</h2>
           <ScrollableRow className="gap-4 pb-2">
             {knownForCredits.map((c) => (
               <CreditCard
@@ -312,7 +312,7 @@ export default function PersonPage() {
       {/* Acting Credits */}
       {castCredits.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-white">
+          <h2 className="text-lg font-semibold text-foreground">
             Acting ({castCredits.length})
           </h2>
           <ScrollableRow className="gap-4 pb-2">
@@ -330,7 +330,7 @@ export default function PersonPage() {
       {/* Crew Credits */}
       {crewCredits.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-white">
+          <h2 className="text-lg font-semibold text-foreground">
             Crew ({crewCredits.length})
           </h2>
           <ScrollableRow className="gap-4 pb-2">

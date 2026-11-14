@@ -20,7 +20,7 @@ import InstallPrompt from "./components/InstallPrompt";
 import NotificationPrompt from "./components/NotificationPrompt";
 import KeyboardShortcutsModal from "./components/KeyboardShortcutsModal";
 import AchievementToast from "./components/profile/AchievementToast";
-import { ExternalLink, Settings } from "lucide-react";
+import { ExternalLink, Search, Settings } from "lucide-react";
 import { navLinkClass } from "./nav-utils";
 import { usePushSubscriptionSync } from "./hooks/usePushSubscriptionSync";
 import { useKeyboardShortcut } from "./hooks/useKeyboardShortcut";
@@ -118,20 +118,20 @@ export default function App() {
 
   return (
     <div
-      className={`bg-zinc-950 text-zinc-100 w-full ${isReelsPage || isKioskPage ? "h-[100dvh] overflow-hidden" : "min-h-screen"}`}
-      style={{ background: "var(--bg-app)", color: "var(--text-app)" }}
+      className={`bg-background text-foreground w-full ${isReelsPage || isKioskPage ? "h-[100dvh] overflow-hidden" : "min-h-screen"}`}
+      style={{ background: "var(--background)", color: "var(--foreground)" }}
     >
       {/* Skip to main content link */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-amber-500 focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:text-sm focus:font-medium"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:rounded-sm focus:text-sm focus:font-medium"
       >
         {t("nav.skipToMain")}
       </a>
       {/* Hide top nav on reels page (mobile) and kiosk page (all sizes) */}
       <nav
         aria-label="Main navigation"
-        className={`bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.06] sticky top-0 z-50 safe-top ${isKioskPage ? "hidden" : isReelsPage ? "hidden xl:block" : ""}`}
+        className={`bg-background/80 backdrop-blur-xl border-b border-border sticky top-0 z-50 safe-top ${isKioskPage ? "hidden" : isReelsPage ? "hidden md:block" : ""}`}
       >
         <div className="max-w-[1440px] mx-auto px-4 flex items-center gap-4 2xl:gap-8 h-14">
           {/* Logo */}
@@ -139,15 +139,19 @@ export default function App() {
             to="/"
             className="flex items-center gap-2 shrink-0 hover:opacity-90 transition-opacity"
           >
-            <div className="w-6 h-6 rounded-md bg-amber-400 flex items-center justify-center font-extrabold text-sm text-black leading-none select-none">
-              R
-            </div>
-            <span className="text-base font-bold text-white tracking-tight">
+            <img
+              src="/favicon.png"
+              alt=""
+              width={24}
+              height={24}
+              className="size-6 rounded-sm select-none"
+            />
+            <span className="text-base font-bold text-foreground tracking-tight">
               Remindarr
             </span>
           </Link>
           {/* Desktop nav links */}
-          <div className="hidden xl:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-1">
             <NavLink
               to="/"
               end
@@ -185,37 +189,33 @@ export default function App() {
             )}
           </div>
           <div className="flex-1" />
-          {/* Search trigger */}
+          {/* Search trigger: an icon from md (the Browse tab covers phones),
+              the full field from lg. */}
           <button
             type="button"
             aria-keyshortcuts="/"
+            aria-label={t("search.titles")}
             onClick={() => focusOrNavigateSearch(navigate, location.pathname)}
-            className="hidden xl:flex items-center gap-2 w-[220px] shrink-0 bg-white/[0.06] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-zinc-400 hover:bg-white/[0.1] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
+            className="hidden md:flex items-center justify-center lg:justify-start gap-2 size-9 lg:h-9 lg:w-[220px] shrink-0 lg:bg-fill-subtle lg:border border-border rounded-md lg:px-3 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           >
-            <span
-              aria-hidden="true"
-              className="text-zinc-400 text-base leading-none"
-            >
-              ⌕
-            </span>
-            <span className="flex-1 text-left text-[13px] text-zinc-300">
+            <Search className="size-4 shrink-0" aria-hidden="true" />
+            <span className="hidden lg:block flex-1 text-left">
               {t("search.titles")}
             </span>
             <span
               aria-hidden="true"
-              className="font-mono text-[11px] text-zinc-400"
+              className="hidden lg:block font-mono text-[11px]"
             >
               /
             </span>
           </button>
           {/* Desktop user section */}
-          <div className="hidden xl:flex items-center gap-3 shrink-0">
+          <div className="hidden md:flex items-center gap-3 shrink-0">
             {loading ? null : user ? (
               <>
                 <Link
                   to={`/user/${user.username}`}
-                  className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[13px] text-black hover:opacity-80 transition-opacity shrink-0"
-                  style={{ background: "oklch(0.6 0.1 250)" }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center bg-muted font-semibold text-sm text-foreground hover:bg-muted-hover transition-colors shrink-0"
                   aria-label={user.display_name || user.username}
                   title={user.display_name || user.username}
                 >
@@ -223,14 +223,14 @@ export default function App() {
                 </Link>
                 <Link
                   to="/settings"
-                  className="text-zinc-400 hover:text-white transition-colors"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
                   aria-label={t("nav.settings")}
                 >
                   <Settings className="size-4" />
                 </Link>
                 <button
                   onClick={logout}
-                  className="text-sm text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                  className="text-sm text-foreground-secondary hover:text-foreground transition-colors cursor-pointer"
                 >
                   {t("nav.logout")}
                 </button>
@@ -239,7 +239,7 @@ export default function App() {
               location.pathname !== "/login" && (
                 <NavLink
                   to="/login"
-                  className="text-sm text-zinc-400 hover:text-white transition-colors"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {t("nav.signIn")}
                 </NavLink>
@@ -255,13 +255,15 @@ export default function App() {
         className={
           isReelsPage || isKioskPage
             ? ""
-            : "max-w-[1440px] mx-auto px-4 py-6 pb-28 xl:pb-6"
+            : "max-w-[1440px] mx-auto px-4 py-6 pb-28 md:pb-6"
         }
       >
         {user && !isKioskPage && <NotificationPrompt />}
         <Suspense
           fallback={
-            <div className="text-center py-12 text-zinc-400">Loading...</div>
+            <div className="text-center py-12 text-muted-foreground">
+              Loading...
+            </div>
           }
         >
           <Routes>
@@ -562,20 +564,20 @@ export default function App() {
         </Suspense>
       </main>
       <footer
-        className={`border-t border-white/[0.06] py-6 mt-8 ${isReelsPage || isKioskPage ? "hidden" : "hidden xl:block"}`}
+        className={`border-t border-border py-6 mt-8 ${isReelsPage || isKioskPage ? "hidden" : "hidden md:block"}`}
       >
-        <div className="max-w-[1440px] mx-auto px-4 flex items-center justify-between text-sm text-zinc-400">
+        <div className="max-w-[1440px] mx-auto px-4 flex items-center justify-between text-sm text-muted-foreground">
           <span>&copy; {new Date().getFullYear()} Remindarr</span>
           <div className="flex items-center gap-4">
             <Link
               to="/privacy"
-              className="text-zinc-400 hover:text-white transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
             >
               {t("legal.privacy")}
             </Link>
             <Link
               to="/terms"
-              className="text-zinc-400 hover:text-white transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
             >
               {t("legal.terms")}
             </Link>
@@ -583,7 +585,7 @@ export default function App() {
               href="https://github.com/MatijaMaric/remindarr"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-zinc-400 hover:text-white transition-colors"
+              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
             >
               <ExternalLink className="size-4" />
               GitHub

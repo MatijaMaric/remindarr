@@ -43,10 +43,10 @@ const ICON_BY_TYPE: Record<
 };
 
 const ICON_STYLES = {
-  rating: "bg-amber-400/15 text-amber-400",
-  watched: "bg-amber-500/15 text-amber-500",
-  review: "bg-sky-500/15 text-sky-400",
-  track: "bg-emerald-500/15 text-emerald-400",
+  rating: "bg-primary-soft text-primary-text",
+  watched: "bg-primary-soft text-primary-text",
+  review: "bg-info/15 text-info",
+  track: "bg-success/15 text-success",
   discussion: "bg-violet-500/15 text-violet-400",
 } as const;
 
@@ -113,7 +113,7 @@ function StarRow({ rating }: { rating: NonNullable<ActivityEvent["rating"]> }) {
         <Star
           key={i}
           size={11}
-          className={i < filled ? "text-amber-400" : "text-zinc-700"}
+          className={i < filled ? "text-primary-text" : "text-muted-foreground"}
           fill="currentColor"
           strokeWidth={0}
         />
@@ -201,7 +201,7 @@ function ActivityRow({ event, isOwnProfile, onHide }: ActivityRowProps) {
         detail = (
           <>
             {detail}
-            <p className="mt-1 text-sm italic text-zinc-300">
+            <p className="mt-1 text-sm italic text-foreground-secondary">
               &ldquo;{event.review}&rdquo;
             </p>
           </>
@@ -256,7 +256,7 @@ function ActivityRow({ event, isOwnProfile, onHide }: ActivityRowProps) {
       if (event.message) {
         summary = "";
         detail = (
-          <p className="mt-0.5 text-sm italic text-zinc-300">
+          <p className="mt-0.5 text-sm italic text-foreground-secondary">
             &ldquo;{event.message}&rdquo;
           </p>
         );
@@ -281,33 +281,37 @@ function ActivityRow({ event, isOwnProfile, onHide }: ActivityRowProps) {
   }
 
   return (
-    <li className="group flex items-start gap-3.5 py-3.5 border-b border-white/[0.04] last:border-b-0">
+    <li className="group flex items-start gap-3.5 py-3.5 border-b border-border last:border-b-0">
       <ActivityIcon type={event.type} />
       <div className="flex-1 min-w-0 pt-0.5">
         <div className="flex items-baseline gap-2 flex-wrap">
           <Link
             to={titleHref}
-            className="text-[15px] font-bold text-zinc-100 hover:text-amber-400 transition-colors truncate"
+            className="text-[15px] font-bold text-foreground hover:text-primary-text transition-colors truncate"
           >
             {event.title.title}
           </Link>
-          <span className="text-[11px] font-semibold text-zinc-500">
+          <span className="text-[11px] font-semibold text-muted-foreground">
             {t(BADGE_LABEL_KEY[badgeKey])}
           </span>
         </div>
         {summary && (
-          <p className="text-[13px] text-zinc-400 mt-0.5 truncate">{summary}</p>
+          <p className="text-[13px] text-muted-foreground mt-0.5 truncate">
+            {summary}
+          </p>
         )}
         {detail}
       </div>
       <div className="flex items-center gap-2 shrink-0 pt-1">
-        <span className="font-mono text-[11px] text-zinc-500">{relative}</span>
+        <span className="font-mono text-[11px] text-muted-foreground">
+          {relative}
+        </span>
         {isOwnProfile && onHide && (
           <button
             type="button"
             aria-label={t("userProfile.dossier.activity.hideEvent")}
             onClick={() => onHide(event)}
-            className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-zinc-600 hover:text-zinc-300 transition-opacity"
+            className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-muted-foreground hover:text-foreground-secondary transition-opacity"
           >
             <X size={13} />
           </button>
@@ -413,16 +417,16 @@ function ActivityFeed({
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex items-start gap-3.5 py-3.5">
-              <div className="w-10 h-10 rounded-full bg-white/[0.04] animate-pulse" />
+              <div className="w-10 h-10 rounded-full bg-fill-subtle animate-pulse" />
               <div className="flex-1 space-y-2">
-                <div className="h-4 w-1/3 bg-white/[0.04] rounded animate-pulse" />
-                <div className="h-3 w-2/3 bg-white/[0.04] rounded animate-pulse" />
+                <div className="h-4 w-1/3 bg-fill-subtle rounded-sm animate-pulse" />
+                <div className="h-3 w-2/3 bg-fill-subtle rounded-sm animate-pulse" />
               </div>
             </div>
           ))}
         </div>
       ) : events.length === 0 ? (
-        <p className="text-sm text-zinc-500 py-6 text-center">
+        <p className="text-sm text-muted-foreground py-6 text-center">
           {t("userProfile.dossier.activity.empty")}
         </p>
       ) : (
@@ -443,7 +447,7 @@ function ActivityFeed({
                 type="button"
                 onClick={loadMore}
                 disabled={loadingMore}
-                className="text-sm font-semibold text-amber-400 hover:text-amber-300 disabled:opacity-50 transition-colors"
+                className="text-sm font-semibold text-primary-text hover:text-primary-text disabled:opacity-50 transition-colors"
               >
                 {loadingMore
                   ? t("userProfile.dossier.activity.loading")

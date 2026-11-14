@@ -166,7 +166,7 @@ function TitleListImpl({
 
   if (visibleTitles.length === 0) {
     return (
-      <div className="text-center py-12 text-zinc-500">
+      <div className="text-center py-12 text-muted-foreground">
         {emptyMessage ?? t("common.noTitlesFound")}
       </div>
     );
@@ -234,7 +234,7 @@ function TitleListImpl({
         <div className="mt-3 text-center">
           <a
             href={viewAllHref}
-            className="text-sm text-amber-500 hover:text-amber-400 transition-colors"
+            className="text-sm text-primary-text hover:text-primary-text transition-colors"
           >
             {viewAllLabel ?? t("common.viewAll")}
           </a>

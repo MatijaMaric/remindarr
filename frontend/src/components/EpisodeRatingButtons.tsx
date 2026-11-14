@@ -22,7 +22,7 @@ const RATING_CONFIG: {
     value: "HATE",
     Icon: HeartCrack,
     label: "Hate",
-    activeColor: "text-white",
+    activeColor: "text-foreground",
     activeBg: "bg-red-500",
     filled: true,
   },
@@ -30,21 +30,21 @@ const RATING_CONFIG: {
     value: "DISLIKE",
     Icon: ThumbsDown,
     label: "Dislike",
-    activeColor: "text-white",
+    activeColor: "text-foreground",
     activeBg: "bg-orange-500",
   },
   {
     value: "LIKE",
     Icon: ThumbsUp,
     label: "Like",
-    activeColor: "text-white",
+    activeColor: "text-foreground",
     activeBg: "bg-blue-500",
   },
   {
     value: "LOVE",
     Icon: Heart,
     label: "Love",
-    activeColor: "text-white",
+    activeColor: "text-foreground",
     activeBg: "bg-pink-500",
     filled: true,
   },
@@ -132,7 +132,7 @@ export default function EpisodeRatingButtons({
         {RATING_CONFIG.map(({ value }) => (
           <div
             key={value}
-            className="h-9 w-16 rounded-lg bg-zinc-800 animate-pulse"
+            className="h-9 w-16 rounded-md bg-muted animate-pulse"
           />
         ))}
       </div>
@@ -158,10 +158,10 @@ export default function EpisodeRatingButtons({
                 disabled={submitting || isReadOnly}
                 aria-label={label}
                 aria-pressed={isActive}
-                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                   isActive
                     ? `${activeBg} ${activeColor}`
-                    : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-300"
+                    : "bg-muted text-muted-foreground hover:bg-muted-hover hover:text-foreground-secondary"
                 } disabled:cursor-default ${isReadOnly ? "" : "disabled:opacity-50"}`}
               >
                 <Icon
@@ -184,16 +184,16 @@ export default function EpisodeRatingButtons({
             onChange={(e) => setReviewText(e.target.value.slice(0, 500))}
             placeholder="Add a short review… (optional)"
             rows={2}
-            className="w-full bg-zinc-800 text-zinc-200 text-sm rounded-lg border border-white/[0.06] px-3 py-2 placeholder-zinc-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:border-amber-500/50 resize-none"
+            className="w-full bg-muted text-foreground-secondary text-sm rounded-md border border-border px-3 py-2 placeholder-foreground-disabled focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border focus-visible:border-primary-border resize-none"
           />
           <div className="flex items-center justify-between">
-            <span className="text-xs text-zinc-600">
+            <span className="text-xs text-muted-foreground">
               {reviewText.length}/500
             </span>
             <button
               onClick={handleReviewSave}
               disabled={submitting}
-              className="text-xs text-amber-400 hover:text-amber-300 transition-colors disabled:opacity-50 cursor-pointer"
+              className="text-xs text-primary-text hover:text-primary-text transition-colors disabled:opacity-50 cursor-pointer"
             >
               Save review
             </button>
@@ -228,7 +228,10 @@ function EpisodeFriendsRatings({
   const remaining = parts.length - visible.length;
 
   return (
-    <p className="text-xs text-zinc-400" data-testid="episode-friends-ratings">
+    <p
+      className="text-xs text-muted-foreground"
+      data-testid="episode-friends-ratings"
+    >
       Friends: {visible.join(", ")}
       {remaining > 0 && ` +${remaining} more`}
     </p>

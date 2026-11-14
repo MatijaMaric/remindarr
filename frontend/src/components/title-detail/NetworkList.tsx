@@ -27,13 +27,13 @@ export function NetworkList({
               height={20}
             />
           )}
-          <span className="text-sm text-zinc-400">{n.name}</span>
+          <span className="text-sm text-muted-foreground">{n.name}</span>
         </div>
       ))}
       {hasMore && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-sm text-amber-400 hover:text-amber-300 transition-colors"
+          className="text-sm text-primary-text hover:text-primary-text transition-colors"
         >
           {expanded
             ? "Show less"

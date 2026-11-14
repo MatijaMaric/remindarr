@@ -107,28 +107,31 @@ export default function EpisodeThread({
 
   return (
     <section className="space-y-3" aria-labelledby="episode-discussion">
-      <h2 id="episode-discussion" className="text-lg font-semibold text-white">
+      <h2
+        id="episode-discussion"
+        className="text-lg font-semibold text-foreground"
+      >
         {t("episodes.discussion.title")}
       </h2>
 
       {blocked ? (
-        <p className="text-sm text-zinc-400">
+        <p className="text-sm text-muted-foreground">
           {signedIn
             ? t("episodes.discussion.watchFirst")
             : t("episodes.discussion.signIn")}
         </p>
       ) : isLoading ? (
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-muted-foreground">
           {t("episodes.discussion.loading")}
         </p>
       ) : isError ? (
-        <p className="text-sm text-red-400">
+        <p className="text-sm text-destructive">
           {t("episodes.discussion.loadError")}
         </p>
       ) : (
         <>
           {data && data.comments.length === 0 && (
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-muted-foreground">
               {t("episodes.discussion.empty")}
             </p>
           )}
@@ -153,7 +156,7 @@ export default function EpisodeThread({
             }}
           >
             <label
-              className="block text-sm text-zinc-400"
+              className="block text-sm text-muted-foreground"
               htmlFor="episode-comment"
             >
               {t("episodes.discussion.composer")}
@@ -164,11 +167,11 @@ export default function EpisodeThread({
               maxLength={280}
               rows={3}
               onChange={(event) => setBody(event.target.value)}
-              className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-white"
+              className="w-full rounded-sm border border-border bg-card px-3 py-2 text-sm text-foreground"
             />
             <div className="flex items-center gap-3">
               <label
-                className="text-sm text-zinc-400"
+                className="text-sm text-muted-foreground"
                 htmlFor="episode-comment-visibility"
               >
                 {t("episodes.discussion.visibility")}
@@ -179,7 +182,7 @@ export default function EpisodeThread({
                 onChange={(event) =>
                   setVisibility(event.target.value as "public" | "friends_only")
                 }
-                className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm text-white"
+                className="rounded-sm border border-border bg-card px-2 py-1 text-sm text-foreground"
               >
                 <option value="public">
                   {t("episodes.discussion.public")}
@@ -191,7 +194,7 @@ export default function EpisodeThread({
               <button
                 type="submit"
                 disabled={postMutation.isPending || body.trim().length === 0}
-                className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-zinc-900 disabled:opacity-40"
+                className="rounded-sm bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-40"
               >
                 {t("episodes.discussion.post")}
               </button>
@@ -215,33 +218,36 @@ function CommentRow({
   const { t } = useTranslation();
   const name = comment.user.display_name || comment.user.username;
   return (
-    <li className="space-y-2 border-b border-white/[0.06] pb-4">
+    <li className="space-y-2 border-b border-border pb-4">
       <div className="flex items-baseline gap-2 flex-wrap">
         <Link
           to={`/user/${encodeURIComponent(comment.user.username)}`}
-          className="text-sm font-medium text-white hover:text-amber-400"
+          className="text-sm font-medium text-foreground hover:text-primary-text"
         >
           {name}
         </Link>
         {comment.visibility === "friends_only" && (
-          <span className="text-xs text-zinc-500">
+          <span className="text-xs text-muted-foreground">
             {t("episodes.discussion.friendsBadge")}
           </span>
         )}
-        <time className="text-xs text-zinc-500" dateTime={comment.created_at}>
+        <time
+          className="text-xs text-muted-foreground"
+          dateTime={comment.created_at}
+        >
           {commentTime(comment.created_at)}
         </time>
         {comment.can_delete && (
           <button
             type="button"
             onClick={onDelete}
-            className="text-xs text-zinc-500 hover:text-red-400"
+            className="text-xs text-muted-foreground hover:text-destructive"
           >
             {t("episodes.discussion.delete")}
           </button>
         )}
       </div>
-      <p className="text-sm text-zinc-200 whitespace-pre-wrap select-text">
+      <p className="text-sm text-foreground-secondary whitespace-pre-wrap select-text">
         {comment.body}
       </p>
       <div className="flex flex-wrap gap-2">
@@ -256,8 +262,8 @@ function CommentRow({
             onClick={() => onReact(reaction.emoji)}
             className={`rounded-full border px-2 py-0.5 text-sm ${
               reaction.reacted
-                ? "border-amber-400/60 bg-amber-400/10 text-white"
-                : "border-zinc-700 text-zinc-300"
+                ? "border-primary/60 bg-primary-soft text-foreground"
+                : "border-border text-foreground-secondary"
             }`}
           >
             {reaction.emoji}

@@ -150,15 +150,15 @@ const FilterBar = memo(function FilterBar({
       <div
         role="group"
         aria-label={t("filter.card.contentType")}
-        className="flex gap-1 bg-zinc-800/50 rounded-lg p-1"
+        className="flex gap-1 bg-muted/50 rounded-md p-1"
       >
         <button
           aria-pressed={type.length === 0}
           onClick={() => onTypeChange([])}
-          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+          className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
             type.length === 0
-              ? "bg-amber-500/15 text-amber-400"
-              : "text-zinc-400 hover:text-white"
+              ? "bg-primary-soft text-primary-text"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           {t("filter.all")}
@@ -168,10 +168,10 @@ const FilterBar = memo(function FilterBar({
             key={tv.value}
             aria-pressed={type.includes(tv.value)}
             onClick={() => onTypeChange(toggleType(type, tv.value))}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+            className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
               type.includes(tv.value)
-                ? "bg-amber-500/15 text-amber-400"
-                : "text-zinc-400 hover:text-white"
+                ? "bg-primary-soft text-primary-text"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {t(tv.labelKey)}
@@ -182,17 +182,17 @@ const FilterBar = memo(function FilterBar({
         <div
           role="group"
           aria-label={t("filter.timePeriod")}
-          className="flex gap-1 bg-zinc-800/50 rounded-lg p-1"
+          className="flex gap-1 bg-muted/50 rounded-md p-1"
         >
           {DAYS.map((d) => (
             <button
               key={d.value}
               aria-pressed={daysBack === d.value}
               onClick={() => onDaysBackChange(d.value)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
                 daysBack === d.value
-                  ? "bg-amber-500/15 text-amber-400"
-                  : "text-zinc-400 hover:text-white"
+                  ? "bg-primary-soft text-primary-text"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {d.label}
@@ -228,10 +228,10 @@ const FilterBar = memo(function FilterBar({
         <button
           aria-pressed={hideTracked}
           onClick={() => onHideTrackedChange(!hideTracked)}
-          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+          className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
             hideTracked
-              ? "bg-blue-600 text-white"
-              : "bg-zinc-800 text-zinc-400 hover:text-white"
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground hover:text-foreground"
           }`}
         >
           {t("filter.hideTracked")}
@@ -240,7 +240,7 @@ const FilterBar = memo(function FilterBar({
       {onClearFilters && hasActiveFilters && (
         <button
           onClick={onClearFilters}
-          className="px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400 hover:text-white transition-colors cursor-pointer"
+          className="px-3 py-1.5 rounded-sm text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
         >
           {t("filter.clearFilters")}
         </button>

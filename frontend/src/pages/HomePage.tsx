@@ -382,22 +382,22 @@ export default function HomePage() {
       <div className="space-y-10">
         {/* Hero */}
         <div className="text-center py-12">
-          <h1 className="text-4xl font-extrabold text-white mb-3">
+          <h1 className="text-4xl font-extrabold text-foreground mb-3">
             {t("landing.tagline")}
           </h1>
-          <p className="text-zinc-400 text-lg max-w-xl mx-auto mb-8">
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto mb-8">
             {t("landing.subtitle")}
           </p>
           <div className="flex justify-center gap-4">
             <Link
               to="/login"
-              className="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-lg transition-colors"
+              className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-md transition-colors"
             >
               {t("landing.signIn")}
             </Link>
             <Link
               to="/signup"
-              className="px-6 py-2.5 border border-zinc-600 hover:border-zinc-400 text-white font-semibold rounded-lg transition-colors"
+              className="px-6 py-2.5 border border-input hover:border-input text-foreground font-semibold rounded-md transition-colors"
             >
               {t("landing.signUp")}
             </Link>
@@ -428,7 +428,7 @@ export default function HomePage() {
 
   if (authDataError) {
     return (
-      <div className="bg-red-900/50 border border-red-800 text-red-200 px-4 py-2 rounded-lg text-sm">
+      <div className="bg-destructive-soft border border-destructive/40 text-destructive px-4 py-2 rounded-md text-sm">
         {authError instanceof Error ? authError.message : String(authError)}
       </div>
     );
@@ -462,7 +462,7 @@ export default function HomePage() {
                 headingExtra={
                   <Link
                     to="/reels"
-                    className="flex items-center gap-1 text-xs text-zinc-400 hover:text-amber-400 transition-colors sm:hidden"
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary-text transition-colors sm:hidden"
                     title={t("home.reelsView")}
                   >
                     <Maximize2 size={14} />
@@ -528,7 +528,7 @@ export default function HomePage() {
                     title={rec.title.title}
                     titleClamp={2}
                     subtitle={
-                      <span className="text-zinc-400">
+                      <span className="text-muted-foreground">
                         from @{rec.from_user.username}
                       </span>
                     }
@@ -549,7 +549,7 @@ export default function HomePage() {
               linkLabel={t("home.seeAll")}
             />
             {today.length === 0 ? (
-              <p className="text-zinc-400 text-sm">
+              <p className="text-muted-foreground text-sm">
                 {noEpisodes ? t("home.noEpisodes") : t("home.noEpisodesToday")}
               </p>
             ) : (
@@ -585,7 +585,7 @@ export default function HomePage() {
             <div className="space-y-4">
               {upcomingByDateEntries.map(({ date, dateLabel, byShow }) => (
                 <div key={date}>
-                  <h3 className="text-xs text-zinc-400 mb-2">
+                  <h3 className="text-xs text-muted-foreground mb-2">
                     {dateLabel === "__TOMORROW__"
                       ? t("episodes.tomorrow")
                       : dateLabel}
@@ -645,7 +645,7 @@ export default function HomePage() {
               kicker={t("home.kickers.comingUp")}
               title={t("home.airingSoon.title")}
             />
-            <p className="text-zinc-400 text-sm">
+            <p className="text-muted-foreground text-sm">
               {t("home.airingSoon.empty")}
             </p>
           </section>

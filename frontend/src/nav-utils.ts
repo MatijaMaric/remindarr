@@ -1,21 +1,21 @@
 export function navLinkClass(isActive: boolean, mobile = false): string {
   if (mobile) {
-    return `block w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+    return `block w-full px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
       isActive
-        ? "bg-amber-500 text-zinc-950 font-medium"
-        : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+        ? "bg-primary text-primary-foreground font-medium"
+        : "text-muted-foreground hover:text-foreground hover:bg-muted"
     }`;
   }
-  // Desktop: underline active indicator (matches V1 Signal design)
-  return `px-1 py-2 text-sm font-medium transition-colors border-b-2 leading-none ${
+  // Desktop: the current destination takes the accent, same as the tab bar.
+  return `px-3 py-2 rounded-md text-sm transition-colors ${
     isActive
-      ? "text-zinc-100 border-amber-400 font-semibold"
-      : "text-zinc-400 border-transparent hover:text-zinc-100"
+      ? "text-primary-text font-semibold"
+      : "text-muted-foreground font-medium hover:text-foreground hover:bg-accent"
   }`;
 }
 
 export function bottomTabClass(isActive: boolean): string {
   return `flex flex-col items-center justify-center flex-1 py-2 transition-colors ${
-    isActive ? "text-amber-400 font-medium" : "text-zinc-500"
+    isActive ? "text-primary-text font-medium" : "text-muted-foreground"
   }`;
 }

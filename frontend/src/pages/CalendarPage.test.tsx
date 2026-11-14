@@ -253,7 +253,7 @@ describe("CalendarPage", () => {
     const toggle = screen.getByTitle("Show watched");
     expect(toggle).toBeDefined();
     // Active state = indigo background class
-    expect(toggle.className).toContain("bg-amber-500");
+    expect(toggle.className).toContain("bg-primary");
   });
 
   it("toggles hide watched off when clicked", () => {
@@ -268,7 +268,7 @@ describe("CalendarPage", () => {
     // Now it should show "Hide watched" title (inactive state)
     const toggleOff = screen.getByTitle("Hide watched");
     expect(toggleOff).toBeDefined();
-    expect(toggleOff.className).not.toContain("bg-amber-500");
+    expect(toggleOff.className).not.toContain("bg-primary");
   });
 
   it("shows hide watched toggle on mobile agenda", () => {
@@ -277,7 +277,7 @@ describe("CalendarPage", () => {
 
     const toggle = screen.getByTitle("Show watched");
     expect(toggle).toBeDefined();
-    expect(toggle.className).toContain("bg-amber-500");
+    expect(toggle.className).toContain("bg-primary");
   });
 
   it("view toggle buttons have aria-label attributes", () => {
@@ -391,7 +391,7 @@ describe("CalendarPage", () => {
 
     const comfortableBtn = screen.getByRole("button", { name: /comfortable/i });
     expect(comfortableBtn.getAttribute("aria-pressed")).toBe("true");
-    expect(comfortableBtn.className).toContain("bg-amber-500");
+    expect(comfortableBtn.className).toContain("bg-primary");
   });
 
   it("compact density reduces item cap vs comfortable", () => {
@@ -402,7 +402,7 @@ describe("CalendarPage", () => {
     fireEvent.click(compactBtn);
 
     expect(compactBtn.getAttribute("aria-pressed")).toBe("true");
-    expect(compactBtn.className).toContain("bg-amber-500");
+    expect(compactBtn.className).toContain("bg-primary");
 
     // Comfortable should no longer be active
     const comfortableBtn = screen.getByRole("button", { name: /comfortable/i });

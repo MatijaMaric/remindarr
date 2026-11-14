@@ -97,7 +97,7 @@ export default function WatchButtonGroup({
         variant="full"
         className={
           isLg
-            ? "w-full justify-center px-6 py-3 rounded-xl text-base font-semibold"
+            ? "w-full justify-center px-6 py-3 rounded-lg text-base font-semibold"
             : fullWidth
               ? "w-full justify-center"
               : undefined
@@ -152,8 +152,8 @@ function DropdownProviderItem({
       data-subscribed={isSubscribed}
       className={`flex items-center justify-center gap-1.5 font-semibold transition-colors duration-200 ${
         isLg
-          ? "rounded-xl px-6 py-3 text-base"
-          : "rounded-lg px-3 py-1.5 text-xs"
+          ? "rounded-lg px-6 py-3 text-base"
+          : "rounded-md px-3 py-1.5 text-xs"
       }${!isSubscribed ? " opacity-50" : ""}`}
       style={{ backgroundColor: hovered ? c.bg : c.hover, color: c.text }}
       onMouseEnter={() => setHovered(true)}
@@ -163,7 +163,7 @@ function DropdownProviderItem({
       <img
         src={offer.provider_icon_url}
         alt={offer.provider_name}
-        className="w-5 h-5 rounded"
+        className="w-5 h-5 rounded-sm"
         loading="lazy"
       />
       <ExternalLink size={14} className="opacity-60" aria-hidden="true" />
@@ -224,8 +224,8 @@ function SplitWatchButton({
         title={primaryLabel}
         className={`flex-1 flex items-center justify-center gap-1.5 transition-colors duration-200 font-semibold ${
           isLg
-            ? "rounded-l-xl px-6 py-3 text-base"
-            : "rounded-l-lg px-3 py-1.5 text-xs"
+            ? "rounded-l-lg px-6 py-3 text-base"
+            : "rounded-l-md px-3 py-1.5 text-xs"
         }`}
         style={{
           backgroundColor: primaryHovered ? color.hover : color.bg,
@@ -238,7 +238,7 @@ function SplitWatchButton({
         <img
           src={primary.provider_icon_url}
           alt={primary.provider_name}
-          className="w-5 h-5 rounded"
+          className="w-5 h-5 rounded-sm"
           loading="lazy"
         />
         <ExternalLink size={14} className="opacity-60" aria-hidden="true" />
@@ -247,8 +247,8 @@ function SplitWatchButton({
       {/* Caret / dropdown trigger */}
       <Popover.Root>
         <Popover.Trigger
-          className={`flex items-center border-l border-white/20 transition-colors duration-200 cursor-pointer ${
-            isLg ? "rounded-r-xl px-2.5" : "rounded-r-lg px-1.5"
+          className={`flex items-center border-l border-border transition-colors duration-200 cursor-pointer ${
+            isLg ? "rounded-r-lg px-2.5" : "rounded-r-md px-1.5"
           }`}
           style={{
             backgroundColor: caretHovered ? color.hover : color.bg,

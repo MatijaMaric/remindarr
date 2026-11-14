@@ -14,17 +14,17 @@ export default function ReleaseDates({ releaseDates }: ReleaseDatesProps) {
       <Card padding="none" className="overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/[0.06]">
-              <th className="text-left py-2 px-4 text-zinc-400 font-medium">
+            <tr className="border-b border-border">
+              <th className="text-left py-2 px-4 text-muted-foreground font-medium">
                 Type
               </th>
-              <th className="text-left py-2 px-4 text-zinc-400 font-medium">
+              <th className="text-left py-2 px-4 text-muted-foreground font-medium">
                 Date
               </th>
-              <th className="text-left py-2 px-4 text-zinc-400 font-medium">
+              <th className="text-left py-2 px-4 text-muted-foreground font-medium">
                 Certification
               </th>
-              <th className="text-left py-2 px-4 text-zinc-400 font-medium">
+              <th className="text-left py-2 px-4 text-muted-foreground font-medium">
                 Note
               </th>
             </tr>
@@ -33,22 +33,24 @@ export default function ReleaseDates({ releaseDates }: ReleaseDatesProps) {
             {releaseDates.release_dates.map((rd) => (
               <tr
                 key={`${rd.release_date}-${rd.type}`}
-                className="border-b border-zinc-800/50 last:border-0"
+                className="border-b border-border last:border-0"
               >
-                <td className="py-2 px-4 text-zinc-300">
+                <td className="py-2 px-4 text-foreground-secondary">
                   {RELEASE_TYPE_LABELS[rd.type] || `Type ${rd.type}`}
                 </td>
-                <td className="py-2 px-4 text-zinc-300">
+                <td className="py-2 px-4 text-foreground-secondary">
                   {formatDate(rd.release_date)}
                 </td>
                 <td className="py-2 px-4">
                   {rd.certification && (
-                    <span className="border border-white/[0.10] px-1.5 py-0.5 rounded text-xs text-zinc-300">
+                    <span className="border border-border px-1.5 py-0.5 rounded-sm text-xs text-foreground-secondary">
                       {rd.certification}
                     </span>
                   )}
                 </td>
-                <td className="py-2 px-4 text-zinc-500 text-xs">{rd.note}</td>
+                <td className="py-2 px-4 text-muted-foreground text-xs">
+                  {rd.note}
+                </td>
               </tr>
             ))}
           </tbody>

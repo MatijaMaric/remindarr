@@ -77,7 +77,7 @@ const WEEKDAYS = Array.from({ length: 7 }, (_, i) =>
 function CalendarFetchError() {
   const { t } = useTranslation();
   return (
-    <p className="text-zinc-400 text-sm py-12 text-center">
+    <p className="text-muted-foreground text-sm py-12 text-center">
       {t("calendar.loadError")}
     </p>
   );
@@ -96,16 +96,16 @@ function MonthStatsBar({
   return (
     <div className="flex items-center gap-3 text-xs font-medium">
       {episodes > 0 && (
-        <span className="bg-emerald-500/15 text-emerald-400 px-2.5 py-1 rounded-full">
+        <span className="bg-success/15 text-success px-2.5 py-1 rounded-full">
           {t("calendar.stats.episodes", { count: episodes })}
         </span>
       )}
       {titles > 0 && (
-        <span className="bg-blue-500/15 text-blue-400 px-2.5 py-1 rounded-full">
+        <span className="bg-info/15 text-info px-2.5 py-1 rounded-full">
           {t("calendar.stats.titles", { count: titles })}
         </span>
       )}
-      <span className="bg-amber-500/15 text-amber-400 px-2.5 py-1 rounded-full">
+      <span className="bg-primary-soft text-primary-text px-2.5 py-1 rounded-full">
         {t("calendar.stats.total", { count: total })}
       </span>
     </div>
@@ -163,7 +163,7 @@ export function SlideOverPanel({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 z-40 transition-opacity"
+        className="fixed inset-0 bg-scrim z-40 transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -175,22 +175,22 @@ export function SlideOverPanel({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="fixed right-0 top-14 bottom-0 w-full sm:w-[420px] z-50 bg-zinc-950 border-l border-white/[0.06] overflow-y-auto animate-slide-in-right"
+        className="fixed right-0 top-14 bottom-0 w-full sm:w-[420px] z-50 bg-background border-l border-border overflow-y-auto animate-slide-in-right"
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-zinc-950/95 backdrop-blur-sm border-b border-white/[0.06] px-4 py-3 flex items-center justify-between">
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-between">
           <div>
-            <h3 id={titleId} className="font-semibold text-white">
+            <h3 id={titleId} className="font-semibold text-foreground">
               {dateLabel}
             </h3>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted-foreground">
               {items.length} item{items.length !== 1 ? "s" : ""}
             </p>
           </div>
           <button
             onClick={onClose}
             aria-label={t("calendar.close")}
-            className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <XIcon className="size-5" />
           </button>
@@ -199,7 +199,7 @@ export function SlideOverPanel({
         {/* Episodes */}
         {episodes.length > 0 && (
           <div className="px-4 pb-4 pt-4">
-            <h4 className="text-sm font-medium text-emerald-400 mb-3">
+            <h4 className="text-sm font-medium text-success mb-3">
               {t("calendar.episodes")}
             </h4>
             {Array.from(episodesByShow.entries()).map(([titleId, showEps]) => {
@@ -210,7 +210,7 @@ export function SlideOverPanel({
                     <div className="flex items-center justify-between mb-2">
                       <Link
                         to={`/title/${titleId}`}
-                        className="text-xs font-medium text-zinc-400 hover:text-amber-400 transition-colors"
+                        className="text-xs font-medium text-muted-foreground hover:text-primary-text transition-colors"
                       >
                         {showEps[0].show_title}
                       </Link>
@@ -222,7 +222,7 @@ export function SlideOverPanel({
                               !allWatched,
                             )
                           }
-                          className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                          className="text-xs text-muted-foreground hover:text-foreground-secondary transition-colors cursor-pointer"
                         >
                           {allWatched
                             ? t("episodes.markAllUnwatched")
@@ -237,10 +237,10 @@ export function SlideOverPanel({
                       return (
                         <div
                           key={ep.id}
-                          className={`flex gap-3 p-3 rounded-lg border transition-colors ${
+                          className={`flex gap-3 p-3 rounded-md border transition-colors ${
                             ep.is_watched
-                              ? "bg-zinc-900/30 border-zinc-800/60 opacity-60"
-                              : "bg-zinc-900/60 border-white/[0.06]"
+                              ? "bg-card/30 border-border opacity-60"
+                              : "bg-card/60 border-border"
                           }`}
                         >
                           {ep.poster_url && (
@@ -251,7 +251,7 @@ export function SlideOverPanel({
                               <img
                                 src={ep.poster_url}
                                 alt={ep.show_title}
-                                className="w-12 h-18 rounded object-cover"
+                                className="w-12 h-18 rounded-sm object-cover"
                                 loading="lazy"
                               />
                             </Link>
@@ -260,9 +260,9 @@ export function SlideOverPanel({
                             <div className="flex items-center justify-between gap-2">
                               <Link
                                 to={`/title/${ep.title_id}`}
-                                className="hover:text-amber-400 transition-colors"
+                                className="hover:text-primary-text transition-colors"
                               >
-                                <div className="text-sm font-medium text-white truncate">
+                                <div className="text-sm font-medium text-foreground truncate">
                                   {ep.show_title}
                                 </div>
                               </Link>
@@ -277,15 +277,15 @@ export function SlideOverPanel({
                             </div>
                             <Link
                               to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
-                              className="block hover:text-amber-400 transition-colors"
+                              className="block hover:text-primary-text transition-colors"
                             >
-                              <div className="text-xs text-emerald-400 mt-0.5">
+                              <div className="text-xs text-success mt-0.5">
                                 {formatEpisodeCode(ep)}
                                 {ep.name && ` — ${ep.name}`}
                               </div>
                             </Link>
                             {ep.overview && (
-                              <p className="text-xs text-zinc-400 mt-1 line-clamp-2">
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                                 {ep.overview}
                               </p>
                             )}
@@ -311,7 +311,7 @@ export function SlideOverPanel({
         {/* Titles */}
         {titles.length > 0 && (
           <div className="px-4 pb-6">
-            <h4 className="text-sm font-medium text-blue-400 mb-3">
+            <h4 className="text-sm font-medium text-info mb-3">
               {t("calendar.releases")}
             </h4>
             <div className="grid grid-cols-2 gap-3">
@@ -341,7 +341,7 @@ export function SlideOverPanel({
         )}
 
         {items.length === 0 && (
-          <div className="px-4 py-8 text-center text-zinc-500 text-sm">
+          <div className="px-4 py-8 text-center text-muted-foreground text-sm">
             {t("calendar.noReleasesOnDay")}
           </div>
         )}
@@ -374,7 +374,7 @@ function MiniMonthGrid({
 
   return (
     <div className="px-5 pb-4">
-      <div className="grid grid-cols-7 gap-0.5 mb-1 text-center text-xs text-zinc-500">
+      <div className="grid grid-cols-7 gap-0.5 mb-1 text-center text-xs text-muted-foreground">
         {weekdays.map((d, i) => (
           <div key={i}>{d}</div>
         ))}
@@ -388,18 +388,18 @@ function MiniMonthGrid({
           return (
             <div
               key={dateStr}
-              className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-lg text-[13px] font-mono ${
+              className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-md text-[13px] font-mono ${
                 isToday
-                  ? "border border-amber-400 bg-amber-400/[0.12] text-amber-400 font-bold"
+                  ? "border border-primary bg-primary-soft text-primary-text font-bold"
                   : hasDots
-                    ? "bg-white/[0.03] text-zinc-200 font-medium"
-                    : "text-zinc-600"
+                    ? "bg-fill-subtle text-foreground-secondary font-medium"
+                    : "text-muted-foreground"
               }`}
             >
               <span>{day}</span>
               {hasDots && (
                 <div className="flex gap-0.5">
-                  <span className="w-1 h-1 rounded-full bg-amber-400" />
+                  <span className="w-1 h-1 rounded-full bg-primary" />
                 </div>
               )}
             </div>
@@ -481,7 +481,7 @@ function MobileCalendar({
           {/* Month header */}
           <div className="flex items-baseline justify-between px-5 pt-3 pb-2">
             <div>
-              <div className="text-xs text-zinc-400 mb-0.5">
+              <div className="text-xs text-muted-foreground mb-0.5">
                 {year}
                 {!monthError && ` · ${dotDates.size} airings`}
               </div>
@@ -493,14 +493,14 @@ function MobileCalendar({
               <button
                 onClick={prevMonth}
                 aria-label={t("calendar.previousMonth")}
-                className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300"
+                className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-foreground-secondary"
               >
                 ‹
               </button>
               <button
                 onClick={nextMonth}
                 aria-label={t("calendar.nextMonth")}
-                className="w-8 h-8 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300"
+                className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-foreground-secondary"
               >
                 ›
               </button>
@@ -511,20 +511,20 @@ function MobileCalendar({
             <button
               onClick={() => setMobileView("month")}
               aria-pressed={mobileMonthActive}
-              className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold font-mono"
+              className="px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold font-mono"
             >
               {t("calendar.month")}
             </button>
             <button
               onClick={() => setMobileView("agenda")}
               aria-pressed={!mobileMonthActive}
-              className="px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-300 text-[11px] font-semibold font-mono"
+              className="px-3 py-1.5 rounded-full bg-accent text-foreground-secondary text-[11px] font-semibold font-mono"
             >
               {t("calendar.agenda")}
             </button>
           </div>
           {loadingMonth ? (
-            <div className="text-center py-8 text-zinc-400 font-mono text-xs">
+            <div className="text-center py-8 text-muted-foreground font-mono text-xs">
               {t("common.loading")}
             </div>
           ) : monthError ? (
@@ -542,14 +542,14 @@ function MobileCalendar({
             <button
               onClick={() => setMobileView("month")}
               aria-pressed={mobileMonthActive}
-              className="px-3 py-1.5 rounded-full bg-white/[0.06] text-zinc-300 text-[11px] font-semibold font-mono"
+              className="px-3 py-1.5 rounded-full bg-accent text-foreground-secondary text-[11px] font-semibold font-mono"
             >
               {t("calendar.month")}
             </button>
             <button
               onClick={() => setMobileView("agenda")}
               aria-pressed={!mobileMonthActive}
-              className="px-3 py-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold font-mono"
+              className="px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold font-mono"
             >
               {t("calendar.agenda")}
             </button>
@@ -962,33 +962,33 @@ function GridCalendar({
       <button
         onClick={prevMonth}
         aria-label={t("calendar.previousMonth")}
-        className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
       >
         <ChevronLeftIcon className="size-5" />
       </button>
       <button
         onClick={() => setMonthParam(formatMonth(new Date()))}
-        className="px-3 py-1.5 rounded-lg text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+        className="px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
       >
         {t("home.today")}
       </button>
       <button
         onClick={nextMonth}
         aria-label={t("calendar.nextMonth")}
-        className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
       >
         <ChevronRightIcon className="size-5" />
       </button>
-      <div className="w-px h-5 bg-white/10 mx-1" />
+      <div className="w-px h-5 bg-accent mx-1" />
       {typeFilters.map((f) => (
         <button
           key={f.value}
           onClick={() => setTypeFilter(f.value)}
           aria-pressed={typeFilter === f.value}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
             typeFilter === f.value
-              ? "bg-amber-500 text-zinc-950"
-              : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
           }`}
         >
           {f.label}
@@ -996,10 +996,10 @@ function GridCalendar({
       ))}
       <button
         onClick={() => setHideWatched((v) => !v)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
           hideWatched
-            ? "bg-amber-500 text-zinc-950"
-            : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted"
         }`}
         aria-label={
           hideWatched ? t("calendar.showWatched") : t("calendar.hideWatched")
@@ -1036,13 +1036,13 @@ function GridCalendar({
       ) : isError ? (
         <CalendarFetchError />
       ) : (
-        <div className="border border-white/[0.06] rounded-xl overflow-hidden">
+        <div className="border border-border rounded-lg overflow-hidden">
           {/* Weekday headers */}
-          <div className="grid grid-cols-7 bg-zinc-900 border-b border-white/[0.06]">
+          <div className="grid grid-cols-7 bg-card border-b border-border">
             {WEEKDAYS.map((d) => (
               <div
                 key={d}
-                className="px-2 py-2 text-center text-xs text-zinc-400 font-medium"
+                className="px-2 py-2 text-center text-xs text-muted-foreground font-medium"
               >
                 {d}
               </div>
@@ -1066,18 +1066,18 @@ function GridCalendar({
             return (
               <div
                 key={wi}
-                className="relative grid grid-cols-7 gap-px bg-white/[0.06]"
+                className="relative grid grid-cols-7 gap-px bg-accent"
               >
                 {isCrowded && (
                   <div className="absolute top-1 right-1 z-10 pointer-events-none">
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-orange-500/20 border border-orange-500/40 text-orange-400 text-[9px] font-mono font-semibold leading-none">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-orange-500/20 border border-orange-500/40 text-orange-400 text-[11px] font-mono font-semibold leading-none">
                       {weekEpisodeCount} eps
                     </span>
                   </div>
                 )}
                 {week.map((day, di) => {
                   if (!day) {
-                    return <div key={di} className="min-h-28 bg-zinc-950" />;
+                    return <div key={di} className="min-h-28 bg-background" />;
                   }
                   const dateKey = formatDateKey(day);
                   const dayItems = itemsByDate.get(dateKey) ?? [];
@@ -1104,28 +1104,28 @@ function GridCalendar({
                         event.currentTarget.focus();
                         setSelectedDate(isSelected ? "" : dateKey);
                       }}
-                      className={`${minHClass} p-1.5 text-left transition-colors cursor-pointer bg-zinc-950 ${
+                      className={`${minHClass} p-1.5 text-left transition-colors cursor-pointer bg-background ${
                         borderColor ? `border-l-2 ${borderColor}` : ""
                       } ${
                         isSelected
-                          ? "bg-amber-500/10 ring-1 ring-inset ring-amber-500"
+                          ? "bg-primary-soft ring-1 ring-inset ring-primary"
                           : dayItems.length > 0
-                            ? "hover:bg-zinc-900/60"
-                            : "hover:bg-zinc-900/30"
-                      } ${isToday ? "outline-2 outline-amber-400 outline-offset-[-2px] relative z-10" : ""}`}
+                            ? "hover:bg-card/60"
+                            : "hover:bg-card/30"
+                      } ${isToday ? "outline-2 outline-primary outline-offset-[-2px] relative z-10" : ""}`}
                     >
                       <div className="flex items-center mb-1">
                         {isToday ? (
                           <>
-                            <span className="font-mono text-[13px] text-amber-400 font-bold">
+                            <span className="font-mono text-[13px] text-primary-text font-bold">
                               {day.getDate()}
                             </span>
-                            <span className="font-mono text-[9px] ml-1 tracking-widest text-amber-400 opacity-80">
+                            <span className="font-mono text-[11px] ml-1 tracking-widest text-primary-text opacity-80">
                               TODAY
                             </span>
                           </>
                         ) : (
-                          <span className="font-mono text-[13px] text-zinc-400 pl-0.5">
+                          <span className="font-mono text-[13px] text-muted-foreground pl-0.5">
                             {day.getDate()}
                           </span>
                         )}
@@ -1151,7 +1151,7 @@ function GridCalendar({
                             return (
                               <div
                                 key={idx}
-                                className="bg-amber-400/10 text-amber-400 border-l-2 border-amber-400 px-1.5 py-0.5 rounded-sm text-[10px] font-medium leading-tight overflow-hidden text-ellipsis whitespace-nowrap"
+                                className="bg-primary-soft text-primary-text border-l-2 border-primary px-1.5 py-0.5 rounded-sm text-[11px] font-medium leading-tight overflow-hidden text-ellipsis whitespace-nowrap"
                               >
                                 <span className="font-mono">{prefix}</span>
                                 {label}
@@ -1159,7 +1159,7 @@ function GridCalendar({
                             );
                           })}
                           {itemCap < dayItems.length && (
-                            <div className="text-[10px] text-zinc-400 pl-1.5">
+                            <div className="text-[11px] text-muted-foreground pl-1.5">
                               +{dayItems.length - itemCap} more
                             </div>
                           )}
@@ -1176,9 +1176,9 @@ function GridCalendar({
 
       {/* Legend */}
       {!loading && !isError && (
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[11px] text-zinc-400 pt-1">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[11px] text-muted-foreground pt-1">
           <div className="flex items-center gap-1.5">
-            <span className="text-amber-400">●</span>
+            <span className="text-primary-text">●</span>
             <span>{t("calendar.legend.tracked")}</span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -1377,32 +1377,32 @@ function WeekCalendar({
       <button
         onClick={prevWeek}
         aria-label={t("calendar.previousWeek")}
-        className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
       >
         <ChevronLeftIcon className="size-5" />
       </button>
       <button
         onClick={goToThisWeek}
-        className="px-3 py-1.5 rounded-lg text-sm font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+        className="px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
       >
         {t("calendar.thisWeek")}
       </button>
       <button
         onClick={nextWeek}
         aria-label={t("calendar.nextWeek")}
-        className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
       >
         <ChevronRightIcon className="size-5" />
       </button>
-      <div className="w-px h-5 bg-white/10 mx-1" />
+      <div className="w-px h-5 bg-accent mx-1" />
       {typeFilters.map((f) => (
         <button
           key={f.value}
           onClick={() => setTypeFilter(f.value)}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
             typeFilter === f.value
-              ? "bg-amber-500 text-zinc-950"
-              : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
           }`}
         >
           {f.label}
@@ -1410,10 +1410,10 @@ function WeekCalendar({
       ))}
       <button
         onClick={() => setHideWatched((v) => !v)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
           hideWatched
-            ? "bg-amber-500 text-zinc-950"
-            : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted"
         }`}
         aria-label={
           hideWatched ? t("calendar.showWatched") : t("calendar.hideWatched")
@@ -1443,9 +1443,9 @@ function WeekCalendar({
       ) : isError ? (
         <CalendarFetchError />
       ) : (
-        <div className="border border-white/[0.06] rounded-xl overflow-hidden">
+        <div className="border border-border rounded-lg overflow-hidden">
           {/* Day column headers */}
-          <div className="grid grid-cols-7 bg-zinc-900 border-b border-white/[0.06]">
+          <div className="grid grid-cols-7 bg-card border-b border-border">
             {weekDays.map((day) => {
               const dateKey = formatDateKey(day);
               const isToday = dateKey === today;
@@ -1453,7 +1453,7 @@ function WeekCalendar({
                 <div
                   key={dateKey}
                   className={`px-2 py-2 text-center ${
-                    isToday ? "text-amber-400" : "text-zinc-400"
+                    isToday ? "text-primary-text" : "text-muted-foreground"
                   }`}
                 >
                   <div className="text-xs font-medium">
@@ -1461,7 +1461,9 @@ function WeekCalendar({
                   </div>
                   <div
                     className={`font-mono text-lg font-bold mt-0.5 ${
-                      isToday ? "text-amber-400" : "text-zinc-300"
+                      isToday
+                        ? "text-primary-text"
+                        : "text-foreground-secondary"
                     }`}
                     data-testid="week-day-number"
                   >
@@ -1473,7 +1475,7 @@ function WeekCalendar({
           </div>
 
           {/* Day columns body */}
-          <div className="grid grid-cols-7 gap-px bg-white/[0.06]">
+          <div className="grid grid-cols-7 gap-px bg-accent">
             {weekDays.map((day) => {
               const dateKey = formatDateKey(day);
               const dayItems = itemsByDate.get(dateKey) ?? [];
@@ -1484,9 +1486,9 @@ function WeekCalendar({
                 <div
                   key={dateKey}
                   data-testid="week-day-column"
-                  className={`${minHClass} p-1.5 bg-zinc-950 ${
+                  className={`${minHClass} p-1.5 bg-background ${
                     borderColor ? `border-l-2 ${borderColor}` : ""
-                  } ${isToday ? "outline-2 outline-amber-400 outline-offset-[-2px] relative z-10" : ""}`}
+                  } ${isToday ? "outline-2 outline-primary outline-offset-[-2px] relative z-10" : ""}`}
                 >
                   {dayItems.map((item, idx) => {
                     const isEp = item.type === "episode";
@@ -1515,7 +1517,7 @@ function WeekCalendar({
                             ? `${item.data.show_title} ${prefix.trim()} — ${formatDateKey(day)}`
                             : `${label} — ${formatDateKey(day)}`
                         }
-                        className="block mb-0.5 bg-amber-400/10 text-amber-400 border-l-2 border-amber-400 px-1.5 py-0.5 rounded-sm text-[10px] font-medium leading-tight overflow-hidden text-ellipsis whitespace-nowrap hover:bg-amber-400/20 transition-colors"
+                        className="block mb-0.5 bg-primary-soft text-primary-text border-l-2 border-primary px-1.5 py-0.5 rounded-sm text-[11px] font-medium leading-tight overflow-hidden text-ellipsis whitespace-nowrap hover:bg-primary-soft/80 transition-colors"
                       >
                         <span className="font-mono">{prefix}</span>
                         {label}

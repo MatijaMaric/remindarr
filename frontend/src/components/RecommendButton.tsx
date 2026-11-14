@@ -116,10 +116,10 @@ export default function RecommendButton({ titleId }: Props) {
       <button
         onClick={handleOpen}
         disabled={sending}
-        className={`min-h-8 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+        className={`min-h-8 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
           recommended
-            ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
-            : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+            ? "bg-primary-soft text-primary-text hover:bg-primary/30"
+            : "bg-muted text-muted-foreground hover:bg-muted-hover hover:text-foreground"
         } disabled:opacity-50 disabled:cursor-not-allowed`}
         title={recommended ? "Recommended" : "Recommend"}
       >
@@ -138,7 +138,7 @@ export default function RecommendButton({ titleId }: Props) {
           <div className="mt-4 space-y-4">
             {/* Audience picker */}
             <div>
-              <label className="block text-sm text-zinc-400 mb-1.5">
+              <label className="block text-sm text-muted-foreground mb-1.5">
                 Send to
               </label>
               <div className="flex gap-2">
@@ -148,10 +148,10 @@ export default function RecommendButton({ titleId }: Props) {
                     setAudienceMode("all");
                     setTargetUser(null);
                   }}
-                  className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium border transition-colors cursor-pointer ${
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-sm text-xs font-medium border transition-colors cursor-pointer ${
                     audienceMode === "all"
-                      ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
-                      : "bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700"
+                      ? "bg-primary-soft text-primary-text border-primary-border"
+                      : "bg-muted text-muted-foreground border-border hover:bg-muted-hover"
                   }`}
                   data-testid="audience-all"
                 >
@@ -161,10 +161,10 @@ export default function RecommendButton({ titleId }: Props) {
                 <button
                   type="button"
                   onClick={() => setAudienceMode("pick")}
-                  className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium border transition-colors cursor-pointer ${
+                  className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-sm text-xs font-medium border transition-colors cursor-pointer ${
                     audienceMode === "pick"
-                      ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
-                      : "bg-zinc-800 text-zinc-400 border-zinc-700 hover:bg-zinc-700"
+                      ? "bg-primary-soft text-primary-text border-primary-border"
+                      : "bg-muted text-muted-foreground border-border hover:bg-muted-hover"
                   }`}
                   data-testid="audience-pick"
                 >
@@ -177,7 +177,7 @@ export default function RecommendButton({ titleId }: Props) {
             {/* User picker — shown when "Pick a person" is selected */}
             {audienceMode === "pick" && (
               <div>
-                <label className="block text-sm text-zinc-400 mb-1.5">
+                <label className="block text-sm text-muted-foreground mb-1.5">
                   Recipient
                 </label>
                 <UserSearchDropdown
@@ -190,8 +190,9 @@ export default function RecommendButton({ titleId }: Props) {
 
             {/* Message */}
             <div>
-              <label className="block text-sm text-zinc-400 mb-1.5">
-                Message <span className="text-zinc-500">(optional)</span>
+              <label className="block text-sm text-muted-foreground mb-1.5">
+                Message{" "}
+                <span className="text-muted-foreground">(optional)</span>
               </label>
               <textarea
                 value={message}
@@ -199,23 +200,23 @@ export default function RecommendButton({ titleId }: Props) {
                 placeholder="Why should people watch this?"
                 maxLength={280}
                 rows={3}
-                className="w-full bg-zinc-800 text-white rounded-md px-3 py-2 text-sm placeholder:text-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 border border-zinc-700 resize-none"
+                className="w-full bg-muted text-foreground rounded-sm px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary border border-border resize-none"
                 data-testid="recommend-message"
               />
-              <div className="text-xs text-zinc-500 text-right mt-1">
+              <div className="text-xs text-muted-foreground text-right mt-1">
                 {message.length}/280
               </div>
             </div>
           </div>
 
           <div className="mt-4 flex justify-end gap-2">
-            <AlertDialogClose className="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer transition-colors">
+            <AlertDialogClose className="inline-flex items-center justify-center rounded-sm px-3 py-1.5 text-xs font-medium bg-muted text-muted-foreground hover:bg-muted-hover cursor-pointer transition-colors">
               Cancel
             </AlertDialogClose>
             <button
               onClick={handleSend}
               disabled={sending || (audienceMode === "pick" && !targetUser)}
-              className="inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium bg-amber-500 text-zinc-950 hover:bg-amber-400 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="recommend-send"
             >
               <Send className="size-3.5" />

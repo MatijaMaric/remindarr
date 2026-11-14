@@ -32,7 +32,7 @@ export default function BioCard({
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="-mt-1 p-1 text-zinc-500 hover:text-amber-400 transition-colors cursor-pointer"
+            className="-mt-1 p-1 text-muted-foreground hover:text-primary-text transition-colors cursor-pointer"
             aria-label={t("userProfile.editProfile")}
             data-testid="bio-edit"
           >
@@ -43,8 +43,8 @@ export default function BioCard({
       <div
         className={
           empty
-            ? "text-sm text-zinc-500 italic leading-relaxed select-text"
-            : "text-sm text-zinc-200 leading-relaxed select-text"
+            ? "text-sm text-muted-foreground italic leading-relaxed select-text"
+            : "text-sm text-foreground-secondary leading-relaxed select-text"
         }
         data-testid="bio-text"
       >

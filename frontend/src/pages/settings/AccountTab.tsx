@@ -111,7 +111,7 @@ function ProfileEditForm({ profile }: { profile: api.MyProfile }) {
             <select
               value={countryCode}
               onChange={(e) => setCountryCode(e.target.value)}
-              className="w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 focus:border-transparent"
+              className="w-full px-3 py-2.5 bg-muted border border-border rounded-md text-foreground text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border focus:border-transparent"
             >
               <option value="">{t("profile.noCountry")}</option>
               {COUNTRIES.map((c) => (
@@ -120,7 +120,7 @@ function ProfileEditForm({ profile }: { profile: api.MyProfile }) {
                 </option>
               ))}
             </select>
-            <p className="mt-2 text-sm text-zinc-400">
+            <p className="mt-2 text-sm text-muted-foreground">
               {t("streamingRegion.profile")}
             </p>
           </SFormRow>
@@ -132,7 +132,7 @@ function ProfileEditForm({ profile }: { profile: api.MyProfile }) {
             placeholder={t("profile.bioPlaceholder")}
             maxLength={280}
             rows={3}
-            className="w-full px-3 py-2.5 bg-zinc-800 border border-white/[0.08] rounded-lg text-zinc-100 placeholder-zinc-500 text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 resize-none"
+            className="w-full px-3 py-2.5 bg-muted border border-border rounded-md text-foreground placeholder-muted-foreground text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border resize-none"
           />
         </SFormRow>
         <div>
@@ -219,7 +219,7 @@ function UserSection() {
         <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] gap-6 items-start">
           <div
             aria-hidden="true"
-            className="w-20 sm:w-24 h-20 sm:h-24 rounded-full flex items-center justify-center font-extrabold text-[28px] text-black"
+            className="w-20 sm:w-24 h-20 sm:h-24 rounded-full flex items-center justify-center font-extrabold text-[28px] text-primary-foreground"
             style={{ background: "oklch(0.72 0.12 250)" }}
           >
             {initials}
@@ -294,7 +294,7 @@ function UserSection() {
                   key={i}
                   className={cn(
                     "flex-1 h-[4px] rounded-sm",
-                    i < strength ? "bg-amber-400" : "bg-zinc-700",
+                    i < strength ? "bg-primary" : "bg-muted-hover",
                   )}
                 />
               ))}
@@ -345,16 +345,18 @@ function LanguageSection() {
               aria-pressed={selected}
               onClick={() => void handleSelect(lang.code)}
               className={cn(
-                "px-3.5 py-1.5 rounded-lg text-[13px] font-semibold transition-colors cursor-pointer border flex items-center gap-1.5",
+                "px-3.5 py-1.5 rounded-md text-[13px] font-semibold transition-colors cursor-pointer border flex items-center gap-1.5",
                 selected
-                  ? "bg-amber-400 text-black border-transparent"
-                  : "bg-zinc-800 text-zinc-200 border-white/[0.08] hover:bg-zinc-700",
+                  ? "bg-primary text-primary-foreground border-transparent"
+                  : "bg-muted text-foreground-secondary border-border hover:bg-muted-hover",
               )}
             >
               <span
                 className={cn(
-                  "font-mono text-[10px]",
-                  selected ? "text-black/60" : "text-zinc-500",
+                  "font-mono text-[11px]",
+                  selected
+                    ? "text-primary-foreground/60"
+                    : "text-muted-foreground",
                 )}
               >
                 {lang.code}
@@ -364,7 +366,7 @@ function LanguageSection() {
           );
         })}
       </div>
-      <p className="text-xs text-zinc-500 mt-3">
+      <p className="text-xs text-muted-foreground mt-3">
         {t("settings.account.languageHint")}
       </p>
     </SCard>
@@ -519,11 +521,11 @@ function PasskeySection() {
         {err && <SMessage kind="error">{err}</SMessage>}
 
         {loading ? (
-          <p className="text-zinc-400 text-sm">{t("common.loading")}</p>
+          <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
         ) : (
           <>
             {passkeys.length === 0 ? (
-              <p className="text-zinc-400 text-sm py-1">
+              <p className="text-muted-foreground text-sm py-1">
                 {t("profile.noPasskeys")}
               </p>
             ) : (
@@ -531,7 +533,7 @@ function PasskeySection() {
                 {passkeys.map((pk) => (
                   <li
                     key={pk.id}
-                    className="bg-zinc-800 rounded-[10px] px-3.5 py-3 flex items-center gap-3.5"
+                    className="bg-muted rounded-[10px] px-3.5 py-3 flex items-center gap-3.5"
                   >
                     {editing === pk.id ? (
                       <form
@@ -566,16 +568,16 @@ function PasskeySection() {
                       <>
                         <div
                           aria-hidden="true"
-                          className="w-9 h-9 rounded-lg bg-zinc-700 text-amber-400 font-mono font-bold text-sm flex items-center justify-center"
+                          className="w-9 h-9 rounded-md bg-muted-hover text-primary-text font-mono font-bold text-sm flex items-center justify-center"
                         >
                           ◈
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-semibold text-zinc-100 truncate">
+                          <div className="text-sm font-semibold text-foreground truncate">
                             {pk.name || t("profile.passkeyUnnamed")}
                           </div>
                           {pk.createdAt && (
-                            <div className="text-[11px] text-zinc-500 font-mono">
+                            <div className="text-[11px] text-muted-foreground font-mono">
                               {t("settings.account.passkeyCreated", {
                                 date: new Date(
                                   pk.createdAt,
@@ -614,7 +616,7 @@ function PasskeySection() {
               </ul>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-2 sm:items-end pt-1 bg-zinc-800 rounded-[10px] p-3.5">
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-end pt-1 bg-muted rounded-[10px] p-3.5">
               <div className="flex-1">
                 <SLabel
                   htmlFor="passkey-name-input"
@@ -698,7 +700,9 @@ function ProfileVisibilitySection() {
   if (loading) {
     return (
       <SCard title={t("settings.profileVisibility")}>
-        <div className="text-zinc-500 text-sm">{t("common.loading")}</div>
+        <div className="text-muted-foreground text-sm">
+          {t("common.loading")}
+        </div>
       </SCard>
     );
   }
@@ -747,7 +751,7 @@ function ProfileVisibilitySection() {
         <>
           <SDivider label={t("settings.account.perTitleOverrides")} />
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm text-zinc-400 mr-auto">
+            <span className="text-sm text-muted-foreground mr-auto">
               {t("settings.perTitleVisibility")}
             </span>
             <SButton
@@ -769,7 +773,7 @@ function ProfileVisibilitySection() {
           </div>
         </>
       ) : (
-        <p className="text-zinc-500 text-sm mt-4">
+        <p className="text-muted-foreground text-sm mt-4">
           {t("settings.noTrackedTitles")}
         </p>
       )}
@@ -850,7 +854,9 @@ function ActivityStreamSection() {
         title={t("settings.activityStream.title")}
         subtitle={t("settings.activityStream.loadingSubtitle")}
       >
-        <div className="text-zinc-500 text-sm">{t("common.loading")}</div>
+        <div className="text-muted-foreground text-sm">
+          {t("common.loading")}
+        </div>
       </SCard>
     );
   }
@@ -879,7 +885,7 @@ function ActivityStreamSection() {
       {settings.enabled && (
         <>
           <SDivider label={t("settings.activityStream.perKind")} />
-          <p className="text-xs text-zinc-500 mb-3">
+          <p className="text-xs text-muted-foreground mb-3">
             {t("settings.activityStream.perKindHint")}
           </p>
           <div className="space-y-2">
@@ -888,9 +894,9 @@ function ActivityStreamSection() {
               return (
                 <div
                   key={kind}
-                  className="flex items-center justify-between gap-4 py-2 border-b border-white/[0.04] last:border-b-0"
+                  className="flex items-center justify-between gap-4 py-2 border-b border-border last:border-b-0"
                 >
-                  <span className="text-sm text-zinc-300">
+                  <span className="text-sm text-foreground-secondary">
                     {t(`settings.activityStream.kinds.${kind}`)}
                   </span>
                   <div className="flex items-center gap-1">
@@ -902,10 +908,10 @@ function ActivityStreamSection() {
                         aria-pressed={current === opt}
                         onClick={() => handleKindChange(kind, opt)}
                         className={cn(
-                          "text-[11px] font-mono px-2 py-1 rounded-md transition-colors disabled:opacity-50",
+                          "text-[11px] font-mono px-2 py-1 rounded-sm transition-colors disabled:opacity-50",
                           current === opt
-                            ? "bg-amber-400/15 text-amber-400 font-semibold"
-                            : "text-zinc-500 hover:text-zinc-300",
+                            ? "bg-primary-soft text-primary-text font-semibold"
+                            : "text-muted-foreground hover:text-foreground-secondary",
                         )}
                       >
                         {t(`settings.activityStream.visibility.${opt}`)}
@@ -932,23 +938,23 @@ function SocialSection() {
     >
       <Link
         to="/invite"
-        className="flex items-center gap-3 p-4 bg-zinc-800 rounded-[10px] hover:bg-zinc-800/80 transition-colors"
+        className="flex items-center gap-3 p-4 bg-muted rounded-[10px] hover:bg-muted/80 transition-colors"
       >
         <span
           aria-hidden="true"
-          className="w-10 h-10 rounded-[10px] bg-amber-400/10 text-amber-400 flex items-center justify-center"
+          className="w-10 h-10 rounded-[10px] bg-primary-soft text-primary-text flex items-center justify-center"
         >
           <UserPlus size={18} />
         </span>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold text-zinc-100 mb-0.5">
+          <div className="text-sm font-semibold text-foreground mb-0.5">
             {t("invite.settingsLink")}
           </div>
-          <div className="text-[11px] text-zinc-400 font-mono">
+          <div className="text-[11px] text-muted-foreground font-mono">
             {t("settings.account.socialHint")}
           </div>
         </div>
-        <span aria-hidden="true" className="text-amber-400 font-mono">
+        <span aria-hidden="true" className="text-primary-text font-mono">
           →
         </span>
       </Link>

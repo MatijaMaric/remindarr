@@ -39,13 +39,13 @@ export default function AccentPicker({ value, onChange }: Props) {
             className={cn(
               "flex items-center gap-2.5 px-3.5 py-2.5 rounded-[10px] border text-left transition-colors cursor-pointer",
               isActive
-                ? "border-white/20 bg-white/[0.06]"
-                : "bg-zinc-800 border-transparent hover:bg-zinc-800/80",
+                ? "border-border bg-accent"
+                : "bg-muted border-transparent hover:bg-muted/80",
             )}
           >
             <span
               aria-hidden="true"
-              className="w-4 h-4 rounded-full shrink-0 ring-2 ring-offset-2 ring-offset-zinc-900"
+              className="w-4 h-4 rounded-full shrink-0 ring-2 ring-offset-2 ring-offset-card"
               style={{
                 background: meta.hex,
                 // Use CSS custom property to set Tailwind's ring color
@@ -57,7 +57,7 @@ export default function AccentPicker({ value, onChange }: Props) {
             <span
               className={cn(
                 "text-[13px] font-semibold",
-                isActive ? "text-zinc-100" : "text-zinc-300",
+                isActive ? "text-foreground" : "text-foreground-secondary",
               )}
             >
               {label}

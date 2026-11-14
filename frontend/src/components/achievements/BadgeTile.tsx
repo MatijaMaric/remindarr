@@ -90,11 +90,11 @@ export function BadgeTile({
       iconColorClass = style.icon;
       textColorClass = style.text;
     } else {
-      // one-shot: amber-400 fallback
-      ringClass = "ring-2 ring-amber-400/50";
-      bgClass = "bg-amber-400/10";
-      iconColorClass = "text-amber-400";
-      textColorClass = "text-amber-400";
+      // one-shot: accent fallback
+      ringClass = "ring-2 ring-primary-border";
+      bgClass = "bg-primary-soft";
+      iconColorClass = "text-primary-text";
+      textColorClass = "text-primary-text";
     }
   }
 
@@ -105,23 +105,23 @@ export function BadgeTile({
     <Link
       to={href}
       className={cn(
-        "relative flex flex-col gap-1.5 rounded-lg border transition-opacity",
+        "relative flex flex-col gap-1.5 rounded-md border transition-opacity",
         compact ? "p-2" : "p-3",
         earned
-          ? cn("border-white/10", bgClass, ringClass)
-          : "bg-white/[0.03] border-white/[0.06] opacity-60",
+          ? cn("border-border", bgClass, ringClass)
+          : "bg-fill-subtle border-border opacity-60",
       )}
       title={achievement.description}
     >
       {/* earnedCount chip — shown when earned more than once */}
       {earnedCount > 1 && (
-        <span className="absolute top-1 right-1 text-[9px] font-mono font-semibold bg-white/10 text-zinc-300 rounded px-1 leading-4">
+        <span className="absolute top-1 right-1 text-[11px] font-mono font-semibold bg-accent text-foreground-secondary rounded-sm px-1 leading-4">
           ×{earnedCount}
         </span>
       )}
 
       {/* Icon */}
-      <div className={cn(earned ? iconColorClass : "text-zinc-500")}>
+      <div className={cn(earned ? iconColorClass : "text-muted-foreground")}>
         <BadgeIcon name={icon} size={iconSize} />
       </div>
 
@@ -129,8 +129,10 @@ export function BadgeTile({
       <span
         className={cn(
           "font-semibold leading-tight truncate",
-          compact ? "text-[10px]" : "text-[12px]",
-          earned ? textColorClass || "text-zinc-200" : "text-zinc-400",
+          compact ? "text-[11px]" : "text-[12px]",
+          earned
+            ? textColorClass || "text-foreground-secondary"
+            : "text-muted-foreground",
         )}
       >
         {title}

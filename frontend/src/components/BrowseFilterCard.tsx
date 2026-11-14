@@ -227,7 +227,7 @@ export default function BrowseFilterCard(props: Props) {
           type="button"
           onClick={onClearFilters}
           disabled={!hasActiveFilters}
-          className="bg-white/[0.06] border border-white/[0.08] text-zinc-300 text-xs font-semibold px-4 py-[9px] rounded-lg hover:bg-white/[0.1] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+          className="bg-fill-subtle border border-border text-foreground-secondary text-xs font-semibold px-4 py-[9px] rounded-md hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
         >
           {t("filter.card.clear")}
         </button>
@@ -238,15 +238,15 @@ export default function BrowseFilterCard(props: Props) {
         <div
           role="group"
           aria-label={t("filter.card.contentType")}
-          className="flex gap-1 bg-zinc-800/50 rounded-lg p-1"
+          className="flex gap-1 bg-muted/50 rounded-md p-1"
         >
           <button
             aria-pressed={type.length === 0}
             onClick={() => onTypeChange([])}
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+            className={`px-3 py-1 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
               type.length === 0
-                ? "bg-amber-500/15 text-amber-400"
-                : "text-zinc-400 hover:text-white"
+                ? "bg-primary-soft text-primary-text"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {t("filter.all")}
@@ -256,10 +256,10 @@ export default function BrowseFilterCard(props: Props) {
             onClick={() =>
               onTypeChange(type.includes("MOVIE") ? [] : ["MOVIE"])
             }
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+            className={`px-3 py-1 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
               type.includes("MOVIE")
-                ? "bg-amber-500/15 text-amber-400"
-                : "text-zinc-400 hover:text-white"
+                ? "bg-primary-soft text-primary-text"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {t("filter.movies")}
@@ -267,10 +267,10 @@ export default function BrowseFilterCard(props: Props) {
           <button
             aria-pressed={type.includes("SHOW")}
             onClick={() => onTypeChange(type.includes("SHOW") ? [] : ["SHOW"])}
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+            className={`px-3 py-1 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
               type.includes("SHOW")
-                ? "bg-amber-500/15 text-amber-400"
-                : "text-zinc-400 hover:text-white"
+                ? "bg-primary-soft text-primary-text"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {t("filter.shows")}
@@ -292,10 +292,10 @@ export default function BrowseFilterCard(props: Props) {
           <button
             aria-pressed={hideTracked}
             onClick={() => onHideTrackedChange(!hideTracked)}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+            className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
               hideTracked
-                ? "bg-blue-600 text-white"
-                : "bg-zinc-800 text-zinc-400 hover:text-white"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:text-foreground"
             }`}
           >
             {t("filter.hideTracked")}
@@ -322,17 +322,19 @@ function FilterField({
 
   return (
     <div ref={ref} className="relative min-w-0">
-      <div className="text-xs font-medium text-zinc-500 mb-1.5">{label}</div>
+      <div className="text-xs font-medium text-muted-foreground mb-1.5">
+        {label}
+      </div>
       <button
         type="button"
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen((v) => !v)}
-        className="w-full bg-zinc-800 border border-white/[0.05] rounded-md px-3 py-2 text-left text-[13px] text-zinc-200 flex items-center justify-between gap-2 hover:bg-zinc-700/70 cursor-pointer transition-colors"
+        className="w-full bg-muted border border-border rounded-sm px-3 py-2 text-left text-[13px] text-foreground-secondary flex items-center justify-between gap-2 hover:bg-muted-hover/70 cursor-pointer transition-colors"
       >
         <span className="truncate">{summary}</span>
         <svg
-          className={`w-3.5 h-3.5 text-zinc-500 transition-transform shrink-0 ${open ? "rotate-180" : ""}`}
+          className={`w-3.5 h-3.5 text-muted-foreground transition-transform shrink-0 ${open ? "rotate-180" : ""}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -347,7 +349,7 @@ function FilterField({
         </svg>
       </button>
       {open && (
-        <div className="absolute z-50 mt-1 w-full min-w-[220px] bg-zinc-800 border border-white/[0.08] rounded-lg shadow-xl overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full min-w-[220px] bg-muted border border-border rounded-md shadow-xl overflow-hidden">
           {children}
         </div>
       )}
@@ -375,10 +377,10 @@ function ChipDropdown({
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer ${
+        className={`px-3 py-1.5 rounded-sm text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer ${
           active
-            ? "bg-amber-500/15 text-amber-400"
-            : "bg-zinc-800 text-zinc-400 hover:text-white"
+            ? "bg-primary-soft text-primary-text"
+            : "bg-muted text-muted-foreground hover:text-foreground"
         }`}
       >
         {summary}
@@ -398,7 +400,7 @@ function ChipDropdown({
         </svg>
       </button>
       {open && (
-        <div className="absolute z-50 mt-1 min-w-[220px] bg-zinc-800 border border-white/[0.08] rounded-lg shadow-xl overflow-hidden">
+        <div className="absolute z-50 mt-1 min-w-[220px] bg-muted border border-border rounded-md shadow-xl overflow-hidden">
           {children}
         </div>
       )}
@@ -438,20 +440,20 @@ function CheckboxList({
   return (
     <div className="flex flex-col max-h-72">
       {searchable && (
-        <div className="sticky top-0 bg-zinc-800 z-10">
+        <div className="sticky top-0 bg-muted z-10">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("filter.search")}
             autoFocus
-            className="w-full bg-zinc-700 text-zinc-200 text-xs px-3 py-2 border-0 outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset placeholder-zinc-500"
+            className="w-full bg-muted-hover text-foreground-secondary text-xs px-3 py-2 border-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset placeholder-muted-foreground"
           />
           {selected.length > 0 && (
             <button
               type="button"
               onClick={() => onChange([])}
-              className="w-full text-left px-3 py-1.5 text-xs text-zinc-400 hover:text-white hover:bg-zinc-700 cursor-pointer"
+              className="w-full text-left px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted-hover cursor-pointer"
             >
               Clear all
             </button>
@@ -466,22 +468,22 @@ function CheckboxList({
           if (filtered.length === 0) return null;
           return (
             <div key={idx}>
-              {idx > 0 && <hr className="border-white/[0.08] my-1" />}
+              {idx > 0 && <hr className="border-border my-1" />}
               {section.label && (
-                <div className="px-3 py-1 text-[10px] font-medium text-zinc-500 uppercase tracking-wider">
+                <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   {section.label}
                 </div>
               )}
               {filtered.map((opt) => (
                 <label
                   key={opt.value}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700 cursor-pointer"
+                  className="flex items-center gap-2 px-3 py-1.5 text-xs text-foreground-secondary hover:bg-muted-hover cursor-pointer"
                 >
                   <input
                     type="checkbox"
                     checked={selected.includes(opt.value)}
                     onChange={() => toggle(opt.value)}
-                    className="rounded border-white/[0.10] bg-zinc-700 text-amber-500 focus:ring-0 cursor-pointer"
+                    className="rounded-sm border-border bg-muted-hover text-primary-text focus:ring-0 cursor-pointer"
                   />
                   {opt.iconUrl && (
                     <img
@@ -523,9 +525,9 @@ function YearRangeInput({
           placeholder={t("filter.card.from")}
           min={1900}
           max={2100}
-          className="w-full bg-zinc-700 text-zinc-200 text-xs rounded-md px-2 py-1.5 border-0 outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset placeholder-zinc-500"
+          className="w-full bg-muted-hover text-foreground-secondary text-xs rounded-sm px-2 py-1.5 border-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset placeholder-muted-foreground"
         />
-        <span className="text-zinc-500 text-xs">–</span>
+        <span className="text-muted-foreground text-xs">–</span>
         <input
           type="number"
           inputMode="numeric"
@@ -534,7 +536,7 @@ function YearRangeInput({
           placeholder={t("filter.card.to")}
           min={1900}
           max={2100}
-          className="w-full bg-zinc-700 text-zinc-200 text-xs rounded-md px-2 py-1.5 border-0 outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset placeholder-zinc-500"
+          className="w-full bg-muted-hover text-foreground-secondary text-xs rounded-sm px-2 py-1.5 border-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset placeholder-muted-foreground"
         />
       </div>
       <div className="flex flex-wrap gap-1">
@@ -556,7 +558,7 @@ function YearRangeInput({
             key={preset.label}
             type="button"
             onClick={() => onChange(preset.min, preset.max)}
-            className="text-[11px] px-2 py-1 rounded bg-zinc-700 text-zinc-300 hover:bg-zinc-600 cursor-pointer"
+            className="text-[11px] px-2 py-1 rounded-sm bg-muted-hover text-foreground-secondary hover:bg-muted-hover/80 cursor-pointer"
           >
             {preset.label}
           </button>
@@ -565,7 +567,7 @@ function YearRangeInput({
           <button
             type="button"
             onClick={() => onChange("", "")}
-            className="text-[11px] px-2 py-1 rounded text-zinc-400 hover:text-white cursor-pointer ml-auto"
+            className="text-[11px] px-2 py-1 rounded-sm text-muted-foreground hover:text-foreground cursor-pointer ml-auto"
           >
             {t("filter.card.clear")}
           </button>
@@ -589,8 +591,8 @@ function RatingList({
         onClick={() => onChange("")}
         className={`w-full text-left px-3 py-1.5 text-xs cursor-pointer ${
           value === ""
-            ? "bg-zinc-700 text-amber-400"
-            : "text-zinc-300 hover:bg-zinc-700"
+            ? "bg-muted-hover text-primary-text"
+            : "text-foreground-secondary hover:bg-muted-hover"
         }`}
       >
         Any rating
@@ -602,11 +604,11 @@ function RatingList({
           onClick={() => onChange(r)}
           className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 cursor-pointer ${
             value === r
-              ? "bg-zinc-700 text-amber-400"
-              : "text-zinc-300 hover:bg-zinc-700"
+              ? "bg-muted-hover text-primary-text"
+              : "text-foreground-secondary hover:bg-muted-hover"
           }`}
         >
-          <span className="text-amber-400">★</span>
+          <span className="text-primary-text">★</span>
           {r}+
         </button>
       ))}

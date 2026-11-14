@@ -59,7 +59,7 @@ function SetupSteps({
   return (
     <section
       aria-label="First reminder setup"
-      className="rounded-xl border border-white/10 p-4 space-y-3"
+      className="rounded-lg border border-border p-4 space-y-3"
     >
       <h2 className="text-lg font-semibold">Set up your first reminder</h2>
       <StreamingRegion country={providers.data?.country} help />
@@ -101,7 +101,7 @@ function SetupSteps({
           .
         </li>
       </ol>
-      <p className="text-sm text-zinc-400">
+      <p className="text-sm text-muted-foreground">
         In Notifications, use Test, check delivery history, and confirm the
         message arrived. Saving settings or granting browser permission does not
         verify delivery.

@@ -7,7 +7,7 @@ export function LegalSection({
 }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
+      <h2 className="text-lg font-semibold text-foreground">{title}</h2>
       {children}
     </section>
   );

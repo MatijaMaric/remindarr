@@ -21,7 +21,7 @@ function EpisodeCard({
   const hasEpisode = item.nextEpisodeId != null;
 
   return (
-    <div className="bg-zinc-900 rounded-xl overflow-hidden flex flex-col h-full border border-white/[0.06]">
+    <div className="bg-card rounded-lg overflow-hidden flex flex-col h-full border border-border">
       {/* Poster */}
       <Link to={`/title/${item.titleId}`} className="block relative">
         {posterSrc ? (
@@ -32,19 +32,19 @@ function EpisodeCard({
             loading="lazy"
           />
         ) : (
-          <div className="w-full aspect-[2/3] bg-gradient-to-b from-zinc-800 to-zinc-950 flex items-center justify-center text-zinc-600 text-xs">
+          <div className="w-full aspect-[2/3] bg-gradient-to-b from-muted to-background flex items-center justify-center text-muted-foreground text-xs">
             N/A
           </div>
         )}
         {/* Kind badge */}
-        <span className="absolute top-2 left-2 bg-black/70 backdrop-blur-sm text-[10px] font-bold font-mono px-2 py-0.5 rounded-full text-amber-400">
+        <span className="absolute top-2 left-2 bg-scrim backdrop-blur-sm text-[11px] font-bold font-mono px-2 py-0.5 rounded-full text-primary">
           {item.kind === "in_progress"
             ? t("home.upNext.inProgress")
             : t("home.upNext.newEpisodes")}
         </span>
         {/* Unwatched count badge */}
         {item.unwatchedCount != null && item.unwatchedCount > 1 && (
-          <span className="absolute top-2 right-2 bg-black/70 backdrop-blur-sm text-zinc-100 font-mono text-[11px] font-semibold px-2 py-0.5 rounded-full">
+          <span className="absolute top-2 right-2 bg-scrim backdrop-blur-sm text-scrim-foreground font-mono text-[11px] font-semibold px-2 py-0.5 rounded-full">
             +{item.unwatchedCount}
           </span>
         )}
@@ -54,20 +54,23 @@ function EpisodeCard({
       <div className="p-3 flex flex-col flex-1">
         <Link
           to={`/title/${item.titleId}`}
-          className="hover:text-amber-400 transition-colors"
+          className="hover:text-primary-text transition-colors"
         >
-          <h3 className="font-semibold text-white text-sm truncate">
+          <h3 className="font-semibold text-foreground text-sm truncate">
             {item.title}
           </h3>
         </Link>
         {hasEpisode && (
           <p className="text-xs mt-0.5">
-            <span className="text-amber-400 font-medium">
+            <span className="text-primary-text font-medium">
               S{String(item.nextEpisodeSeason).padStart(2, "0")}·E
               {String(item.nextEpisodeNumber).padStart(2, "0")}
             </span>
             {item.nextEpisodeTitle && (
-              <span className="text-zinc-400"> · {item.nextEpisodeTitle}</span>
+              <span className="text-muted-foreground">
+                {" "}
+                · {item.nextEpisodeTitle}
+              </span>
             )}
           </p>
         )}
@@ -77,7 +80,7 @@ function EpisodeCard({
           <div className="mt-auto pt-3">
             <button
               onClick={() => onMarkWatched(item.nextEpisodeId!)}
-              className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/[0.08] hover:bg-white/[0.14] text-zinc-100 text-xs font-medium rounded-lg transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-fill-subtle hover:bg-accent text-foreground text-xs font-medium rounded-md transition-colors cursor-pointer"
             >
               <CheckCircle size={14} />
               {t("home.markWatched")}
@@ -94,7 +97,7 @@ function RecommendationCard({ item }: { item: UpNextItem }) {
 
   return (
     <Link to={`/title/${item.titleId}`} className="flex flex-col group">
-      <div className="relative aspect-[2/3] rounded-xl overflow-hidden bg-zinc-800 ring-2 ring-amber-500/60 border border-white/[0.06]">
+      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-muted ring-2 ring-primary/60 border border-border">
         {posterSrc ? (
           <img
             src={posterSrc}
@@ -105,20 +108,20 @@ function RecommendationCard({ item }: { item: UpNextItem }) {
             height={278}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs">
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
             N/A
           </div>
         )}
         {/* Recommended badge */}
-        <span className="absolute top-2 left-2 bg-amber-500/90 text-black text-[10px] font-bold px-2 py-0.5 rounded-full">
+        <span className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-[11px] font-bold px-2 py-0.5 rounded-full">
           Rec
         </span>
       </div>
-      <p className="text-sm text-white mt-1.5 line-clamp-2 group-hover:text-amber-400 transition-colors">
+      <p className="text-sm text-foreground mt-1.5 line-clamp-2 group-hover:text-primary-text transition-colors">
         {item.title}
       </p>
       {item.recommendedBy && (
-        <p className="text-xs text-zinc-400 truncate">
+        <p className="text-xs text-muted-foreground truncate">
           from @{item.recommendedBy}
         </p>
       )}
@@ -140,7 +143,9 @@ export const UpNextRow = memo(function UpNextRow({
   const { t } = useTranslation();
 
   if (items.length === 0) {
-    return <p className="text-zinc-500 text-sm">{t("home.upNext.empty")}</p>;
+    return (
+      <p className="text-muted-foreground text-sm">{t("home.upNext.empty")}</p>
+    );
   }
 
   return (
