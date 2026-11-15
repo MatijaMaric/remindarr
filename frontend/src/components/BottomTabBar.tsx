@@ -9,8 +9,8 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
-import { useQuery } from "@tanstack/react-query";
-import * as api from "../api";
+import { useUnreadRecommendationCount } from "../hooks/useUnreadRecommendationCount";
+import UnreadBadge from "./UnreadBadge";
 
 const UNAUTHENTICATED_ROUTES = ["/login", "/signup"];
 
@@ -21,13 +21,12 @@ export default function BottomTabBar() {
   const { t } = useTranslation();
   const location = useLocation();
 
-  const { data: countData } = useQuery({
-    queryKey: ["notification-count"],
-    queryFn: ({ signal }) => api.getUnreadRecommendationCount(signal),
-    enabled: !!user,
-  });
-
-  const unreadCount = countData?.count ?? 0;
+  const unreadCount = useUnreadRecommendationCount();
+  // The aria-label replaces the link's content, so the count goes in it too.
+  const moreLabel =
+    unreadCount > 0
+      ? `${t("bottomNav.moreOptions")}, ${t("bottomNav.unreadRecommendations", { count: unreadCount })}`
+      : t("bottomNav.moreOptions");
 
   if (loading) return null;
   if (UNAUTHENTICATED_ROUTES.includes(location.pathname)) return null;
@@ -91,22 +90,15 @@ export default function BottomTabBar() {
 
             <NavLink
               to="/more"
-              aria-label={t("bottomNav.moreOptions")}
+              aria-label={moreLabel}
               className={({ isActive }) => tabClass(isActive)}
             >
               <div className="relative">
                 <MoreHorizontal size={ICON_SIZE} aria-hidden="true" />
-                {unreadCount > 0 && (
-                  <span
-                    data-testid="unread-badge"
-                    aria-label={t("bottomNav.unreadRecommendations", {
-                      count: unreadCount,
-                    })}
-                    className="absolute -top-1 -right-2 min-w-4 h-4 px-1 flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold leading-none"
-                  >
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </span>
-                )}
+                <UnreadBadge
+                  count={unreadCount}
+                  className="absolute -top-1 -right-2"
+                />
               </div>
               <span className="max-w-full truncate text-xs font-semibold tracking-[0.02em]">
                 {t("bottomNav.more")}

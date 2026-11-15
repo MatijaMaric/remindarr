@@ -24,7 +24,7 @@ async function setupMoreMocks(page: MorePagePO["page"]) {
 }
 
 test.describe("More page", () => {
-  // MorePage redirects to /reels on desktop; use mobile viewport throughout.
+  // MorePage redirects to / on desktop; use mobile viewport throughout.
   test.use({ viewport: { width: 390, height: 844 } });
 
   test.skip(
@@ -60,12 +60,13 @@ test.describe("More page", () => {
       page.getByRole("link", { name: /stats/i }).first(),
     ).toBeVisible();
     await expect(page.getByText("Your watch history")).toBeVisible();
+    // Under 640px the Home tab opens Reels, so More links to the dashboard.
+    await expect(page.getByRole("link", { name: /dashboard/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^reels/i })).toHaveCount(0);
 
-    // Account group
+    // Account group: the profile card is the only profile link.
     await expect(page.getByText("Account").first()).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: /profile/i }).first(),
-    ).toBeVisible();
+    await expect(page.getByRole("link", { name: /^profile$/i })).toHaveCount(0);
     await expect(
       page.getByRole("link", { name: /settings/i }).first(),
     ).toBeVisible();

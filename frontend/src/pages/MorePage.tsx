@@ -1,12 +1,14 @@
 import { Link, Navigate, useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import { Card } from "../components/ui/card";
+import UnreadBadge from "../components/UnreadBadge";
 import {
   ChevronRight,
   Clapperboard,
+  LayoutDashboard,
   Sparkles,
   PartyPopper,
   BarChart2,
-  User,
   Settings,
   LogOut,
   Shield,
@@ -14,6 +16,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { useUnreadRecommendationCount } from "../hooks/useUnreadRecommendationCount";
+import { HOME_DASHBOARD_STATE } from "../lib/homeView";
 
 function MoreGroup({
   label,
@@ -39,6 +43,8 @@ function MoreRow({
   label,
   sub,
   to,
+  state,
+  badge,
   onClick,
   danger,
   isLast,
@@ -47,6 +53,8 @@ function MoreRow({
   label: string;
   sub?: string;
   to?: string;
+  state?: unknown;
+  badge?: React.ReactNode;
   onClick?: () => void;
   danger?: boolean;
   isLast?: boolean;
@@ -70,6 +78,7 @@ function MoreRow({
           </div>
         )}
       </div>
+      {badge}
       {!danger && (
         <ChevronRight size={16} className="text-muted-foreground shrink-0" />
       )}
@@ -77,7 +86,11 @@ function MoreRow({
   );
 
   if (to) {
-    return <Link to={to}>{inner}</Link>;
+    return (
+      <Link to={to} state={state}>
+        {inner}
+      </Link>
+    );
   }
   return (
     <button
@@ -92,11 +105,16 @@ function MoreRow({
 
 export default function MorePage() {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const isMobile = useIsMobile("(max-width: 767px)");
+  // Same breakpoint as the tab bar (md:hidden): wider screens use the top nav.
+  const hasTabBar = useIsMobile("(max-width: 767px)");
+  // Under 640px the Home tab opens Reels, so More offers the dashboard instead.
+  const homeTabIsReels = useIsMobile();
+  const unreadCount = useUnreadRecommendationCount();
 
   if (!user) return null;
-  if (!isMobile) return <Navigate to="/reels" replace />;
+  if (!hasTabBar) return <Navigate to="/" replace />;
 
   const initials = (user.display_name ?? user.username)
     .split(" ")
@@ -110,8 +128,9 @@ export default function MorePage() {
   };
 
   return (
-    <div className="pb-32 pt-4">
-      <h1 className="sr-only">More</h1>
+    // The shell's <main> already leaves room for the tab bar.
+    <div className="pt-4">
+      <h1 className="sr-only">{t("bottomNav.more")}</h1>
       {/* Profile card */}
       <div className="mx-4 mb-6">
         <Link
@@ -133,70 +152,72 @@ export default function MorePage() {
         </Link>
       </div>
 
-      {/* Discover */}
-      <MoreGroup label="Discover">
-        <MoreRow
-          icon={<Clapperboard size={16} />}
-          label="Reels"
-          sub="Full-screen episodes and movies"
-          to="/reels"
-        />
+      <MoreGroup label={t("more.discover")}>
+        {homeTabIsReels ? (
+          <MoreRow
+            icon={<LayoutDashboard size={16} />}
+            label={t("more.dashboard")}
+            sub={t("more.dashboardSub")}
+            to="/"
+            state={HOME_DASHBOARD_STATE}
+          />
+        ) : (
+          <MoreRow
+            icon={<Clapperboard size={16} />}
+            label={t("home.reels")}
+            sub={t("more.reelsSub")}
+            to="/reels"
+          />
+        )}
         <MoreRow
           icon={<Sparkles size={16} />}
-          label="Discovery"
-          sub="Recommendations and suggestions for you"
+          label={t("nav.discovery")}
+          sub={t("more.discoverySub")}
           to="/discovery"
+          badge={<UnreadBadge count={unreadCount} className="shrink-0" />}
         />
         <MoreRow
           icon={<BarChart2 size={16} />}
-          label="Stats"
-          sub="Your watch history"
+          label={t("nav.stats")}
+          sub={t("more.statsSub")}
           to="/tracked?view=stats"
         />
         <MoreRow
           icon={<PartyPopper size={16} />}
-          label="Year in Review"
-          sub="Your annual Wrapped"
+          label={t("nav.wrapped")}
+          sub={t("more.wrappedSub")}
           to="/wrapped"
           isLast
         />
       </MoreGroup>
 
-      {/* Account */}
-      <MoreGroup label="Account">
-        <MoreRow
-          icon={<User size={16} />}
-          label="Profile"
-          to={`/user/${user.username}`}
-        />
+      <MoreGroup label={t("more.account")}>
         <MoreRow
           icon={<Settings size={16} />}
-          label="Settings"
+          label={t("nav.settings")}
           to="/settings"
           isLast
         />
       </MoreGroup>
 
-      {/* Legal */}
-      <MoreGroup label="Legal">
+      <MoreGroup label={t("legal.kicker")}>
         <MoreRow
           icon={<Shield size={16} />}
-          label="Privacy Policy"
+          label={t("privacy.title")}
           to="/privacy"
         />
         <MoreRow
           icon={<FileText size={16} />}
-          label="Terms of Service"
+          label={t("terms.title")}
           to="/terms"
           isLast
         />
       </MoreGroup>
 
-      {/* Session */}
-      <MoreGroup label="Session">
+      <MoreGroup label={t("more.session")}>
         <MoreRow
           icon={<LogOut size={16} />}
-          label="Sign out"
+          label={t("nav.logout")}
           onClick={handleLogout}
           danger
           isLast

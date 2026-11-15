@@ -169,7 +169,7 @@ test("header, compact rows and selection actions fit at phone, tablet and deskto
       await review.assertFits(
         page.getByRole("button", { name: /Sign out|Log out/i }),
       );
-      // /more redirects to /reels once the viewport is no longer mobile, which
+      // /more redirects to / once the viewport is no longer mobile, which
       // would race the next iteration's goto after the resize.
       await page.goBack();
       await expect(page).toHaveURL(/\/tracked$/);

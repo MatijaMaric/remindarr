@@ -14,6 +14,8 @@ import { useAuth } from "./context/AuthContext";
 import RequireAuth from "./components/RequireAuth";
 import ErrorBoundary from "./components/ErrorBoundary";
 import BottomTabBar from "./components/BottomTabBar";
+import UnreadBadge from "./components/UnreadBadge";
+import { useUnreadRecommendationCount } from "./hooks/useUnreadRecommendationCount";
 import ScrollToTop from "./components/ScrollToTop";
 import OfflineIndicator from "./components/OfflineIndicator";
 import InstallPrompt from "./components/InstallPrompt";
@@ -105,6 +107,7 @@ export default function App() {
   const isReelsPage = location.pathname === "/reels";
   const isKioskPage = location.pathname.startsWith("/kiosk/");
   usePushSubscriptionSync();
+  const unreadCount = useUnreadRecommendationCount();
 
   const { theme } = useTheme();
   // Density, accent, motion and contrast apply on every route, not only after
@@ -184,6 +187,7 @@ export default function App() {
                   className={({ isActive }) => navLinkClass(isActive)}
                 >
                   {t("nav.discovery")}
+                  <UnreadBadge count={unreadCount} className="ml-1.5" />
                 </NavLink>
               </>
             )}

@@ -76,23 +76,29 @@
     "settings": "Einstellungen",
     "discovery": "Empfehlungen",
     "stats": "Statistiken",
-    "wrapped": "Jahresrückblick",
-    "search": "Suche"
+    "wrapped": "Jahresrückblick"
   },
   "bottomNav": {
     "home": "Start",
-    "watch": "Start",
-    "upcoming": "Demnächst",
     "browse": "Entdecken",
     "calendar": "Kalender",
     "tracked": "Merkliste",
-    "discovery": "Empfehlungen",
     "more": "Mehr",
     "moreOptions": "Weitere Navigationsoptionen",
-    "profile": "Profil",
     "signIn": "Anmelden",
     "unreadRecommendations_one": "{{count}} ungelesene Empfehlung",
     "unreadRecommendations_other": "{{count}} ungelesene Empfehlungen"
+  },
+  "more": {
+    "discover": "Entdecken",
+    "account": "Konto",
+    "session": "Sitzung",
+    "dashboard": "Dashboard",
+    "dashboardSub": "Als Nächstes und Neuerscheinungen",
+    "reelsSub": "Folgen und Filme im Vollbild",
+    "discoverySub": "Empfehlungen und Vorschläge für dich",
+    "statsSub": "Dein Wiedergabeverlauf",
+    "wrappedSub": "Dein Jahr im Rückblick"
   },
   "shortcuts": {
     "title": "Tastenkürzel",

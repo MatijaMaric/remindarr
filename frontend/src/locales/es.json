@@ -76,24 +76,30 @@
     "settings": "Ajustes",
     "discovery": "Descubrir",
     "stats": "Estadísticas",
-    "wrapped": "Resumen del año",
-    "search": "Buscar"
+    "wrapped": "Resumen del año"
   },
   "bottomNav": {
     "home": "Inicio",
-    "watch": "Inicio",
-    "upcoming": "Próximamente",
     "browse": "Explorar",
     "calendar": "Calendario",
     "tracked": "Seguimiento",
-    "discovery": "Descubrir",
     "more": "Más",
     "moreOptions": "Más opciones de navegación",
-    "profile": "Perfil",
     "signIn": "Iniciar sesión",
     "unreadRecommendations_one": "{{count}} recomendación sin leer",
     "unreadRecommendations_many": "{{count}} recomendaciones sin leer",
     "unreadRecommendations_other": "{{count}} recomendaciones sin leer"
+  },
+  "more": {
+    "discover": "Descubrir",
+    "account": "Cuenta",
+    "session": "Sesión",
+    "dashboard": "Panel",
+    "dashboardSub": "Lo siguiente y novedades",
+    "reelsSub": "Episodios y películas a pantalla completa",
+    "discoverySub": "Recomendaciones y sugerencias para ti",
+    "statsSub": "Tu historial de visionado",
+    "wrappedSub": "Tu resumen anual"
   },
   "shortcuts": {
     "title": "Atajos de teclado",

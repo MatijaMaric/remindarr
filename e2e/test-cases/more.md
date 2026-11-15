@@ -45,12 +45,14 @@ made. Mocking the session is sufficient to exercise the full render.
   - The username `"@testuser"` in monospace below.
   - A chevron-right icon indicating it is a navigation link.
 - A section labelled `"Discover"` (uppercase monospace group label) is present, containing
-  two rows:
+  four rows:
+  - `"Dashboard"` (links to `/`). Under 640px the Home tab opens Reels, so this row is the
+    menu's way to the dashboard; from 640px to 767px it is a `"Reels"` row instead.
   - `"Discovery"` with sub-label `"Recommendations and suggestions for you"`.
   - `"Stats"` with sub-label `"Your watch history"`.
-- A section labelled `"Account"` is present, containing two rows:
-  - `"Profile"` (with no sub-label).
-  - `"Settings"` (with no sub-label).
+  - `"Year in Review"` with sub-label `"Your annual Wrapped"`.
+- A section labelled `"Account"` is present, containing one row:
+  - `"Settings"` (with no sub-label). The profile is reached through the profile card.
 - A section labelled `"Session"` is present, containing one row:
   - `"Sign out"` in red text (danger style, no chevron).
 - No error banner is shown.
@@ -84,13 +86,13 @@ must be redirected before the page content renders.
 
 ---
 
-## TC-03: Profile card and Profile row both navigate to the user's profile page
+## TC-03: Profile card navigates to the user's profile page
 
 **Priority**: P1
 **Backend**: Mock
 
-**Why mock**: Navigation is a frontend concern. Both the profile card at the top and the
-`"Profile"` row in the Account group are `<Link to="/user/:username">` elements.
+**Why mock**: Navigation is a frontend concern. The profile card at the top is a
+`<Link to="/user/:username">` and is the page's only link to the profile.
 
 **Preconditions**:
 
@@ -102,16 +104,6 @@ must be redirected before the page content renders.
 2. Navigate to `/more` and wait for the profile card.
 3. Click the profile card link (the entire card is a `<Link>`).
 4. Wait for the URL to change.
-
-**Expected**:
-
-- The URL changes to `/user/testuser`.
-
-**Steps** (Profile row):
-
-1. Re-apply mocks and navigate to `/more`.
-2. Click `getByRole("link", { name: "Profile" })` inside the Account group.
-3. Wait for the URL to change.
 
 **Expected**:
 

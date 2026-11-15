@@ -191,4 +191,14 @@ describe("BottomTabBar", () => {
     expect(moreLink).toBeDefined();
     expect(moreLink.getAttribute("href")).toBe("/more");
   });
+
+  it("puts the unread count in the More link's accessible name", async () => {
+    getCountSpy.mockResolvedValue({ count: 2 } as never);
+    render(<BottomTabBar />, { wrapper: Wrapper });
+    const moreLink = await screen.findByRole("link", {
+      name: "More navigation options, 2 unread recommendations",
+    });
+    expect(moreLink.getAttribute("href")).toBe("/more");
+    expect(screen.getByTestId("unread-badge").textContent).toBe("2");
+  });
 });
