@@ -57,15 +57,6 @@ const profileFixture: UserProfileResponse = {
     bio: null,
     country_code: null,
   },
-  stats: {
-    tracked_count: 0,
-    watched_movies: 0,
-    watched_episodes: 0,
-    shows_completed: 0,
-    shows_total: 0,
-    total_watched_episodes: 0,
-    total_released_episodes: 0,
-  },
   overview: {
     tracked_count: 0,
     watched_movies: 0,
@@ -82,16 +73,6 @@ const profileFixture: UserProfileResponse = {
   },
   genres: [],
   monthly: [],
-  shows_by_status: {
-    watching: 0,
-    caught_up: 0,
-    completed: 0,
-    not_started: 0,
-    unreleased: 0,
-    on_hold: 0,
-    dropped: 0,
-    plan_to_watch: 0,
-  },
   friends: [],
   movies: [],
   shows: [],
@@ -198,6 +179,22 @@ describe("UserProfilePage error handling", () => {
     expect(screen.queryByText("Failed to load profile")).toBeNull();
   });
 
+  it("hides Watch together and skips achievements when the watchlist is hidden", async () => {
+    apiMock.getUserProfile.mockResolvedValue({
+      ...profileFixture,
+      show_watchlist: false,
+      profile_visibility: "private",
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("profile-hero")).toBeDefined();
+    });
+    expect(screen.queryByText("Watch together")).toBeNull();
+    expect(apiMock.getUserAchievements).not.toHaveBeenCalled();
+  });
+
   it("renders the hero when followed_people is omitted", async () => {
     apiMock.getUserProfile.mockResolvedValue({
       ...profileFixture,
@@ -209,5 +206,73 @@ describe("UserProfilePage error handling", () => {
     await waitFor(() => {
       expect(screen.getByTestId("profile-hero")).toBeDefined();
     });
+  });
+});
+
+describe("UserProfilePage watchlist", () => {
+  const show = (id: string, show_status: string) =>
+    ({
+      id,
+      object_type: "SHOW",
+      title: id,
+      offers: [],
+      genres: [],
+      user_status: null,
+      show_status,
+    }) as unknown as UserProfileResponse["shows"][number];
+
+  it("shows counted tabs instead of status tiles and opens the first non-empty tab", async () => {
+    apiMock.getUserProfile.mockResolvedValue({
+      ...profileFixture,
+      show_watchlist: true,
+      shows: [show("s1", "not_started"), show("s2", "unreleased")],
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("watchlist-tabs")).toBeDefined();
+    });
+    expect(screen.queryByTestId("status-watching")).toBeNull();
+    expect(screen.queryByTestId("tab-watching")).toBeNull();
+    expect(
+      screen.getByTestId("tab-not_started").getAttribute("aria-selected"),
+    ).toBe("true");
+    expect(screen.getByTestId("tab-unreleased")).toBeDefined();
+    expect(screen.getAllByTestId("watchlist-card")).toHaveLength(1);
+  });
+
+  it("orders the watchlist before the sidebar below the lg breakpoint", async () => {
+    apiMock.getUserProfile.mockResolvedValue({
+      ...profileFixture,
+      show_watchlist: true,
+      shows: [show("s1", "watching")],
+    });
+
+    const { container } = renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("watchlist-section")).toBeDefined();
+    });
+    expect(screen.getByTestId("watchlist-section").className).toContain(
+      "order-first",
+    );
+    expect(container.querySelector("aside")!.className).toContain("order-last");
+  });
+
+  it("offers Watch together when the watchlist is visible", async () => {
+    apiMock.getUserProfile.mockResolvedValue({
+      ...profileFixture,
+      show_watchlist: true,
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Watch together").length).toBeGreaterThan(0);
+    });
+    for (const link of screen.getAllByText("Watch together")) {
+      expect(link.getAttribute("href")).toBe("/u/testuser/overlap/alice");
+    }
   });
 });

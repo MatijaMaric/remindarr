@@ -6,7 +6,9 @@ import {
   createSession,
   getSessionWithUser,
   trackTitle,
+  upsertTitles,
 } from "../db/repository";
+import { makeParsedTitle, makeParsedOffer } from "../test-utils/fixtures";
 import { requireAuth } from "../middleware/auth";
 import { getDb } from "../db/schema";
 import { users } from "../db/schema";
@@ -153,6 +155,40 @@ describe("GET /overlap/:friendUsername — happy path", () => {
     const body = await res.json();
     expect(body.counts.intersection).toBe(0);
     expect(body.titles).toHaveLength(0);
+  });
+});
+
+describe("GET /overlap/:friendUsername — providers and genres", () => {
+  it("returns shared FLATRATE providers and each title's genres", async () => {
+    // Regression: offers store "FLATRATE"; comparing to "flatrate" left
+    // sharedProviders empty and genres were hardcoded to [].
+    await setProfileVisibility(bobId, "public");
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-1",
+        genres: ["Drama", "Comedy"],
+        offers: [
+          makeParsedOffer({ titleId: "movie-1", providerId: 8 }),
+          makeParsedOffer({
+            titleId: "movie-1",
+            providerId: 2,
+            providerName: "Apple TV",
+            providerTechnicalName: "itunes",
+            monetizationType: "BUY",
+          }),
+        ],
+      }),
+    ]);
+    await trackTitle("movie-1", aliceId);
+    await trackTitle("movie-1", bobId);
+
+    const res = await app.request("/overlap/bob", {
+      headers: authHeaders(aliceToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.sharedProviders.map((p: { id: number }) => p.id)).toEqual([8]);
+    expect([...body.titles[0].genres].sort()).toEqual(["Comedy", "Drama"]);
   });
 });
 

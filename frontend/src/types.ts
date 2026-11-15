@@ -642,17 +642,6 @@ export interface ProfileMonthlyActivity {
   episodes_watched: number;
 }
 
-export interface ProfileShowsByStatus {
-  watching: number;
-  caught_up: number;
-  completed: number;
-  not_started: number;
-  unreleased: number;
-  on_hold: number;
-  dropped: number;
-  plan_to_watch: number;
-}
-
 export interface ProfileFriend {
   id: string;
   username: string;
@@ -679,11 +668,9 @@ export interface PinnedTitle {
 
 export interface UserProfileResponse {
   user: UserProfileUser;
-  stats: UserProfileStats;
   overview: UserProfileOverview;
   genres: ProfileGenreCount[];
   monthly: ProfileMonthlyActivity[];
-  shows_by_status: ProfileShowsByStatus;
   friends: ProfileFriend[];
   movies: Title[];
   shows: Title[];

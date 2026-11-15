@@ -614,7 +614,6 @@
       "watchTimeShows": "TV time",
       "topGenres": "Top genres",
       "friendsCount": "Friends · {{count}}",
-      "seeAll": "See all",
       "followedPeople": "People followed",
       "followedSince": "following since {{date}}",
       "activity12m": "12-month activity",
@@ -633,7 +632,9 @@
         "completed": "Completed",
         "onHold": "On hold",
         "planToWatch": "Plan to watch",
-        "dropped": "Dropped"
+        "dropped": "Dropped",
+        "notStarted": "Not started",
+        "unreleased": "Unreleased"
       },
       "activity": {
         "title": "Recent activity",

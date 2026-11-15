@@ -598,7 +598,6 @@
       "watchTimeShows": "番組の視聴時間",
       "topGenres": "よく見るジャンル",
       "friendsCount": "友達 · {{count}}",
-      "seeAll": "すべて表示",
       "followedPeople": "フォロー中の人物",
       "followedSince": "{{date}} からフォロー",
       "activity12m": "過去 12 か月のアクティビティ",
@@ -617,7 +616,9 @@
         "completed": "視聴完了",
         "onHold": "一時停止",
         "planToWatch": "見たい",
-        "dropped": "視聴中止"
+        "dropped": "視聴中止",
+        "notStarted": "未視聴",
+        "unreleased": "未公開"
       },
       "activity": {
         "title": "最近のアクティビティ",
