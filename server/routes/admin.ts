@@ -10,7 +10,6 @@ import {
   getOidcConfig,
   getAllUsers,
   getAdminUserCount,
-  getUserTrackedCount,
   getUserById,
   banUser,
   unbanUser,
@@ -208,16 +207,6 @@ app.get("/users", zValidator("query", usersQuerySchema), async (c) => {
     page_size: PAGE_SIZE,
     total_pages: Math.ceil(total / PAGE_SIZE),
   });
-});
-
-// GET /api/admin/users/:id
-app.get("/users/:id", zValidator("param", userIdParam), async (c) => {
-  const { id } = c.req.valid("param");
-  const user = await getUserById(id);
-  if (!user) return c.json({ error: "User not found" }, 404);
-
-  const trackedCount = await getUserTrackedCount(id);
-  return ok(c, { user: { ...user, tracked_count: trackedCount } });
 });
 
 // PUT /api/admin/users/:id/role  { role: "admin" | "user" }

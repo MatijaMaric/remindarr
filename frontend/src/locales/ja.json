@@ -24,10 +24,10 @@
       "ban": "ユーザーを停止",
       "unban": "停止を解除",
       "delete": "ユーザーを削除",
-      "banTitle": "ユーザーを停止",
+      "banTitle": "{{username}} を停止",
       "banReasonPlaceholder": "理由（任意）",
       "banConfirm": "ユーザーを停止",
-      "deleteTitle": "ユーザーを削除",
+      "deleteTitle": "{{username}} を削除",
       "deleteConfirm": "この操作は取り消せません。",
       "deleteConfirmButton": "完全に削除",
       "prevPage": "前のページ",
@@ -51,7 +51,21 @@
       "newPassword": "新しいパスワード（8 文字以上）",
       "resetPasswordConfirm": "パスワードを設定",
       "resetPasswordDone": "パスワードをリセットしました。ユーザーはすべての端末でサインアウトされました。",
-      "resetPasswordFailed": "パスワードをリセットできませんでした"
+      "resetPasswordFailed": "パスワードをリセットできませんでした",
+      "roleAdmin": "管理者",
+      "roleUser": "ユーザー",
+      "banned": "停止中",
+      "banReason": "理由: {{reason}}",
+      "promoteTitle": "{{username}} を管理者にしますか？",
+      "promoteHelp": "管理者はユーザーとサーバー設定を管理できます。",
+      "demoteTitle": "{{username}} の管理者権限を外しますか？",
+      "demoteHelp": "アカウントとデータはそのまま残り、管理設定にアクセスできなくなります。",
+      "promoted": "{{username}} を管理者にしました",
+      "demoted": "{{username}} の管理者権限を外しました",
+      "roleFailed": "権限を変更できませんでした",
+      "banFailed": "ユーザーを停止できませんでした",
+      "unbanFailed": "停止を解除できませんでした",
+      "deleteFailed": "ユーザーを削除できませんでした"
     }
   },
   "legal": {
@@ -791,7 +805,7 @@
       "visibilityUpdateFailed": "公開範囲を更新できませんでした",
       "perTitleOverrides": "作品ごとの設定",
       "socialTitle": "ソーシャル",
-      "socialSubtitle": "友達をあなたの Remindarr に招待しましょう。登録用の限定リンクが送られます。",
+      "socialSubtitle": "友達をあなたの Remindarr に招待しましょう。リンクを開くと、お互いにフォローし合います。",
       "socialHint": "招待コードは招待ページで管理できます",
       "passkeyNameLabel": "パスキー名",
       "data": {
@@ -921,14 +935,18 @@
     "redeeming": "招待を適用中...",
     "redeemSuccess": "@{{name}} さんと相互フォローになりました！",
     "statusPending": "未使用",
-    "statusUsed": "@{{username}} さんが使用",
+    "statusUsed": "<profile>@{{username}}</profile> さんが使用",
     "statusExpired": "期限切れ",
     "created_at": "作成日",
     "expires_at": "有効期限",
-    "usedBy": "使用者",
     "shareTitle": "Remindarr で一緒に楽しもう",
     "shareText": "招待リンクから Remindarr に参加してください！",
-    "settingsLink": "友達を招待"
+    "settingsLink": "友達を招待",
+    "statusUsedDeleted": "削除されたアカウントが使用",
+    "used_at": "使用日",
+    "remove": "削除",
+    "removing": "削除中...",
+    "removed": "招待を削除しました"
   },
   "common": {
     "scrollLeft": "左にスクロール",
@@ -947,7 +965,10 @@
       "minutesAgo_other": "{{count}} 分前",
       "hoursAgo_other": "{{count}} 時間前",
       "daysAgo_other": "{{count}} 日前"
-    }
+    },
+    "share": "共有",
+    "linkCopied": "リンクをクリップボードにコピーしました",
+    "linkCopyFailed": "リンクをコピーできませんでした"
   },
   "feed": {
     "title": "カレンダーフィード",

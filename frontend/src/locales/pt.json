@@ -24,10 +24,10 @@
       "ban": "Banir usuário",
       "unban": "Remover banimento",
       "delete": "Excluir usuário",
-      "banTitle": "Banir usuário",
+      "banTitle": "Banir {{username}}",
       "banReasonPlaceholder": "Motivo (opcional)",
       "banConfirm": "Banir usuário",
-      "deleteTitle": "Excluir usuário",
+      "deleteTitle": "Excluir {{username}}",
       "deleteConfirm": "Esta ação é permanente e não pode ser desfeita.",
       "deleteConfirmButton": "Excluir permanentemente",
       "prevPage": "Página anterior",
@@ -51,7 +51,21 @@
       "newPassword": "Nova palavra-passe (mínimo 8 caracteres)",
       "resetPasswordConfirm": "Definir palavra-passe",
       "resetPasswordDone": "Palavra-passe reposta. O utilizador terminou sessão em todo o lado.",
-      "resetPasswordFailed": "Não foi possível repor a palavra-passe"
+      "resetPasswordFailed": "Não foi possível repor a palavra-passe",
+      "roleAdmin": "Admin",
+      "roleUser": "Usuário",
+      "banned": "Banido",
+      "banReason": "Motivo: {{reason}}",
+      "promoteTitle": "Tornar {{username}} administrador?",
+      "promoteHelp": "Administradores podem gerenciar usuários e as configurações do servidor.",
+      "demoteTitle": "Remover os direitos de administrador de {{username}}?",
+      "demoteHelp": "A conta e os dados são mantidos, mas o acesso às configurações de administração é removido.",
+      "promoted": "{{username}} agora é administrador",
+      "demoted": "{{username}} não é mais administrador",
+      "roleFailed": "Não foi possível alterar a função",
+      "banFailed": "Não foi possível banir o usuário",
+      "unbanFailed": "Não foi possível remover o banimento",
+      "deleteFailed": "Não foi possível excluir o usuário"
     }
   },
   "legal": {
@@ -817,7 +831,7 @@
       "visibilityUpdateFailed": "Não foi possível atualizar a visibilidade",
       "perTitleOverrides": "Exceções por título",
       "socialTitle": "Social",
-      "socialSubtitle": "Convide amigos para a sua instância do Remindarr. Eles receberão um link de cadastro limitado.",
+      "socialSubtitle": "Convide amigos para a sua instância do Remindarr. Quando abrirem o seu link, vocês passam a se seguir.",
       "socialHint": "Gerencie os códigos de convite na página Convidar",
       "passkeyNameLabel": "Nome da chave",
       "data": {
@@ -953,14 +967,18 @@
     "redeeming": "Resgatando convite...",
     "redeemSuccess": "Agora você e @{{name}} seguem um ao outro!",
     "statusPending": "Pendente",
-    "statusUsed": "Usado por @{{username}}",
+    "statusUsed": "Usado por <profile>@{{username}}</profile>",
     "statusExpired": "Expirado",
     "created_at": "Criado",
     "expires_at": "Expira",
-    "usedBy": "Usado por",
     "shareTitle": "Venha para o Remindarr",
     "shareText": "Use meu link de convite para entrar no Remindarr!",
-    "settingsLink": "Convidar amigos"
+    "settingsLink": "Convidar amigos",
+    "statusUsedDeleted": "Usado por uma conta excluída",
+    "used_at": "Usado",
+    "remove": "Remover",
+    "removing": "Removendo...",
+    "removed": "Convite removido"
   },
   "common": {
     "scrollLeft": "Rolar para a esquerda",
@@ -985,7 +1003,10 @@
       "daysAgo_one": "há {{count}} dia",
       "daysAgo_many": "há {{count}} dias",
       "daysAgo_other": "há {{count}} dias"
-    }
+    },
+    "share": "Compartilhar",
+    "linkCopied": "Link copiado para a área de transferência",
+    "linkCopyFailed": "Não foi possível copiar o link"
   },
   "feed": {
     "title": "Feed de calendário",

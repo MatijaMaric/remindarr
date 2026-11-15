@@ -19,6 +19,7 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "../api";
 import * as AuthContextModule from "../context/AuthContext";
+import * as sonner from "sonner";
 import type { AdminUsersResponse } from "../types";
 
 // Initialize i18n so t() returns real strings
@@ -100,26 +101,34 @@ let setAdminUserRoleSpy: ReturnType<
 let banAdminUserSpy: ReturnType<typeof spyOn<typeof api, "banAdminUser">>;
 let unbanAdminUserSpy: ReturnType<typeof spyOn<typeof api, "unbanAdminUser">>;
 let deleteAdminUserSpy: ReturnType<typeof spyOn<typeof api, "deleteAdminUser">>;
+let toastSuccessSpy: ReturnType<typeof spyOn<typeof sonner.toast, "success">>;
+
+const adminAuth = {
+  user: {
+    id: "admin-1",
+    username: "admin",
+    display_name: "Admin",
+    auth_provider: "local",
+    is_admin: true,
+  },
+  providers: { local: true, oidc: null },
+  loading: false,
+  sessionStatus: "authenticated" as const,
+  subscriptions: null,
+  refreshSubscriptions: mock(() => Promise.resolve()),
+  login: mock(() => Promise.resolve()),
+  signup: mock(() => Promise.resolve()),
+  logout: mock(() => Promise.resolve()),
+  refresh: mock(() => Promise.resolve()),
+};
 
 beforeEach(() => {
-  useAuthSpy = spyOn(AuthContextModule, "useAuth").mockReturnValue({
-    user: {
-      id: "admin-1",
-      username: "admin",
-      display_name: "Admin",
-      auth_provider: "local",
-      is_admin: true,
-    },
-    providers: { local: true, oidc: null },
-    loading: false,
-    sessionStatus: "authenticated",
-    subscriptions: null,
-    refreshSubscriptions: mock(() => Promise.resolve()),
-    login: mock(() => Promise.resolve()),
-    signup: mock(() => Promise.resolve()),
-    logout: mock(() => Promise.resolve()),
-    refresh: mock(() => Promise.resolve()),
-  });
+  toastSuccessSpy = spyOn(sonner.toast, "success").mockImplementation(
+    () => "1" as any,
+  );
+  useAuthSpy = spyOn(AuthContextModule, "useAuth").mockReturnValue(
+    adminAuth as any,
+  );
   getAdminUsersSpy = spyOn(api, "getAdminUsers");
   setAdminUserRoleSpy = spyOn(api, "setAdminUserRole");
   banAdminUserSpy = spyOn(api, "banAdminUser");
@@ -128,6 +137,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  toastSuccessSpy.mockRestore();
   useAuthSpy.mockRestore();
   getAdminUsersSpy.mockRestore();
   setAdminUserRoleSpy.mockRestore();
@@ -170,9 +180,31 @@ describe("AdminUsersPage", () => {
     const promoteButtons = screen.getAllByTitle("Promote to admin");
     fireEvent.click(promoteButtons[0]);
 
+    // Nothing changes until the admin confirms in a dialog naming the user
+    expect(await screen.findByText("Make alice an admin?")).toBeDefined();
+    expect(setAdminUserRoleSpy).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Promote to admin" }));
+
     await waitFor(() => {
       expect(setAdminUserRoleSpy).toHaveBeenCalledWith("u1", "admin");
     });
+    await waitFor(() => {
+      expect(toastSuccessSpy).toHaveBeenCalledWith("alice is now an admin");
+    });
+  });
+
+  test("cancelling the promote dialog changes nothing", async () => {
+    getAdminUsersSpy.mockResolvedValue(mockUsersResponse);
+    render(<AdminUsersPage />, { wrapper: Wrapper });
+
+    fireEvent.click((await screen.findAllByTitle("Promote to admin"))[0]);
+    await screen.findByText("Make alice an admin?");
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Make alice an admin?")).toBeNull();
+    });
+    expect(setAdminUserRoleSpy).not.toHaveBeenCalled();
   });
 
   test("roleToggleMutation — clicking demote calls setAdminUserRole with user", async () => {
@@ -205,6 +237,8 @@ describe("AdminUsersPage", () => {
 
     const demoteButton = screen.getByTitle("Demote to user");
     fireEvent.click(demoteButton);
+    await screen.findByText("Remove admin rights from alice?");
+    fireEvent.click(screen.getByRole("button", { name: "Demote to user" }));
 
     await waitFor(() => {
       expect(setAdminUserRoleSpy).toHaveBeenCalledWith("u1", "user");
@@ -225,10 +259,8 @@ describe("AdminUsersPage", () => {
     const banButtons = screen.getAllByTitle("Ban user");
     fireEvent.click(banButtons[0]);
 
-    // Modal should open — find the confirm button (button role, not heading)
-    await waitFor(() => {
-      expect(screen.getAllByText("Ban User").length).toBeGreaterThanOrEqual(1);
-    });
+    // Modal should open and name the user
+    expect(await screen.findByText("Ban alice")).toBeDefined();
 
     // Click the confirm button in the modal (the <button> with text "Ban User")
     const confirmButton = screen.getAllByRole("button", {
@@ -273,10 +305,8 @@ describe("AdminUsersPage", () => {
     const deleteButtons = screen.getAllByTitle("Delete user");
     fireEvent.click(deleteButtons[0]);
 
-    // Confirm dialog should appear
-    await waitFor(() => {
-      expect(screen.getByText("Delete User")).toBeDefined();
-    });
+    // Confirm dialog should appear and name the user
+    expect(await screen.findByText("Delete alice")).toBeDefined();
 
     // Click the confirm button
     const confirmButton = screen.getByText("Delete permanently");
@@ -285,6 +315,78 @@ describe("AdminUsersPage", () => {
     await waitFor(() => {
       expect(deleteAdminUserSpy).toHaveBeenCalledWith("u1");
     });
+  });
+});
+
+describe("AdminUsersPage — #1414 cleanup", () => {
+  test("shows the ban reason next to a banned user", async () => {
+    getAdminUsersSpy.mockResolvedValue({
+      ...mockBannedUsersResponse,
+      users: mockBannedUsersResponse.users.map((u) => ({
+        ...u,
+        ban_reason: "spamming",
+      })),
+    });
+    render(<AdminUsersPage />, { wrapper: Wrapper });
+
+    expect(await screen.findByText("Reason: spamming")).toBeDefined();
+    expect(screen.getAllByText("Banned").length).toBeGreaterThanOrEqual(1);
+  });
+
+  test("ban and unban use different icons and labels", async () => {
+    getAdminUsersSpy.mockResolvedValue({
+      ...mockUsersResponse,
+      users: [
+        mockUsersResponse.users[0],
+        { ...mockBannedUsersResponse.users[0], id: "u3", username: "carol" },
+      ],
+    });
+    render(<AdminUsersPage />, { wrapper: Wrapper });
+
+    const ban = await screen.findByTitle("Ban user");
+    const unban = screen.getByTitle("Unban user");
+    expect(ban.innerHTML).not.toBe(unban.innerHTML);
+    const promote = screen.getAllByTitle("Promote to admin")[0];
+    expect(promote.innerHTML).not.toBe(ban.innerHTML);
+  });
+
+  test("Back to Settings opens the Admin tab", async () => {
+    getAdminUsersSpy.mockResolvedValue(mockUsersResponse);
+    render(<AdminUsersPage />, { wrapper: Wrapper });
+
+    const link = await screen.findByRole("link", { name: /Back to Settings/ });
+    expect(link.getAttribute("href")).toBe("/settings?tab=admin");
+  });
+
+  test("does not request the user list for non-admins", async () => {
+    useAuthSpy.mockReturnValue({
+      ...adminAuth,
+      user: { ...adminAuth.user, is_admin: false },
+    });
+    getAdminUsersSpy.mockResolvedValue(mockUsersResponse);
+    render(<AdminUsersPage />, { wrapper: Wrapper });
+
+    expect(await screen.findByText("Access denied")).toBeDefined();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(getAdminUsersSpy).not.toHaveBeenCalled();
+  });
+
+  test("search waits for a pause in typing before requesting", async () => {
+    getAdminUsersSpy.mockResolvedValue(mockUsersResponse);
+    render(<AdminUsersPage />, { wrapper: Wrapper });
+    await screen.findByText("alice");
+    getAdminUsersSpy.mockClear();
+
+    const input = screen.getByLabelText("Search by username or name...");
+    for (const value of ["a", "al", "ali"]) {
+      fireEvent.change(input, { target: { value } });
+    }
+    expect(getAdminUsersSpy).not.toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(getAdminUsersSpy).toHaveBeenCalledTimes(1);
+    });
+    expect(getAdminUsersSpy.mock.calls[0][0]).toMatchObject({ search: "ali" });
   });
 });
 

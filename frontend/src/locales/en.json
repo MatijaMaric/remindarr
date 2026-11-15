@@ -24,10 +24,10 @@
       "ban": "Ban user",
       "unban": "Unban user",
       "delete": "Delete user",
-      "banTitle": "Ban User",
+      "banTitle": "Ban {{username}}",
       "banReasonPlaceholder": "Reason (optional)",
       "banConfirm": "Ban User",
-      "deleteTitle": "Delete User",
+      "deleteTitle": "Delete {{username}}",
       "deleteConfirm": "This action is permanent and cannot be undone.",
       "deleteConfirmButton": "Delete permanently",
       "prevPage": "Previous page",
@@ -51,7 +51,21 @@
       "newPassword": "New password (at least 8 characters)",
       "resetPasswordConfirm": "Set password",
       "resetPasswordDone": "Password reset. The user has been signed out everywhere.",
-      "resetPasswordFailed": "Failed to reset password"
+      "resetPasswordFailed": "Failed to reset password",
+      "roleAdmin": "Admin",
+      "roleUser": "User",
+      "banned": "Banned",
+      "banReason": "Reason: {{reason}}",
+      "promoteTitle": "Make {{username}} an admin?",
+      "promoteHelp": "Admins can manage users and server settings.",
+      "demoteTitle": "Remove admin rights from {{username}}?",
+      "demoteHelp": "They keep their account and data but lose access to admin settings.",
+      "promoted": "{{username}} is now an admin",
+      "demoted": "{{username}} is no longer an admin",
+      "roleFailed": "Failed to update role",
+      "banFailed": "Failed to ban user",
+      "unbanFailed": "Failed to unban user",
+      "deleteFailed": "Failed to delete user"
     }
   },
   "legal": {
@@ -804,7 +818,7 @@
       "visibilityUpdateFailed": "Failed to update visibility",
       "perTitleOverrides": "Per-title overrides",
       "socialTitle": "Social",
-      "socialSubtitle": "Invite friends to your Remindarr instance. They'll get a limited signup link.",
+      "socialSubtitle": "Invite friends to your Remindarr instance. When they open your link, you follow each other.",
       "socialHint": "Manage invite codes on the Invite page",
       "passkeyNameLabel": "Passkey name",
       "data": {
@@ -937,14 +951,18 @@
     "redeeming": "Redeeming invitation...",
     "redeemSuccess": "You and @{{name}} are now following each other!",
     "statusPending": "Pending",
-    "statusUsed": "Used by @{{username}}",
+    "statusUsed": "Used by <profile>@{{username}}</profile>",
     "statusExpired": "Expired",
     "created_at": "Created",
     "expires_at": "Expires",
-    "usedBy": "Used by",
     "shareTitle": "Join me on Remindarr",
     "shareText": "Use my invite link to join Remindarr!",
-    "settingsLink": "Invite Friends"
+    "settingsLink": "Invite Friends",
+    "statusUsedDeleted": "Used by a deleted account",
+    "used_at": "Used",
+    "remove": "Remove",
+    "removing": "Removing...",
+    "removed": "Invitation removed"
   },
   "common": {
     "scrollLeft": "Scroll left",
@@ -966,7 +984,10 @@
       "hoursAgo_other": "{{count}}h ago",
       "daysAgo_one": "{{count}}d ago",
       "daysAgo_other": "{{count}}d ago"
-    }
+    },
+    "share": "Share",
+    "linkCopied": "Link copied to clipboard",
+    "linkCopyFailed": "Failed to copy link"
   },
   "feed": {
     "title": "Calendar Feed",
