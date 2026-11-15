@@ -546,13 +546,9 @@
     "hideWatched": "Ocultar vistos",
     "showWatched": "Mostrar vistos",
     "gridView": "Vista de cuadrícula",
-    "weekView": "Vista semanal",
     "agendaView": "Vista de agenda",
     "close": "Cerrar",
     "goToDay": "Ir al {{date}}",
-    "densityCompact": "Compacta",
-    "densityComfortable": "Cómoda",
-    "densitySpacious": "Amplia",
     "loadError": "No se pudo cargar el calendario. Inténtalo de nuevo.",
     "stats": {
       "episodes_one": "{{count}} episodio",
@@ -560,29 +556,16 @@
       "episodes_other": "{{count}} episodios",
       "titles_one": "{{count}} título",
       "titles_many": "{{count}} títulos",
-      "titles_other": "{{count}} títulos",
-      "total_one": "{{count}} en total",
-      "total_many": "{{count}} en total",
-      "total_other": "{{count}} en total"
+      "titles_other": "{{count}} títulos"
     },
     "episodes": "Episodios",
     "releases": "Estrenos",
     "noReleasesOnDay": "No hay estrenos seguidos este día",
     "previousMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
-    "month": "Mes",
-    "agenda": "Agenda",
-    "legend": {
-      "tracked": "Seguido · en emisión",
-      "followed": "Seguido · episodio nuevo",
-      "premiere": "Estreno"
-    },
-    "episodesThisMonth_one": "{{count}} episodio este mes",
-    "episodesThisMonth_many": "{{count}} episodios este mes",
-    "episodesThisMonth_other": "{{count}} episodios este mes",
-    "previousWeek": "Semana anterior",
-    "nextWeek": "Semana siguiente",
-    "thisWeek": "Esta semana"
+    "loadMonth": "Mostrar {{month}}",
+    "movie": "Película",
+    "show": "Serie"
   },
   "landing": {
     "tagline": "Sigue las películas y series que te encantan",

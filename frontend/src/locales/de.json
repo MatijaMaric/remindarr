@@ -534,39 +534,24 @@
     "hideWatched": "Gesehene ausblenden",
     "showWatched": "Gesehene anzeigen",
     "gridView": "Rasteransicht",
-    "weekView": "Wochenansicht",
     "agendaView": "Agendaansicht",
     "close": "Schließen",
     "goToDay": "Zu {{date}} springen",
-    "densityCompact": "Kompakt",
-    "densityComfortable": "Komfortabel",
-    "densitySpacious": "Großzügig",
     "loadError": "Kalender konnte nicht geladen werden. Bitte versuche es erneut.",
     "stats": {
       "episodes_one": "{{count}} Episode",
       "episodes_other": "{{count}} Episoden",
       "titles_one": "{{count}} Titel",
-      "titles_other": "{{count}} Titel",
-      "total_one": "{{count}} gesamt",
-      "total_other": "{{count}} gesamt"
+      "titles_other": "{{count}} Titel"
     },
     "episodes": "Episoden",
     "releases": "Veröffentlichungen",
     "noReleasesOnDay": "An diesem Tag gibt es keine gemerkten Veröffentlichungen",
     "previousMonth": "Vorheriger Monat",
     "nextMonth": "Nächster Monat",
-    "month": "Monat",
-    "agenda": "Agenda",
-    "legend": {
-      "tracked": "Gemerkt · läuft",
-      "followed": "Gefolgt · neue Episode",
-      "premiere": "Premiere"
-    },
-    "episodesThisMonth_one": "{{count}} Episode in diesem Monat",
-    "episodesThisMonth_other": "{{count}} Episoden in diesem Monat",
-    "previousWeek": "Vorherige Woche",
-    "nextWeek": "Nächste Woche",
-    "thisWeek": "Diese Woche"
+    "loadMonth": "{{month}} anzeigen",
+    "movie": "Film",
+    "show": "Serie"
   },
   "landing": {
     "tagline": "Behalte deine Lieblingsfilme und -serien im Blick",

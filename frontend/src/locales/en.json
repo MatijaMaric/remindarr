@@ -534,39 +534,24 @@
     "hideWatched": "Hide watched",
     "showWatched": "Show watched",
     "gridView": "Grid view",
-    "weekView": "Week view",
     "agendaView": "Agenda view",
     "close": "Close",
     "goToDay": "Go to {{date}}",
-    "densityCompact": "Compact",
-    "densityComfortable": "Comfortable",
-    "densitySpacious": "Spacious",
     "loadError": "Failed to load calendar. Please try again.",
     "stats": {
       "episodes_one": "{{count}} Episode",
       "episodes_other": "{{count}} Episodes",
       "titles_one": "{{count}} Title",
-      "titles_other": "{{count}} Titles",
-      "total_one": "{{count}} Total",
-      "total_other": "{{count}} Total"
+      "titles_other": "{{count}} Titles"
     },
     "episodes": "Episodes",
     "releases": "Releases",
     "noReleasesOnDay": "No tracked releases on this day",
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
-    "month": "Month",
-    "agenda": "Agenda",
-    "legend": {
-      "tracked": "Tracked · airing",
-      "followed": "Followed · new episode",
-      "premiere": "Premiere"
-    },
-    "episodesThisMonth_one": "{{count}} episode this month",
-    "episodesThisMonth_other": "{{count}} episodes this month",
-    "previousWeek": "Previous week",
-    "nextWeek": "Next week",
-    "thisWeek": "This week"
+    "loadMonth": "Show {{month}}",
+    "movie": "Movie",
+    "show": "Show"
   },
   "landing": {
     "tagline": "Track movies & TV shows you love",

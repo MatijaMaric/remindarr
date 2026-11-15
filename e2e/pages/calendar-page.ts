@@ -5,9 +5,9 @@ import { BasePage } from "./base-page";
  * Calendar page POM.
  *
  * Non-DOM notes:
- * - CalendarPage at /calendar renders a GridCalendar (default), Agenda, or
- *   Week view. Tests use desktop viewport (1280x720) to ensure grid view renders
- *   (mobile renders MobileCalendar).
+ * - CalendarPage at /calendar renders a GridCalendar (default) or Agenda view.
+ *   Tests use desktop viewport (1280x720) to ensure grid view renders
+ *   (phones get the Agenda only).
  * - GridCalendar calls GET /api/calendar?month=YYYY-MM on mount.
  * - GridCalendar also calls GET /api/user/settings/crowded-weeks on mount.
  * - App shell background components need mocks for subscriptions, achievements/me,

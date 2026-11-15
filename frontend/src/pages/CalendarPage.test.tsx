@@ -30,6 +30,19 @@ function newTestClient() {
 // Initialize i18n before anything else (avoids mock.module leak)
 import "../i18n";
 
+// The agenda's scroll-spy needs an IntersectionObserver; a no-op is enough.
+if (!("IntersectionObserver" in globalThis)) {
+  Object.defineProperty(globalThis, "IntersectionObserver", {
+    value: class {
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    },
+    configurable: true,
+    writable: true,
+  });
+}
+
 // Must import after spies are set up in beforeEach
 const { default: CalendarPage, SlideOverPanel } =
   await import("./CalendarPage");
@@ -115,6 +128,46 @@ afterEach(() => {
   cleanup();
 });
 
+function gridEpisode(
+  id: number,
+  titleId: string,
+  airDate: string,
+  showTitle = `Show ${titleId}`,
+  watched = false,
+) {
+  return {
+    id,
+    title_id: titleId,
+    season_number: 1,
+    episode_number: id,
+    name: null,
+    overview: null,
+    air_date: airDate,
+    still_path: null,
+    show_title: showTitle,
+    poster_url: null,
+    is_watched: watched,
+    offers: [],
+  };
+}
+
+function gridTitle(
+  id: string,
+  objectType: "MOVIE" | "SHOW",
+  releaseDate: string,
+  name: string,
+) {
+  return {
+    id,
+    object_type: objectType,
+    title: name,
+    release_date: releaseDate,
+    poster_url: null,
+    age_certification: null,
+    offers: [],
+  };
+}
+
 describe("CalendarPage", () => {
   it("renders grid view by default on desktop", () => {
     render(<CalendarPage />, { wrapper: Wrapper });
@@ -133,33 +186,6 @@ describe("CalendarPage", () => {
       await screen.findByText("Failed to load calendar. Please try again."),
     ).toBeDefined();
     expect(screen.queryByText("Mon")).toBeNull();
-  });
-
-  it("shows an error in week view when the calendar fetch fails", async () => {
-    apiSpies[0].mockRejectedValue(new Error("network"));
-    render(
-      <Providers path="/?view=week">
-        <CalendarPage />
-      </Providers>,
-    );
-
-    expect(
-      await screen.findByText("Failed to load calendar. Please try again."),
-    ).toBeDefined();
-    expect(screen.queryByTestId("week-day-column")).toBeNull();
-  });
-
-  it("shows an error in mobile month view when the calendar fetch fails", async () => {
-    useIsMobileSpy.mockReturnValue(true);
-    apiSpies[0].mockRejectedValue(new Error("network"));
-    render(<CalendarPage />, { wrapper: Wrapper });
-
-    fireEvent.click(screen.getByRole("button", { name: "Month" }));
-
-    expect(
-      await screen.findByText("Failed to load calendar. Please try again."),
-    ).toBeDefined();
-    expect(screen.queryByText("Loading...")).toBeNull();
   });
 
   it("opens a labelled day dialog and restores its invoking day on Escape or close", async () => {
@@ -242,42 +268,17 @@ describe("CalendarPage", () => {
     // No toggle buttons on mobile
     expect(screen.queryByTitle("Grid view")).toBeNull();
     expect(screen.queryByTitle("Agenda view")).toBeNull();
+    // The dots-only month grid is gone: no Month/Agenda switch either
+    expect(screen.queryByRole("button", { name: "Month" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Agenda" })).toBeNull();
   });
 
-  it("shows hide watched toggle in agenda mode, selected by default", () => {
-    render(<CalendarPage />, { wrapper: Wrapper });
-
-    // Switch to agenda
-    fireEvent.click(screen.getByTitle("Agenda view"));
-
-    const toggle = screen.getByTitle("Show watched");
-    expect(toggle).toBeDefined();
-    // Active state = indigo background class
-    expect(toggle.className).toContain("bg-primary");
-  });
-
-  it("toggles hide watched off when clicked", () => {
-    render(<CalendarPage />, { wrapper: Wrapper });
-
-    // Switch to agenda
-    fireEvent.click(screen.getByTitle("Agenda view"));
-
-    const toggle = screen.getByTitle("Show watched");
-    fireEvent.click(toggle);
-
-    // Now it should show "Hide watched" title (inactive state)
-    const toggleOff = screen.getByTitle("Hide watched");
-    expect(toggleOff).toBeDefined();
-    expect(toggleOff.className).not.toContain("bg-primary");
-  });
-
-  it("shows hide watched toggle on mobile agenda", () => {
+  it("shows hide watched toggle on mobile agenda, off by default", () => {
     useIsMobileSpy.mockReturnValue(true);
     render(<CalendarPage />, { wrapper: Wrapper });
 
-    const toggle = screen.getByTitle("Show watched");
-    expect(toggle).toBeDefined();
-    expect(toggle.className).toContain("bg-primary");
+    const toggle = screen.getByTitle("Hide watched");
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
   });
 
   it("view toggle buttons have aria-label attributes", () => {
@@ -328,95 +329,102 @@ describe("CalendarPage", () => {
 
     const toggle = screen.getByRole("button", { name: /hide watched/i });
     expect(toggle).toBeDefined();
-    expect(toggle.getAttribute("aria-pressed")).toBe("true");
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
   });
 
-  it("renders week view toggle button on desktop", () => {
-    render(<CalendarPage />, { wrapper: Wrapper });
-    expect(screen.getByTitle("Week view")).toBeDefined();
-  });
-
-  it("switches to week view when week toggle is clicked", async () => {
+  it("has no week view and no density toggle", () => {
     render(<CalendarPage />, { wrapper: Wrapper });
 
-    // Verify we're in grid mode
-    expect(screen.getByText("Mon")).toBeDefined();
-
-    // Click week view toggle
-    fireEvent.click(screen.getByTitle("Week view"));
-
-    // Week view renders 7 day-column headers (date numbers in header row)
-    const weekDayNumbers = await waitFor(() =>
-      screen.getAllByTestId("week-day-number"),
-    );
-    expect(weekDayNumbers.length).toBe(7);
+    expect(screen.queryByTitle("Week view")).toBeNull();
+    expect(screen.queryByRole("button", { name: /compact/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /spacious/i })).toBeNull();
   });
 
-  it("week view renders 7 day columns", async () => {
-    render(<CalendarPage />, { wrapper: Wrapper });
-    fireEvent.click(screen.getByTitle("Week view"));
-
-    const columns = await waitFor(() =>
-      screen.getAllByTestId("week-day-column"),
-    );
-    expect(columns.length).toBe(7);
-  });
-
-  it("?view=week param activates week view", async () => {
+  it("falls back to the month grid for old ?view=week links", () => {
     render(
       <Providers path="/?view=week">
         <CalendarPage />
       </Providers>,
     );
-    const columns = await waitFor(() =>
-      screen.getAllByTestId("week-day-column"),
-    );
-    expect(columns.length).toBe(7);
+    expect(screen.getByText("Mon")).toBeDefined();
+    expect(screen.queryByTestId("week-day-column")).toBeNull();
   });
 
-  it("renders density toggle buttons on desktop", () => {
-    render(<CalendarPage />, { wrapper: Wrapper });
-
-    // Density toggle renders C / C / S (compact / comfortable / spacious initials)
-    const compactBtn = screen.getByRole("button", { name: /compact/i });
-    const comfortableBtn = screen.getByRole("button", { name: /comfortable/i });
-    const spaciousBtn = screen.getByRole("button", { name: /spacious/i });
-    expect(compactBtn).toBeDefined();
-    expect(comfortableBtn).toBeDefined();
-    expect(spaciousBtn).toBeDefined();
-  });
-
-  it("comfortable density is active by default", () => {
-    render(<CalendarPage />, { wrapper: Wrapper });
-
-    const comfortableBtn = screen.getByRole("button", { name: /comfortable/i });
-    expect(comfortableBtn.getAttribute("aria-pressed")).toBe("true");
-    expect(comfortableBtn.className).toContain("bg-primary");
-  });
-
-  it("compact density reduces item cap vs comfortable", () => {
-    render(<CalendarPage />, { wrapper: Wrapper });
-
-    // Compact density button
-    const compactBtn = screen.getByRole("button", { name: /compact/i });
-    fireEvent.click(compactBtn);
-
-    expect(compactBtn.getAttribute("aria-pressed")).toBe("true");
-    expect(compactBtn.className).toContain("bg-primary");
-
-    // Comfortable should no longer be active
-    const comfortableBtn = screen.getByRole("button", { name: /comfortable/i });
-    expect(comfortableBtn.getAttribute("aria-pressed")).toBe("false");
-  });
-
-  it("?density=compact param activates compact density", () => {
+  it("shows each month count once, with no total chip or legend", async () => {
+    apiSpies[0].mockResolvedValue({
+      titles: [gridTitle("movie-1", "MOVIE", "2024-03-05", "Big Movie")],
+      episodes: [gridEpisode(1, "tv-1", "2024-03-06")],
+      count: 1,
+    } as any);
     render(
-      <Providers path="/?density=compact">
+      <Providers path="/?month=2024-03">
         <CalendarPage />
       </Providers>,
     );
-    const compactBtn = screen.getByRole("button", { name: /compact/i });
-    expect(compactBtn.getAttribute("aria-pressed")).toBe("true");
+
+    expect(await screen.findByText("1 Episode")).toBeDefined();
+    expect(screen.getByText("1 Title")).toBeDefined();
+    expect(screen.queryByText(/Total/)).toBeNull();
+    expect(screen.queryByText(/this month/)).toBeNull();
+    expect(screen.queryByText("Tracked · airing")).toBeNull();
+  });
+
+  it("does not list a show premiere twice in the grid", async () => {
+    apiSpies[0].mockResolvedValue({
+      titles: [gridTitle("tv-1", "SHOW", "2024-03-06", "Lanterns")],
+      episodes: [gridEpisode(1, "tv-1", "2024-03-06", "Lanterns")],
+      count: 1,
+    } as any);
+    render(
+      <Providers path="/?month=2024-03">
+        <CalendarPage />
+      </Providers>,
+    );
+
+    expect(await screen.findByText("1 Episode")).toBeDefined();
+    expect(screen.queryByText("1 Title")).toBeNull();
+    expect(screen.getAllByText("Lanterns").length).toBe(1);
+  });
+
+  it("keeps Hide watched and the month when switching views", async () => {
+    apiSpies[0].mockImplementation((async ({ month }: { month: string }) => ({
+      titles: [],
+      episodes:
+        month === "2024-03"
+          ? [
+              gridEpisode(1, "tv-1", "2024-03-06", "Seen Show", true),
+              gridEpisode(2, "tv-2", "2024-03-07", "Fresh Show"),
+            ]
+          : [],
+      count: 0,
+    })) as any);
+    render(
+      <Providers path="/?month=2024-03">
+        <CalendarPage />
+      </Providers>,
+    );
+
+    expect(await screen.findByText("Seen Show")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: /hide watched/i }));
+    await waitFor(() => expect(screen.queryByText("Seen Show")).toBeNull());
+
+    fireEvent.click(screen.getByTitle("Agenda view"));
+    const agendaToggle = screen.getByRole("button", { name: /hide watched/i });
+    expect(agendaToggle.getAttribute("aria-pressed")).toBe("true");
+    await waitFor(() =>
+      expect(apiSpies[0]).toHaveBeenCalledWith({
+        month: "2024-03",
+        type: undefined,
+      }),
+    );
+    expect(await screen.findByText("Fresh Show")).toBeDefined();
+    expect(screen.queryByText("Seen Show")).toBeNull();
+
+    fireEvent.click(screen.getByTitle("Grid view"));
+    expect(await screen.findByText("Fresh Show")).toBeDefined();
+    expect(
+      screen.getByRole("heading", { name: /March 2024|2024/ }),
+    ).toBeDefined();
   });
 });
 
