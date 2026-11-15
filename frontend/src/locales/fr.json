@@ -24,10 +24,10 @@
       "ban": "Bannir l'utilisateur",
       "unban": "Lever le bannissement",
       "delete": "Supprimer l'utilisateur",
-      "banTitle": "Bannir l'utilisateur",
+      "banTitle": "Bannir {{username}}",
       "banReasonPlaceholder": "Motif (facultatif)",
       "banConfirm": "Bannir l'utilisateur",
-      "deleteTitle": "Supprimer l'utilisateur",
+      "deleteTitle": "Supprimer {{username}}",
       "deleteConfirm": "Cette action est définitive et irréversible.",
       "deleteConfirmButton": "Supprimer définitivement",
       "prevPage": "Page précédente",
@@ -51,7 +51,21 @@
       "newPassword": "Nouveau mot de passe (8 caractères minimum)",
       "resetPasswordConfirm": "Définir le mot de passe",
       "resetPasswordDone": "Mot de passe réinitialisé. L’utilisateur a été déconnecté partout.",
-      "resetPasswordFailed": "Impossible de réinitialiser le mot de passe"
+      "resetPasswordFailed": "Impossible de réinitialiser le mot de passe",
+      "roleAdmin": "Admin",
+      "roleUser": "Utilisateur",
+      "banned": "Banni",
+      "banReason": "Motif : {{reason}}",
+      "promoteTitle": "Promouvoir {{username}} administrateur ?",
+      "promoteHelp": "Les administrateurs peuvent gérer les utilisateurs et les paramètres du serveur.",
+      "demoteTitle": "Retirer les droits d'administrateur de {{username}} ?",
+      "demoteHelp": "Son compte et ses données sont conservés, mais l'accès aux paramètres d'administration est retiré.",
+      "promoted": "{{username}} est maintenant administrateur",
+      "demoted": "{{username}} n'est plus administrateur",
+      "roleFailed": "Impossible de modifier le rôle",
+      "banFailed": "Impossible de bannir l'utilisateur",
+      "unbanFailed": "Impossible de lever le bannissement",
+      "deleteFailed": "Impossible de supprimer l'utilisateur"
     }
   },
   "legal": {
@@ -855,7 +869,7 @@
       "visibilityUpdateFailed": "Impossible de mettre à jour la visibilité",
       "perTitleOverrides": "Exceptions par titre",
       "socialTitle": "Social",
-      "socialSubtitle": "Invitez vos amis sur votre instance Remindarr. Ils recevront un lien d'inscription limité.",
+      "socialSubtitle": "Invitez vos amis sur votre instance Remindarr. Quand ils ouvrent votre lien, vous vous suivez mutuellement.",
       "socialHint": "Gérez les codes d'invitation sur la page Invitations",
       "passkeyNameLabel": "Nom de la clé",
       "data": {
@@ -997,14 +1011,18 @@
     "redeeming": "Utilisation de l'invitation...",
     "redeemSuccess": "Vous et @{{name}} êtes maintenant abonnés l'un à l'autre !",
     "statusPending": "En attente",
-    "statusUsed": "Utilisée par @{{username}}",
+    "statusUsed": "Utilisée par <profile>@{{username}}</profile>",
     "statusExpired": "Expirée",
     "created_at": "Créée",
     "expires_at": "Expire",
-    "usedBy": "Utilisée par",
     "shareTitle": "Rejoignez-moi sur Remindarr",
     "shareText": "Utilisez mon lien d'invitation pour rejoindre Remindarr !",
-    "settingsLink": "Inviter des amis"
+    "settingsLink": "Inviter des amis",
+    "statusUsedDeleted": "Utilisée par un compte supprimé",
+    "used_at": "Utilisée",
+    "remove": "Supprimer",
+    "removing": "Suppression...",
+    "removed": "Invitation supprimée"
   },
   "common": {
     "scrollLeft": "Défiler vers la gauche",
@@ -1029,7 +1047,10 @@
       "daysAgo_one": "il y a {{count}} j",
       "daysAgo_many": "il y a {{count}} j",
       "daysAgo_other": "il y a {{count}} j"
-    }
+    },
+    "share": "Partager",
+    "linkCopied": "Lien copié dans le presse-papiers",
+    "linkCopyFailed": "Impossible de copier le lien"
   },
   "feed": {
     "title": "Flux de calendrier",

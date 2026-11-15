@@ -24,10 +24,10 @@
       "ban": "Bloquear usuario",
       "unban": "Desbloquear usuario",
       "delete": "Eliminar usuario",
-      "banTitle": "Bloquear usuario",
+      "banTitle": "Bloquear a {{username}}",
       "banReasonPlaceholder": "Motivo (opcional)",
       "banConfirm": "Bloquear usuario",
-      "deleteTitle": "Eliminar usuario",
+      "deleteTitle": "Eliminar a {{username}}",
       "deleteConfirm": "Esta acción es permanente y no se puede deshacer.",
       "deleteConfirmButton": "Eliminar definitivamente",
       "prevPage": "Página anterior",
@@ -51,7 +51,21 @@
       "newPassword": "Contraseña nueva (mínimo 8 caracteres)",
       "resetPasswordConfirm": "Establecer contraseña",
       "resetPasswordDone": "Contraseña restablecida. Se han cerrado todas las sesiones del usuario.",
-      "resetPasswordFailed": "No se pudo restablecer la contraseña"
+      "resetPasswordFailed": "No se pudo restablecer la contraseña",
+      "roleAdmin": "Admin",
+      "roleUser": "Usuario",
+      "banned": "Bloqueado",
+      "banReason": "Motivo: {{reason}}",
+      "promoteTitle": "¿Hacer administrador a {{username}}?",
+      "promoteHelp": "Los administradores pueden gestionar usuarios y la configuración del servidor.",
+      "demoteTitle": "¿Quitar los permisos de administrador a {{username}}?",
+      "demoteHelp": "Conserva su cuenta y sus datos, pero pierde el acceso a la configuración de administración.",
+      "promoted": "{{username}} ahora es administrador",
+      "demoted": "{{username}} ya no es administrador",
+      "roleFailed": "No se pudo cambiar el rol",
+      "banFailed": "No se pudo bloquear al usuario",
+      "unbanFailed": "No se pudo desbloquear al usuario",
+      "deleteFailed": "No se pudo eliminar al usuario"
     }
   },
   "legal": {
@@ -855,7 +869,7 @@
       "visibilityUpdateFailed": "No se pudo actualizar la visibilidad",
       "perTitleOverrides": "Excepciones por título",
       "socialTitle": "Social",
-      "socialSubtitle": "Invita a tus amigos a tu instancia de Remindarr. Recibirán un enlace de registro limitado.",
+      "socialSubtitle": "Invita a tus amigos a tu instancia de Remindarr. Cuando abran tu enlace, os seguiréis mutuamente.",
       "socialHint": "Gestiona los códigos de invitación en la página Invitar",
       "passkeyNameLabel": "Nombre de la llave",
       "data": {
@@ -997,14 +1011,18 @@
     "redeeming": "Canjeando la invitación...",
     "redeemSuccess": "¡Ahora tú y @{{name}} os seguís mutuamente!",
     "statusPending": "Pendiente",
-    "statusUsed": "Usada por @{{username}}",
+    "statusUsed": "Usada por <profile>@{{username}}</profile>",
     "statusExpired": "Caducada",
     "created_at": "Creada",
     "expires_at": "Caduca",
-    "usedBy": "Usada por",
     "shareTitle": "Únete a mí en Remindarr",
     "shareText": "¡Usa mi enlace de invitación para unirte a Remindarr!",
-    "settingsLink": "Invitar amigos"
+    "settingsLink": "Invitar amigos",
+    "statusUsedDeleted": "Usada por una cuenta eliminada",
+    "used_at": "Usada",
+    "remove": "Eliminar",
+    "removing": "Eliminando...",
+    "removed": "Invitación eliminada"
   },
   "common": {
     "scrollLeft": "Desplazar a la izquierda",
@@ -1029,7 +1047,10 @@
       "daysAgo_one": "hace {{count}} d",
       "daysAgo_many": "hace {{count}} d",
       "daysAgo_other": "hace {{count}} d"
-    }
+    },
+    "share": "Compartir",
+    "linkCopied": "Enlace copiado al portapapeles",
+    "linkCopyFailed": "No se pudo copiar el enlace"
   },
   "feed": {
     "title": "Feed de calendario",

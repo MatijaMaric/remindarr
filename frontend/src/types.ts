@@ -580,7 +580,6 @@ export interface AdminUser {
   ban_expires: number | null;
   created_at: string | null;
   updated_at: string | null;
-  tracked_count?: number;
 }
 
 export interface AdminUsersResponse {
@@ -873,7 +872,7 @@ export interface InvitationItem {
   created_at: string;
   expires_at: string;
   used_at: string | null;
-  used_by: UserSummary | null;
+  used_by: { id: string; username: string } | null;
 }
 
 export interface UserSettings {

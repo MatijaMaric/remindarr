@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, Link } from "react-router";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   Plus,
@@ -58,9 +58,13 @@ export default function InvitePage() {
     onSettled: () => void qc.invalidateQueries({ queryKey: ["invitations"] }),
   });
 
+  // Revoking a pending invitation and removing an expired one are the same
+  // DELETE; only the confirmation text differs.
   const revokeMutation = useMutation({
-    mutationFn: (id: string) => api.revokeInvitation(id),
-    onSuccess: () => toast.success(t("invite.revoked")),
+    mutationFn: ({ id }: { id: string; expired: boolean }) =>
+      api.revokeInvitation(id),
+    onSuccess: (_data, { expired }) =>
+      toast.success(t(expired ? "invite.removed" : "invite.revoked")),
     onError: (err: unknown) =>
       toast.error(err instanceof Error ? err.message : String(err)),
     onSettled: () => void qc.invalidateQueries({ queryKey: ["invitations"] }),
@@ -155,9 +159,10 @@ export default function InvitePage() {
               key={inv.id}
               invitation={inv}
               revoking={
-                revokeMutation.isPending && revokeMutation.variables === inv.id
+                revokeMutation.isPending &&
+                revokeMutation.variables?.id === inv.id
               }
-              onRevoke={(id) => revokeMutation.mutate(id)}
+              onRevoke={(id, expired) => revokeMutation.mutate({ id, expired })}
             />
           ))}
         </div>
@@ -173,10 +178,11 @@ function InvitationCard({
 }: {
   invitation: InvitationItem;
   revoking: boolean;
-  onRevoke: (id: string) => void;
+  onRevoke: (id: string, expired: boolean) => void;
 }) {
   const { t } = useTranslation();
   const status = getStatus(invitation);
+  // ponytail: the code itself is not shown; Share hands out the full link.
   const inviteUrl = getInviteUrl(invitation.code);
 
   return (
@@ -184,66 +190,57 @@ function InvitationCard({
       className={`rounded-md p-4 border transition-colors ${
         status === "used"
           ? "bg-success/20 border-success/40"
-          : status === "expired"
-            ? "bg-card border-border opacity-50"
-            : "bg-card border-border"
+          : "bg-card border-border"
       }`}
     >
-      {/* Status badge and code */}
-      <div className="flex items-center justify-between gap-2 mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
         <StatusBadge status={status} usedBy={invitation.used_by} />
-        <code
-          className={`text-xs font-mono px-2 py-1 rounded-sm bg-muted text-foreground-secondary ${
-            status === "expired" ? "line-through" : ""
-          }`}
-        >
-          {invitation.code}
-        </code>
-      </div>
-
-      {/* Dates */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mb-3">
-        <span>
-          {t("invite.created_at")}:{" "}
-          {formatDate(invitation.created_at, { withTime: true })}
-        </span>
-        <span>
-          {t("invite.expires_at")}:{" "}
-          {formatDate(invitation.expires_at, { withTime: true })}
-        </span>
-      </div>
-
-      {/* Used by info */}
-      {status === "used" && invitation.used_by && (
-        <div className="text-sm text-success mb-3">
-          {t("invite.usedBy", {
-            username:
-              invitation.used_by.display_name || invitation.used_by.username,
-          })}{" "}
-          <Link
-            to={`/user/${invitation.used_by.username}`}
-            className="text-primary-text hover:text-primary-text transition-colors"
-          >
-            @{invitation.used_by.username}
-          </Link>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span>
+            {t("invite.created_at")}:{" "}
+            {formatDate(invitation.created_at, { withTime: true })}
+          </span>
+          {status === "used" ? (
+            <span>
+              {t("invite.used_at")}:{" "}
+              {formatDate(invitation.used_at, { withTime: true })}
+            </span>
+          ) : (
+            <span>
+              {t("invite.expires_at")}:{" "}
+              {formatDate(invitation.expires_at, { withTime: true })}
+            </span>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Actions */}
       {status === "pending" && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mt-3">
           <ShareButton
             title={t("invite.shareTitle")}
             text={t("invite.shareText")}
             url={inviteUrl}
           />
           <button
-            onClick={() => onRevoke(invitation.id)}
+            onClick={() => onRevoke(invitation.id, false)}
             disabled={revoking}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer bg-destructive-soft text-destructive hover:bg-destructive-soft/80 hover:text-destructive disabled:opacity-50"
+            className="min-h-8 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer bg-destructive-soft text-destructive hover:bg-destructive-soft/80 hover:text-destructive disabled:opacity-50"
           >
             <Trash2 className="size-3.5" />
             {revoking ? t("invite.revoking") : t("invite.revoke")}
+          </button>
+        </div>
+      )}
+
+      {status === "expired" && (
+        <div className="flex items-center gap-2 mt-3">
+          <button
+            onClick={() => onRevoke(invitation.id, true)}
+            disabled={revoking}
+            className="min-h-8 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer bg-muted text-muted-foreground hover:bg-muted-hover hover:text-foreground disabled:opacity-50"
+          >
+            <Trash2 className="size-3.5" />
+            {revoking ? t("invite.removing") : t("invite.remove")}
           </button>
         </div>
       )}
@@ -264,9 +261,24 @@ function StatusBadge({
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
         <CheckCircle2 className="size-3.5" />
-        {t("invite.statusUsed", {
-          username: usedBy?.display_name || usedBy?.username || "",
-        })}
+        {usedBy ? (
+          <span>
+            <Trans
+              i18nKey="invite.statusUsed"
+              values={{ username: usedBy.username }}
+              components={{
+                profile: (
+                  <Link
+                    to={`/user/${usedBy.username}`}
+                    className="text-primary-text hover:underline"
+                  />
+                ),
+              }}
+            />
+          </span>
+        ) : (
+          t("invite.statusUsedDeleted")
+        )}
       </span>
     );
   }
