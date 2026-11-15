@@ -528,7 +528,15 @@ function createApp(env: Env) {
     limit: 20,
     windowMs: 60_000,
   });
-  app.use("/api/suggestions/*", suggestionsRateLimiter, requireAuth);
+  // Dismiss/undo get their own budget so a run of dismissals is not capped by
+  // the list limit above (#1407).
+  const dismissRateLimiter = rateLimiter({
+    store: rateLimitStore,
+    scope: "suggestion-dismiss",
+    limit: 60,
+    windowMs: 60_000,
+  });
+  app.use("/api/suggestions/dismiss/*", dismissRateLimiter, requireAuth);
   app.use("/api/suggestions", suggestionsRateLimiter, requireAuth);
   app.route("/api/suggestions", suggestionsRoutes);
 

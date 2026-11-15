@@ -43,6 +43,11 @@ describe("posterUrl", () => {
       "https://image.tmdb.org/t/p/original/baz.jpg",
     );
   });
+
+  test("leaves an already-absolute URL alone instead of prefixing it twice (#1407)", () => {
+    const full = "https://image.tmdb.org/t/p/w342/foo.jpg";
+    expect(posterUrl(full, "w92")).toBe(full);
+  });
 });
 
 describe("backdropUrl", () => {

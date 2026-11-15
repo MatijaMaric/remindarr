@@ -914,11 +914,10 @@
   "discovery": {
     "title": "Discovery",
     "empty": "No recommendations yet. Follow people to see their recommendations!",
+    "emptyCta": "Find and track titles, then rate a few to improve recommendations.",
     "movie": "Movie",
-    "tv": "TV Show",
     "track": "Track",
     "dismiss": "Dismiss",
-    "tracked": "\"{{title}}\" added to your watchlist",
     "trackFailed": "Failed to track title",
     "dismissFailed": "Failed to dismiss recommendation",
     "loadFailed": "Failed to load recommendations",
@@ -934,10 +933,8 @@
     "friendCount_one": "{{count}} friend",
     "friendCount_other": "{{count}} friends",
     "direct": "Direct",
-    "noPoster": "N/A",
     "kicker": "Based on what you watch & who you follow",
     "forYou": "For you",
-    "activity": "Activity",
     "sessionCounts": "{{tracked}} tracked · {{dismissed}} dismissed",
     "moreForYou": {
       "kicker": "More for you",
@@ -948,9 +945,8 @@
       "kicker": "From people you follow",
       "title": "Friends are recommending"
     },
-    "hiddenCount_one": "{{count}} hidden — already tracked or dismissed",
-    "hiddenCount_other": "{{count}} hidden — already tracked or dismissed",
-    "allHandled": "All suggestions tracked or dismissed.",
+    "hiddenCount_one": "{{count}} hidden — already tracked, watched or dismissed",
+    "hiddenCount_other": "{{count}} hidden — already tracked, watched or dismissed",
     "hero": {
       "kicker": "Top pick for you",
       "tvSeries": "TV Series",
@@ -960,9 +956,7 @@
       "friends": "Friends",
       "recCount_one": "{{count}} rec",
       "recCount_other": "{{count}} recs",
-      "noFriendRecs": "None of your friends have recommended this yet.",
       "viewDetails": "View details",
-      "undoDismiss": "Undo dismiss",
       "notInterested": "Not interested"
     }
   },

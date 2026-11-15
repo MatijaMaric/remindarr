@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../../test-utils/setup";
 import { makeParsedTitle } from "../../test-utils/fixtures";
-import { upsertTitles, createUser, follow } from "../repository";
+import { upsertTitles, createUser, follow, trackTitle } from "../repository";
+import { dismissTitle } from "./dismissed";
 import {
   createRecommendation,
   getUserRecommendation,
@@ -25,6 +26,7 @@ beforeEach(async () => {
   await upsertTitles([
     makeParsedTitle({ id: "movie-1", title: "Test Movie" }),
     makeParsedTitle({ id: "movie-2", title: "Another Movie" }),
+    makeParsedTitle({ id: "movie-3", title: "Third Movie" }),
   ]);
 });
 
@@ -102,6 +104,25 @@ describe("getDiscoveryFeed", () => {
     // After marking as read
     feed = await getDiscoveryFeed(userB);
     expect(feed[0].readAt).not.toBeNull();
+  });
+
+  it("hides titles the recipient already tracks or dismissed (#1407)", async () => {
+    await follow(userB, userA);
+    await createRecommendation(userA, "movie-1");
+    await createRecommendation(userA, "movie-2");
+    await createRecommendation(userA, "movie-3", undefined, userB);
+
+    await trackTitle("movie-1", userB);
+    await dismissTitle(userB, "movie-3");
+
+    const feed = await getDiscoveryFeed(userB);
+    expect(feed.map((r) => r.titleId)).toEqual(["movie-2"]);
+    expect(await getDiscoveryFeedCount(userB)).toBe(1);
+    expect(await getUnreadCount(userB)).toBe(1);
+
+    // Other recipients are unaffected by userB's choices
+    await follow(userC, userA);
+    expect(await getDiscoveryFeedCount(userC)).toBe(2);
   });
 
   it("supports pagination with limit and offset", async () => {

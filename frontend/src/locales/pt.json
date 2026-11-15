@@ -930,11 +930,10 @@
   "discovery": {
     "title": "Descobrir",
     "empty": "Ainda não há recomendações. Siga outras pessoas para ver as recomendações delas!",
+    "emptyCta": "Encontre e acompanhe títulos e avalie alguns para melhorar as recomendações.",
     "movie": "Filme",
-    "tv": "Série",
     "track": "Acompanhar",
     "dismiss": "Descartar",
-    "tracked": "\"{{title}}\" foi adicionado à sua lista",
     "trackFailed": "Não foi possível acompanhar o título",
     "dismissFailed": "Não foi possível descartar a recomendação",
     "loadFailed": "Não foi possível carregar as recomendações",
@@ -951,10 +950,8 @@
     "friendCount_many": "{{count}} amigos",
     "friendCount_other": "{{count}} amigos",
     "direct": "Direta",
-    "noPoster": "N/D",
     "kicker": "Com base no que você assiste e em quem você segue",
     "forYou": "Para você",
-    "activity": "Atividade",
     "sessionCounts": "{{tracked}} acompanhados · {{dismissed}} descartados",
     "moreForYou": {
       "kicker": "Mais para você",
@@ -965,10 +962,9 @@
       "kicker": "Das pessoas que você segue",
       "title": "Seus amigos recomendam"
     },
-    "hiddenCount_one": "{{count}} oculto: já acompanhado ou descartado",
-    "hiddenCount_many": "{{count}} ocultos: já acompanhados ou descartados",
-    "hiddenCount_other": "{{count}} ocultos: já acompanhados ou descartados",
-    "allHandled": "Todas as sugestões foram acompanhadas ou descartadas.",
+    "hiddenCount_one": "{{count}} oculto: já acompanhado, assistido ou descartado",
+    "hiddenCount_many": "{{count}} ocultos: já acompanhados, assistidos ou descartados",
+    "hiddenCount_other": "{{count}} ocultos: já acompanhados, assistidos ou descartados",
     "hero": {
       "kicker": "Nossa melhor escolha para você",
       "tvSeries": "Série",
@@ -979,9 +975,7 @@
       "recCount_one": "{{count}} recomendação",
       "recCount_many": "{{count}} recomendações",
       "recCount_other": "{{count}} recomendações",
-      "noFriendRecs": "Nenhum amigo seu recomendou isto ainda.",
       "viewDetails": "Ver detalhes",
-      "undoDismiss": "Desfazer descarte",
       "notInterested": "Não tenho interesse"
     }
   },
