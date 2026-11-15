@@ -172,6 +172,17 @@ describe("AchievementsPage — own profile", () => {
     });
   });
 
+  test("links to the leaderboard next to the XP total (#1404)", async () => {
+    getMyAchievementsSpy.mockImplementation(() =>
+      Promise.resolve([earnedWatching]),
+    );
+
+    render(<AchievementsPage />, { wrapper: OwnWrapper });
+
+    const link = await screen.findByRole("link", { name: "Leaderboard" });
+    expect(link.getAttribute("href")).toBe("/leaderboard");
+  });
+
   test("NextUpStrip section is visible for own profile when in-progress badges exist", async () => {
     getMyAchievementsSpy.mockImplementation(() =>
       Promise.resolve([earnedWatching, inProgressWatching]),
@@ -260,6 +271,19 @@ describe("AchievementsPage — other user profile", () => {
 
     // "Next up" section must not appear for other profiles
     expect(screen.queryByText("Next up")).toBeNull();
+  });
+
+  test("does not link to the viewer's leaderboard on someone else's profile", async () => {
+    getUserAchievementsSpy.mockImplementation(() =>
+      Promise.resolve([earnedWatching]),
+    );
+
+    render(<AchievementsPage />, { wrapper: OtherWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Achievements")).toBeDefined();
+    });
+    expect(screen.queryByRole("link", { name: "Leaderboard" })).toBeNull();
   });
 });
 
