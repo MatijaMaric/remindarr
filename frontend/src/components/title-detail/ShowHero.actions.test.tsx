@@ -44,7 +44,15 @@ function renderHero({
   signedIn = true,
   tracked = true,
   videos = [trailer],
-}: { signedIn?: boolean; tracked?: boolean; videos?: TmdbVideo[] } = {}) {
+  pinned,
+  imdbScore = null,
+}: {
+  signedIn?: boolean;
+  tracked?: boolean;
+  videos?: TmdbVideo[];
+  pinned?: boolean;
+  imdbScore?: number | null;
+} = {}) {
   const title: Title = {
     id: "show-1",
     object_type: "SHOW",
@@ -61,11 +69,12 @@ function renderHero({
     age_certification: null,
     original_language: null,
     tmdb_url: null,
-    imdb_score: null,
+    imdb_score: imdbScore,
     imdb_votes: null,
     tmdb_score: null,
     is_tracked: tracked,
     is_public: true,
+    is_pinned: pinned,
     offers: [],
   };
   const tmdb = { videos: { results: videos } } as ShowDetailsResponse["tmdb"];
@@ -90,6 +99,20 @@ describe.each([true, false])("ShowHero actions (mobile: %s)", (isMobile) => {
   beforeEach(() => {
     mobile = isMobile;
   });
+  it("shows the pinned state from the title (#1405)", () => {
+    renderHero({ pinned: true });
+    expect(
+      screen
+        .getByRole("button", { name: "📌 Pinned" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+  });
+
+  it("shows the IMDb score once", () => {
+    renderHero({ imdbScore: 8.4 });
+    expect(screen.getAllByText(/8\.4/)).toHaveLength(1);
+  });
+
   it("opens and hides the available trailer without desktop mode", () => {
     renderHero();
     const button = screen.getByRole("button", { name: "Watch Trailer" });
@@ -150,5 +173,16 @@ describe.each([true, false])("ShowHero actions (mobile: %s)", (isMobile) => {
     renderHero(options);
     expect(screen.queryByRole("button", { name: "Watch Trailer" })).toBeNull();
     expect(screen.queryByAltText("Trailer thumbnail")).toBeNull();
+  });
+});
+
+describe("ShowHero desktop kicker", () => {
+  beforeEach(() => {
+    mobile = false;
+  });
+  it("leaves the year to the meta line", () => {
+    renderHero();
+    expect(screen.getByText("TV Show")).toBeTruthy();
+    expect(screen.queryByText(/TV Show · 2024/)).toBeNull();
   });
 });

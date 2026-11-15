@@ -152,7 +152,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
             isTracked={title.is_tracked}
             titleData={title}
           />
-          <PinButton titleId={title.id} />
+          <PinButton titleId={title.id} isPinned={title.is_pinned} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {visibilityButton}
@@ -218,7 +218,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
               </p>
             )}
             <Kicker className="mb-2">
-              TV Show{title.release_year ? ` · ${title.release_year}` : ""}
+              TV Show
               {title.offers[0]?.provider_name
                 ? ` · ${title.offers[0].provider_name}`
                 : ""}
@@ -278,16 +278,13 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
             )}
           </div>
 
-          {(genres.length > 0 || title.imdb_score) && (
+          {genres.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {genres.map((g) => (
                 <Chip key={g} variant="default">
                   {g}
                 </Chip>
               ))}
-              {title.imdb_score && (
-                <Chip variant="amber">★ {title.imdb_score.toFixed(1)}</Chip>
-              )}
             </div>
           )}
 
@@ -310,7 +307,7 @@ export default function ShowHero({ title, tmdb, country }: ShowHeroProps) {
               isTracked={title.is_tracked}
               titleData={title}
             />
-            <PinButton titleId={title.id} />
+            <PinButton titleId={title.id} isPinned={title.is_pinned} />
             {visibilityButton}
             <WatchButtonGroup
               offers={title.offers}

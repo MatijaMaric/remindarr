@@ -58,10 +58,10 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
       {/* Hero */}
       <ShowHero title={title} tmdb={tmdb} country={country} />
 
-      {/* Metadata strip — mobile only; desktop ShowHero already renders these fields inline */}
+      {/* Metadata strip — mobile only; desktop ShowHero already renders these
+          fields inline. Type, provider and IMDb are already in the phone hero. */}
       <div className="sm:hidden bg-card -mx-4 px-6 py-5 flex flex-wrap gap-x-8 gap-y-3 border-b border-border">
         {[
-          { label: "TYPE", value: "TV Show" },
           tmdb?.status ? { label: "STATUS", value: tmdb.status } : null,
           tmdb?.number_of_seasons != null
             ? { label: "SEASONS", value: String(tmdb.number_of_seasons) }
@@ -75,14 +75,8 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
                 value: formatDate(title.next_episode_air_date),
               }
             : null,
-          title.offers[0]?.provider_name
-            ? { label: "NETWORK", value: title.offers[0].provider_name }
-            : null,
           tmdb?.episode_run_time?.[0]
             ? { label: "AVG RUNTIME", value: `${tmdb.episode_run_time[0]} min` }
-            : null,
-          title.imdb_score
-            ? { label: "IMDB", value: `★ ${title.imdb_score.toFixed(1)}` }
             : null,
         ]
           .filter(Boolean)
@@ -106,43 +100,6 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
           </p>
         </Section>
       )}
-
-      {/* Rating & Social */}
-      <SectionErrorBoundary label="ratings">
-        <RatingsSection
-          titleId={title.id}
-          shareTitle={tmdb?.name || title.title}
-        />
-      </SectionErrorBoundary>
-
-      {/* Creators & Cast */}
-      {creators.length > 0 && (
-        <SectionErrorBoundary label="creators">
-          <Section title="Created By">
-            <div className="flex gap-4">
-              {creators.map((c) => (
-                <PersonCard
-                  key={c.id}
-                  id={c.id}
-                  name={c.name}
-                  role="Creator"
-                  profilePath={c.profile_path}
-                />
-              ))}
-            </div>
-          </Section>
-        </SectionErrorBoundary>
-      )}
-
-      <SectionErrorBoundary label="cast">
-        <Cast cast={cast} />
-      </SectionErrorBoundary>
-
-      <RatingSparkline
-        points={pacingData?.user_ratings ?? []}
-        heading={t("pacing.label", "Pacing")}
-        label={t("pacing.aria", "Episode rating pacing")}
-      />
 
       {/* Seasons */}
       {seasons.length > 0 && (
@@ -210,6 +167,43 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
         </section>
       )}
 
+      {/* Rating & Social */}
+      <SectionErrorBoundary label="ratings">
+        <RatingsSection
+          titleId={title.id}
+          shareTitle={tmdb?.name || title.title}
+        />
+      </SectionErrorBoundary>
+
+      {/* Creators & Cast */}
+      {creators.length > 0 && (
+        <SectionErrorBoundary label="creators">
+          <Section title="Created By">
+            <div className="flex gap-4">
+              {creators.map((c) => (
+                <PersonCard
+                  key={c.id}
+                  id={c.id}
+                  name={c.name}
+                  role="Creator"
+                  profilePath={c.profile_path}
+                />
+              ))}
+            </div>
+          </Section>
+        </SectionErrorBoundary>
+      )}
+
+      <SectionErrorBoundary label="cast">
+        <Cast cast={cast} />
+      </SectionErrorBoundary>
+
+      <RatingSparkline
+        points={pacingData?.user_ratings ?? []}
+        heading={t("pacing.label", "Pacing")}
+        label={t("pacing.aria", "Episode rating pacing")}
+      />
+
       {/* Streaming Availability */}
       <SectionErrorBoundary label="streaming providers">
         <ProvidersSection
@@ -227,17 +221,6 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
 
       {/* Suggestions */}
       <SuggestionsRow titleId={title.id} type="show" />
-
-      {/* External Links */}
-      {tmdb && (
-        <Section title="Links">
-          <ExternalLinks
-            externalIds={tmdb.external_ids}
-            tmdbId={tmdb.id}
-            type="tv"
-          />
-        </Section>
-      )}
 
       {/* Additional Info */}
       {tmdb && (
@@ -284,6 +267,11 @@ export default function ShowDetail({ data }: { data: ShowDetailsResponse }) {
               </div>
             )}
           </div>
+          <ExternalLinks
+            externalIds={tmdb.external_ids}
+            tmdbId={tmdb.id}
+            type="tv"
+          />
         </Section>
       )}
     </div>

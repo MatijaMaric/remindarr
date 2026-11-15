@@ -182,7 +182,7 @@ describe("ProvidersSection", () => {
     expect(link.getAttribute("href")).toBe(watchProviders.link);
   });
 
-  it("shows the empty placeholder for monetization types with no offers", () => {
+  it("hides monetization types with no offers", () => {
     const offers: Offer[] = [
       offer({ id: 1, provider_id: 8, monetization_type: "FLATRATE" }),
     ];
@@ -193,7 +193,10 @@ describe("ProvidersSection", () => {
         watchLink={undefined}
       />,
     );
-    // RENT, BUY, ADS, FREE should each render the placeholder
-    expect(screen.getAllByText("— not available")).toHaveLength(4);
+    expect(screen.getByText("Stream")).toBeTruthy();
+    for (const label of ["Free", "Ads", "Rent", "Buy"]) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
+    expect(screen.queryByText("— not available")).toBeNull();
   });
 });

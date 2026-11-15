@@ -501,10 +501,11 @@ describe("SeasonDetailPage", () => {
       fireEvent.click(moreButtons[0]);
     });
 
-    expect(
-      screen.getByRole("menuitem", { name: /view details/i }),
-    ).toBeDefined();
     expect(screen.getByRole("menuitem", { name: /share/i })).toBeDefined();
+    // Clicking the row already opens the episode; the menu does not repeat it.
+    expect(
+      screen.queryByRole("menuitem", { name: /view details/i }),
+    ).toBeNull();
   });
 
   it("renders a pacing sparkline above the episode list from user ratings", async () => {

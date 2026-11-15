@@ -42,6 +42,7 @@ export default function PinButton({
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["tracked"] });
       void qc.invalidateQueries({ queryKey: ["home", "auth"] });
+      void qc.invalidateQueries({ queryKey: ["title-detail", titleId] });
     },
   });
 

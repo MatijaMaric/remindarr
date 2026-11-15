@@ -804,3 +804,130 @@ describe("GET /details/collection/:id", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("GET /details — payload trimmed to what the pages render (#1405)", () => {
+  it("movie: keeps only the configured country's providers, its release dates (+US), and directors/writers", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-603", title: "Trim Movie", tmdbId: "603" }),
+    ]);
+    const c = CONFIG.COUNTRY;
+    const other = c === "DE" ? "FR" : "DE";
+    (tmdbClient.fetchMovieFullDetails as any).mockResolvedValueOnce({
+      id: 603,
+      title: "Trim Movie",
+      credits: {
+        cast: [{ id: 1, name: "Lead", character: "K", profile_path: null }],
+        crew: [
+          { id: 2, name: "Dir", job: "Director", department: "Directing" },
+          { id: 3, name: "Writer", job: "Screenplay", department: "Writing" },
+          { id: 4, name: "Grip", job: "Key Grip", department: "Crew" },
+        ],
+      },
+      release_dates: {
+        results: [
+          { iso_3166_1: c, release_dates: [] },
+          { iso_3166_1: "US", release_dates: [] },
+          { iso_3166_1: other, release_dates: [] },
+        ],
+      },
+      "watch/providers": {
+        results: {
+          [c]: { link: "https://example.test/here", flatrate: [] },
+          [other]: { link: "https://example.test/there", flatrate: [] },
+        },
+      },
+    });
+
+    const body = await (await app.request("/details/movie/movie-603")).json();
+    expect(Object.keys(body.tmdb["watch/providers"].results)).toEqual([c]);
+    expect(
+      body.tmdb.release_dates.results.map((r: any) => r.iso_3166_1).sort(),
+    ).toEqual([...new Set([c, "US"])].sort());
+    expect(body.tmdb.credits.crew.map((m: any) => m.name)).toEqual([
+      "Dir",
+      "Writer",
+    ]);
+    expect(body.tmdb.credits.cast).toHaveLength(1);
+  });
+
+  it("show: keeps only the configured country's providers", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "tv-82452", objectType: "SHOW", tmdbId: "82452" }),
+    ]);
+    const c = CONFIG.COUNTRY;
+    (tmdbClient.fetchShowFullDetails as any).mockResolvedValueOnce({
+      id: 82452,
+      name: "Trim Show",
+      "watch/providers": {
+        results: { [c]: { link: "here" }, ZZ: { link: "there" } },
+      },
+    });
+    const body = await (await app.request("/details/show/tv-82452")).json();
+    expect(Object.keys(body.tmdb["watch/providers"].results)).toEqual([c]);
+  });
+
+  it("season: drops per-episode guest stars and crew", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "tv-777", objectType: "SHOW", tmdbId: "777" }),
+    ]);
+    getSpy("fetchSeasonDetails").mockResolvedValueOnce({
+      id: 1,
+      season_number: 1,
+      credits: { cast: [{ id: 5, name: "Regular" }], crew: [] },
+      episodes: [
+        {
+          id: 1,
+          name: "Pilot",
+          overview: "",
+          season_number: 1,
+          episode_number: 1,
+          runtime: 50,
+          air_date: "2024-01-01",
+          still_path: null,
+          guest_stars: [{ id: 9, name: "Guest" }],
+          crew: [{ id: 10, name: "Director", job: "Director" }],
+        },
+      ],
+    });
+    const body = await (
+      await app.request("/details/show/tv-777/season/1")
+    ).json();
+    expect(body.tmdb.episodes[0].name).toBe("Pilot");
+    expect(body.tmdb.episodes[0].guest_stars).toEqual([]);
+    expect(body.tmdb.episodes[0].crew).toEqual([]);
+    expect(body.tmdb.credits.cast).toHaveLength(1);
+  });
+});
+
+describe("GET /details — is_pinned (#1405)", () => {
+  function authedApp(userId: string) {
+    const authed = new Hono<AppEnv>();
+    authed.use("*", async (c, next) => {
+      c.set("user", { id: userId } as any);
+      await next();
+    });
+    authed.route("/details", detailsApp);
+    return authed;
+  }
+
+  it("reports the signed-in user's pin on movies and shows", async () => {
+    const userId = await repository.createUser("pinner", "hash");
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-1", tmdbId: "1" }),
+      makeParsedTitle({ id: "tv-2", objectType: "SHOW", tmdbId: "2" }),
+    ]);
+    await repository.pinTitle(userId, "movie-1");
+
+    const authed = authedApp(userId);
+    const movie = await (await authed.request("/details/movie/movie-1")).json();
+    expect(movie.title.is_pinned).toBe(true);
+    const show = await (await authed.request("/details/show/tv-2")).json();
+    expect(show.title.is_pinned).toBe(false);
+  });
+
+  it("omits is_pinned when signed out", async () => {
+    await upsertTitles([makeParsedTitle({ id: "movie-1", tmdbId: "1" })]);
+    const body = await (await app.request("/details/movie/movie-1")).json();
+    expect(body.title.is_pinned).toBeUndefined();
+  });
+});

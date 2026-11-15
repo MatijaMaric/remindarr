@@ -86,7 +86,7 @@ export default function MovieHero({
               </p>
             )}
             <Kicker className="mb-2">
-              Movie{title.release_year ? ` · ${title.release_year}` : ""}
+              Movie
               {title.offers[0]?.provider_name
                 ? ` · ${title.offers[0].provider_name}`
                 : ""}
@@ -127,16 +127,13 @@ export default function MovieHero({
             )}
           </div>
 
-          {(genres.length > 0 || title.imdb_score) && (
+          {genres.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {genres.map((g) => (
                 <Chip key={g} variant="default">
                   {g}
                 </Chip>
               ))}
-              {title.imdb_score && (
-                <Chip variant="amber">★ {title.imdb_score.toFixed(1)}</Chip>
-              )}
             </div>
           )}
 
@@ -155,7 +152,7 @@ export default function MovieHero({
               isTracked={title.is_tracked}
               titleData={title}
             />
-            <PinButton titleId={title.id} />
+            <PinButton titleId={title.id} isPinned={title.is_pinned} />
             <VisibilityButton
               titleId={title.id}
               isPublic={title.is_public ?? true}

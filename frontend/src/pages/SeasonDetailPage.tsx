@@ -759,7 +759,6 @@ function EpisodeOverflowMenu({
   onMarkOnAirDate?: () => void | Promise<void>;
 }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -802,18 +801,6 @@ function EpisodeOverflowMenu({
           padding="none"
           className="absolute right-0 top-full mt-1 z-20 min-w-[180px] shadow-xl py-1"
         >
-          <button
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              navigate(
-                `/title/${titleId}/season/${seasonNumber}/episode/${episodeNumber}`,
-              );
-            }}
-            className="w-full text-left px-3 py-2 text-[13px] text-foreground-secondary hover:bg-accent cursor-pointer transition-colors"
-          >
-            {t("episodes.viewDetails", "View details")}
-          </button>
           {canMarkOnAirDate && onMarkOnAirDate && (
             <button
               role="menuitem"

@@ -52,6 +52,9 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) =>
       last.has_more && last.next_cursor ? last.next_cursor : undefined,
+    // Signed out, this 401s, which resets the session and refetches every
+    // query — an endless request loop.
+    enabled: !!user,
   });
   const watchHistory = historyData?.pages.flatMap((p) => p.history) ?? [];
   const playCount = historyData?.pages[0]?.playCount ?? 0;
@@ -203,34 +206,6 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
         watchHistoryPanel={watchHistoryPanel}
       />
 
-      {/* Metadata strip */}
-      <div className="bg-card -mx-4 px-6 sm:px-12 py-5 flex flex-wrap gap-x-10 gap-y-3 border-b border-border">
-        {[
-          { label: "TYPE", value: "Movie" },
-          title.runtime_minutes
-            ? { label: "RUNTIME", value: `${title.runtime_minutes} min` }
-            : null,
-          tmdb?.status ? { label: "STATUS", value: tmdb.status } : null,
-          title.offers[0]?.provider_name
-            ? { label: "NETWORK", value: title.offers[0].provider_name }
-            : null,
-          title.imdb_score
-            ? { label: "IMDB", value: `★ ${title.imdb_score.toFixed(1)}` }
-            : null,
-        ]
-          .filter(Boolean)
-          .map((cell) => (
-            <div key={cell!.label}>
-              <div className="text-xs text-muted-foreground mb-1">
-                {cell!.label}
-              </div>
-              <div className="font-mono text-[13px] font-semibold text-foreground">
-                {cell!.value}
-              </div>
-            </div>
-          ))}
-      </div>
-
       {/* Overview */}
       {overview && (
         <Section title="Overview">
@@ -288,17 +263,6 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
       {/* Suggestions */}
       <SuggestionsRow titleId={title.id} type="movie" />
 
-      {/* External Links */}
-      {tmdb && (
-        <Section title="Links">
-          <ExternalLinks
-            externalIds={tmdb.external_ids ?? { imdb_id: tmdb.imdb_id }}
-            tmdbId={tmdb.id}
-            type="movie"
-          />
-        </Section>
-      )}
-
       {/* Additional Info */}
       {tmdb && (
         <Section title="Details">
@@ -354,6 +318,11 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
               </div>
             )}
           </div>
+          <ExternalLinks
+            externalIds={tmdb.external_ids ?? { imdb_id: tmdb.imdb_id }}
+            tmdbId={tmdb.id}
+            type="movie"
+          />
         </Section>
       )}
 
