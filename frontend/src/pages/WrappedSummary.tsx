@@ -1,6 +1,18 @@
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import type { YearInReview, YearInReviewTitleRef } from "../types";
+import { HorizontalBar, OverviewCard } from "./StatsPage";
+
+type Review = Omit<YearInReview, "years">;
+
+/** A year with nothing logged: the summary shows only an empty message. */
+export function isEmptyReview(data: Review): boolean {
+  return (
+    data.movies_watched === 0 &&
+    data.episodes_watched === 0 &&
+    data.watch_time_minutes === 0
+  );
+}
 
 export function formatWatchHours(minutes: number): string {
   if (minutes === 0) return "0h";
@@ -25,15 +37,6 @@ function formatWatchDate(iso: string): string {
     day: "numeric",
     timeZone: "UTC",
   }).format(d);
-}
-
-function StatCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="bg-card rounded-lg p-4 flex flex-col gap-1">
-      <span className="text-2xl font-bold text-foreground">{value}</span>
-      <span className="text-sm text-muted-foreground">{label}</span>
-    </div>
-  );
 }
 
 function TitleRow({
@@ -66,14 +69,10 @@ function TitleRow({
   );
 }
 
-export function WrappedSummary({ data }: { data: YearInReview }) {
+export function WrappedSummary({ data }: { data: Review }) {
   const { t } = useTranslation();
-  const empty =
-    data.movies_watched === 0 &&
-    data.episodes_watched === 0 &&
-    data.watch_time_minutes === 0;
 
-  if (empty) {
+  if (isEmptyReview(data)) {
     return (
       <p className="text-muted-foreground text-sm py-12 text-center">
         {t("wrapped.empty", { year: data.year })}
@@ -83,16 +82,29 @@ export function WrappedSummary({ data }: { data: YearInReview }) {
 
   const maxGenre = data.top_genres[0]?.count ?? 0;
   const maxProvider = data.top_providers[0]?.count ?? 0;
+  // With one title all year, First and Last watch would be the same card.
+  const lastWatch =
+    data.last_watch && data.last_watch.title_id !== data.first_watch?.title_id
+      ? data.last_watch
+      : null;
+  // A one-day run is not a binge, and repeats whatever Top shows says.
+  const binge =
+    data.longest_binge && data.longest_binge.days >= 2
+      ? data.longest_binge
+      : null;
 
   return (
     <div className="space-y-8 pb-8">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <StatCard
+        <OverviewCard
           label={t("wrapped.hours")}
           value={formatWatchHours(data.watch_time_minutes)}
         />
-        <StatCard label={t("wrapped.movies")} value={data.movies_watched} />
-        <StatCard label={t("wrapped.episodes")} value={data.episodes_watched} />
+        <OverviewCard label={t("wrapped.movies")} value={data.movies_watched} />
+        <OverviewCard
+          label={t("wrapped.episodes")}
+          value={data.episodes_watched}
+        />
       </div>
 
       {!!data.watch_time_unknown_episodes && (
@@ -103,7 +115,7 @@ export function WrappedSummary({ data }: { data: YearInReview }) {
         </p>
       )}
 
-      {(data.first_watch || data.last_watch) && (
+      {(data.first_watch || lastWatch) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {data.first_watch && (
             <div className="bg-card rounded-lg p-4 space-y-3">
@@ -116,14 +128,14 @@ export function WrappedSummary({ data }: { data: YearInReview }) {
               />
             </div>
           )}
-          {data.last_watch && (
+          {lastWatch && (
             <div className="bg-card rounded-lg p-4 space-y-3">
               <h3 className="text-sm font-semibold">
                 {t("wrapped.lastWatch")}
               </h3>
               <TitleRow
-                item={data.last_watch}
-                meta={formatWatchDate(data.last_watch.watched_at)}
+                item={lastWatch}
+                meta={formatWatchDate(lastWatch.watched_at)}
               />
             </div>
           )}
@@ -138,7 +150,7 @@ export function WrappedSummary({ data }: { data: YearInReview }) {
               <TitleRow
                 key={show.title_id}
                 item={show}
-                meta={`${show.count}`}
+                meta={t("wrapped.episodeCount", { count: show.count })}
               />
             ))}
           </div>
@@ -151,67 +163,52 @@ export function WrappedSummary({ data }: { data: YearInReview }) {
             <h3 className="text-sm font-semibold">{t("wrapped.topGenres")}</h3>
             <div className="space-y-2">
               {data.top_genres.map((g) => (
-                <div key={g.genre} className="flex items-center gap-3">
-                  <span className="text-xs text-foreground-secondary w-28 truncate shrink-0">
-                    {g.genre}
-                  </span>
-                  <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full"
-                      style={{
-                        width: `${maxGenre > 0 ? (g.count / maxGenre) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="text-xs text-muted-foreground w-6 text-right shrink-0">
-                    {g.count}
-                  </span>
-                </div>
+                <HorizontalBar
+                  key={g.genre}
+                  label={g.genre}
+                  count={g.count}
+                  max={maxGenre}
+                />
               ))}
             </div>
           </div>
         )}
         {data.top_providers.length > 0 && (
           <div className="bg-card rounded-lg p-4 space-y-3">
-            <h3 className="text-sm font-semibold">
-              {t("wrapped.topProviders")}
-            </h3>
+            <div>
+              <h3 className="text-sm font-semibold">
+                {t("wrapped.streamingOn")}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {t("wrapped.streamingOnHint")}
+              </p>
+            </div>
             <div className="space-y-2">
               {data.top_providers.map((p) => (
-                <div key={p.provider_id} className="flex items-center gap-3">
-                  <span className="text-xs text-foreground-secondary w-28 truncate shrink-0">
-                    {p.name}
-                  </span>
-                  <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full"
-                      style={{
-                        width: `${maxProvider > 0 ? (p.count / maxProvider) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="text-xs text-muted-foreground w-6 text-right shrink-0">
-                    {p.count}
-                  </span>
-                </div>
+                <HorizontalBar
+                  key={p.provider_id}
+                  label={p.name}
+                  count={p.count}
+                  max={maxProvider}
+                />
               ))}
             </div>
           </div>
         )}
       </div>
 
-      {(data.longest_binge || data.most_rewatched) && (
+      {(binge || data.most_rewatched) && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {data.longest_binge && (
+          {binge && (
             <div className="bg-card rounded-lg p-4 space-y-3">
               <h3 className="text-sm font-semibold">
                 {t("wrapped.longestBinge")}
               </h3>
               <TitleRow
-                item={data.longest_binge}
+                item={binge}
                 meta={t("wrapped.bingeMeta", {
-                  days: data.longest_binge.days,
-                  episodes: data.longest_binge.episodes,
+                  days: binge.days,
+                  episodes: binge.episodes,
                 })}
               />
             </div>
@@ -223,7 +220,9 @@ export function WrappedSummary({ data }: { data: YearInReview }) {
               </h3>
               <TitleRow
                 item={data.most_rewatched}
-                meta={t("wrapped.plays", { count: data.most_rewatched.plays })}
+                meta={t("wrapped.rewatches", {
+                  count: data.most_rewatched.rewatches,
+                })}
               />
             </div>
           )}

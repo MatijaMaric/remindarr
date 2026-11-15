@@ -108,8 +108,6 @@ describe("getYearInReview", () => {
     expect(review.movies_watched).toBe(0);
     expect(review.episodes_watched).toBe(0);
     expect(review.watch_time_minutes).toBe(0);
-    expect(review.watch_time_minutes_movies).toBe(0);
-    expect(review.watch_time_minutes_shows).toBe(0);
     expect(review.top_genres).toEqual([]);
     expect(review.top_providers).toEqual([]);
     expect(review.top_shows).toEqual([]);
@@ -135,8 +133,6 @@ describe("getYearInReview", () => {
     const review = await getYearInReview(userId, 2025);
     expect(review.movies_watched).toBe(1);
     expect(review.episodes_watched).toBe(1);
-    expect(review.watch_time_minutes_movies).toBe(100);
-    expect(review.watch_time_minutes_shows).toBe(40);
     expect(review.watch_time_minutes).toBe(140);
     expect(review.years).toEqual([2025, 2024]);
   });
@@ -259,7 +255,33 @@ describe("getYearInReview", () => {
     expect(review.most_rewatched).toMatchObject({
       title_id: "rewatch-me",
       title: "Rewatch Me",
-      plays: 3,
+      rewatches: 2,
+    });
+  });
+
+  // Regression: plays were counted per title, so a show with several
+  // different episodes watched once each showed up as "most rewatched".
+  it("does not count different episodes of one show as rewatches", async () => {
+    await insertShow("binge", "Binge", 40);
+    const e1 = await insertEpisode("binge", 1, 1, "2025-01-01");
+    const e2 = await insertEpisode("binge", 1, 2, "2025-01-02");
+    await logWatch(userId, "binge", e1, "2025-03-01 00:00:00");
+    await logWatch(userId, "binge", e2, "2025-03-02 00:00:00");
+
+    const review = await getYearInReview(userId, 2025);
+    expect(review.most_rewatched).toBeNull();
+  });
+
+  it("counts a replay of an episode first seen in an earlier year", async () => {
+    await insertShow("rerun", "Rerun", 40);
+    const e1 = await insertEpisode("rerun", 1, 1, "2024-01-01");
+    await logWatch(userId, "rerun", e1, "2024-03-01 00:00:00");
+    await logWatch(userId, "rerun", e1, "2025-03-01 00:00:00");
+
+    const review = await getYearInReview(userId, 2025);
+    expect(review.most_rewatched).toMatchObject({
+      title_id: "rerun",
+      rewatches: 1,
     });
   });
 

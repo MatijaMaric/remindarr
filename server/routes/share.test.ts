@@ -262,6 +262,7 @@ describe("GET /share/wrapped/:token/:year (public)", () => {
     expect(body.year).toBe(2025);
     expect(body.movies_watched).toBe(0);
     expect(body.episodes_watched).toBe(0);
+    expect(body).not.toHaveProperty("years");
   });
 });
 

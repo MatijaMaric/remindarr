@@ -35,7 +35,8 @@ export interface YearInReviewBinge extends YearInReviewTitleRef {
 }
 
 export interface YearInReviewRewatch extends YearInReviewTitleRef {
-  plays: number;
+  /** Plays this year of a movie or episode the user had already played. */
+  rewatches: number;
 }
 
 export interface YearInReviewWatch extends YearInReviewTitleRef {
@@ -47,8 +48,6 @@ export interface YearInReview {
   movies_watched: number;
   episodes_watched: number;
   watch_time_minutes: number;
-  watch_time_minutes_movies: number;
-  watch_time_minutes_shows: number;
   watch_time_unknown_episodes: number;
   top_genres: YearInReviewGenre[];
   top_providers: YearInReviewProvider[];
@@ -73,7 +72,7 @@ function tryGetCache(): Cache | null {
 }
 
 function cacheKey(userId: string, year: number): string {
-  return `year-in-review:v2:${userId}:${year}`;
+  return `year-in-review:v3:${userId}:${year}`;
 }
 
 function cacheTtlSeconds(year: number): number {
@@ -129,8 +128,6 @@ export async function computeYearInReview(
       year,
       movies_watched: counts.movies_watched,
       episodes_watched: counts.episodes_watched,
-      watch_time_minutes_movies: counts.watch_time_minutes_movies,
-      watch_time_minutes_shows: counts.watch_time_minutes_shows,
       watch_time_unknown_episodes: counts.watch_time_unknown_episodes,
       watch_time_minutes:
         counts.watch_time_minutes_movies + counts.watch_time_minutes_shows,
@@ -377,16 +374,26 @@ async function queryMostRewatched(
   end: string,
 ): Promise<YearInReviewRewatch | null> {
   const db = getDb();
+  // A rewatch is a play of the same movie (episode_id NULL) or the same
+  // episode that has an earlier play, at any time. Counting plays per title
+  // instead made every show with two episodes watched "rewatched".
   const rows = await db.all<YearInReviewRewatch>(sql`
-    SELECT wh.title_id, ti.title, ti.poster_url, COUNT(*) AS plays
+    SELECT wh.title_id, ti.title, ti.poster_url, COUNT(*) AS rewatches
     FROM watch_history wh
     INNER JOIN titles ti ON ti.id = wh.title_id
     WHERE wh.user_id = ${userId}
       AND wh.watched_at >= ${start}
       AND wh.watched_at < ${end}
+      AND EXISTS (
+        SELECT 1 FROM watch_history prev
+        WHERE prev.user_id = wh.user_id
+          AND prev.title_id = wh.title_id
+          AND prev.episode_id IS wh.episode_id
+          AND (prev.watched_at < wh.watched_at
+               OR (prev.watched_at = wh.watched_at AND prev.id < wh.id))
+      )
     GROUP BY wh.title_id
-    HAVING COUNT(*) > 1
-    ORDER BY plays DESC
+    ORDER BY rewatches DESC
     LIMIT 1
   `);
   return rows[0] ?? null;

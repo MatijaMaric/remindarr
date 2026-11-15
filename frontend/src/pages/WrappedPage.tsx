@@ -6,7 +6,10 @@ import { Share2 } from "lucide-react";
 import { toast } from "sonner";
 import * as api from "../api";
 import { PageHeader } from "../components/design";
-import { WrappedSummary } from "./WrappedSummary";
+import { WrappedSummary, isEmptyReview } from "./WrappedSummary";
+
+const shareClass =
+  "min-h-8 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer bg-muted text-muted-foreground hover:bg-muted-hover hover:text-foreground disabled:opacity-50";
 
 function currentUtcYear(): number {
   return new Date().getUTCFullYear();
@@ -38,6 +41,9 @@ export default function WrappedPage() {
     return [...set].sort((a, b) => b - a);
   }, [data?.years, year]);
 
+  // Nothing worth sharing until the year has loaded with some watches.
+  const canShare = !sharing && !!data && !isEmptyReview(data);
+
   async function handleShare() {
     setSharing(true);
     try {
@@ -60,9 +66,9 @@ export default function WrappedPage() {
         }
       }
       await navigator.clipboard.writeText(url);
-      toast.success("Link copied to clipboard");
+      toast.success(t("wrapped.linkCopied", { year }));
     } catch {
-      toast.error("Failed to copy link");
+      toast.error(t("wrapped.copyFailed"));
     } finally {
       setSharing(false);
     }
@@ -95,8 +101,8 @@ export default function WrappedPage() {
               onClick={() => {
                 void handleShare();
               }}
-              disabled={sharing}
-              className="min-h-8 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer bg-muted text-muted-foreground hover:bg-muted-hover hover:text-foreground disabled:opacity-50"
+              disabled={!canShare}
+              className={shareClass}
               title={t("wrapped.share")}
             >
               <Share2 className="size-3.5" />
@@ -106,31 +112,33 @@ export default function WrappedPage() {
         }
       />
 
-      <p className="text-sm text-muted-foreground">
-        A shared link reveals only your {year} review. Older shared links must
-        be recreated; watchlist links remain separate.
-      </p>
       {tokenData?.token && (
-        <button
-          type="button"
-          disabled={sharing}
-          onClick={async () => {
-            setSharing(true);
-            try {
-              await api.revokeWrappedShareToken(year);
-              await queryClient.invalidateQueries({
-                queryKey: ["wrapped-share-token", year],
-              });
-              toast.success("Review link revoked");
-            } catch {
-              toast.error("Could not revoke review link. Please retry.");
-            } finally {
-              setSharing(false);
-            }
-          }}
-        >
-          Revoke {year} review link
-        </button>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <p className="text-sm text-muted-foreground">
+            {t("wrapped.shareScope", { year })}
+          </p>
+          <button
+            type="button"
+            disabled={sharing}
+            className={shareClass}
+            onClick={async () => {
+              setSharing(true);
+              try {
+                await api.revokeWrappedShareToken(year);
+                await queryClient.invalidateQueries({
+                  queryKey: ["wrapped-share-token", year],
+                });
+                toast.success(t("wrapped.revoked"));
+              } catch {
+                toast.error(t("wrapped.revokeFailed"));
+              } finally {
+                setSharing(false);
+              }
+            }}
+          >
+            {t("wrapped.revoke")}
+          </button>
+        </div>
       )}
       {isError && (
         <p className="text-muted-foreground text-sm py-12 text-center">

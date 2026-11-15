@@ -36,7 +36,7 @@ function formatTime(minutes: number): string {
   return i18n.t("stats.time.hoursMinutes", { h, m });
 }
 
-function OverviewCard({
+export function OverviewCard({
   label,
   value,
   sub,
@@ -54,7 +54,7 @@ function OverviewCard({
   );
 }
 
-function HorizontalBar({
+export function HorizontalBar({
   label,
   count,
   max,

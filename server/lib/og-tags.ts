@@ -1,4 +1,8 @@
-import type { YearInReview } from "../db/repository/year-in-review";
+import {
+  getYearInReview,
+  type YearInReview,
+} from "../db/repository/year-in-review";
+import { getUserByWrappedShareToken } from "../db/repository/wrapped-shares";
 
 export function escapeOg(value: string): string {
   return value
@@ -49,4 +53,25 @@ export function wrappedOgImage(review: YearInReview): string | null {
   if (!poster) return null;
   if (poster.startsWith("http")) return poster;
   return `https://image.tmdb.org/t/p/w342${poster}`;
+}
+
+/**
+ * OG tags for `/share/wrapped/:token/:year`, shared by the Bun and Workers
+ * entry points. Only a Year in Review token for that exact year resolves;
+ * a watchlist share token or another year's token yields no tags.
+ */
+export async function wrappedShareOgTags(
+  token: string,
+  year: number,
+): Promise<string> {
+  if (!/^[a-f0-9]{32}$/.test(token) || !Number.isInteger(year)) return "";
+  const user = await getUserByWrappedShareToken(token, year);
+  if (!user) return "";
+  const review = await getYearInReview(user.id, year);
+  const username = user.displayUsername ?? user.username;
+  return buildOgTags({
+    title: `${username}'s ${year} Wrapped — Remindarr`,
+    description: wrappedOgDescription(review),
+    image: wrappedOgImage(review),
+  });
 }
