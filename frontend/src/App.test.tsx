@@ -77,6 +77,12 @@ describe("App nav Sign In link", () => {
     expect(signInLink).toBeNull();
   });
 
+  it("hides Sign In link in the desktop nav on /signup, which links to sign-in itself", () => {
+    renderApp("/signup");
+    const nav = screen.getByRole("navigation", { name: "Main navigation" });
+    expect(nav.querySelector("a[href='/login']")).toBeNull();
+  });
+
   it("hides Sign In link in the desktop nav when user is logged in", () => {
     renderApp("/", loggedInAuth);
     const nav = screen.getByRole("navigation", { name: "Main navigation" });

@@ -302,6 +302,7 @@
   "signup": {
     "title": "Criar uma conta",
     "username": "Nome de usuário",
+    "usernameHint": "Letras, números, pontos, hífens e sublinhados",
     "email": "E-mail",
     "displayName": "Nome de exibição",
     "password": "Senha",
@@ -324,7 +325,7 @@
     "signIn": "Entrar",
     "noAccount": "Não tem uma conta?",
     "signUp": "Cadastre-se",
-    "loginFailed": "Falha ao entrar: {{error}}",
+    "loginFailed": "Falha ao entrar. Tente novamente.",
     "signInWithPasskey": "Entrar com chave de acesso",
     "passkeyFailed": "Falha ao entrar com a chave de acesso",
     "recoveryTitle": "Esqueceu-se da palavra-passe?",
@@ -589,7 +590,6 @@
     "subtitle": "Receba avisos de novos episódios, registre o que você assistiu e descubra o que está nos streamings.",
     "signIn": "Entrar",
     "signUp": "Criar conta",
-    "popularNow": "Em alta agora",
     "discoverMore": "Descobrir mais"
   },
   "userProfile": {

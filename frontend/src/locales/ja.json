@@ -286,6 +286,7 @@
   "signup": {
     "title": "アカウントを作成",
     "username": "ユーザー名",
+    "usernameHint": "英字、数字、ピリオド、ハイフン、アンダースコア",
     "email": "メールアドレス",
     "displayName": "表示名",
     "password": "パスワード",
@@ -308,7 +309,7 @@
     "signIn": "ログイン",
     "noAccount": "アカウントをお持ちでないですか？",
     "signUp": "登録",
-    "loginFailed": "ログインに失敗しました: {{error}}",
+    "loginFailed": "ログインに失敗しました。もう一度お試しください。",
     "signInWithPasskey": "パスキーでログイン",
     "passkeyFailed": "パスキーでのログインに失敗しました",
     "recoveryTitle": "パスワードをお忘れですか？",
@@ -557,7 +558,6 @@
     "subtitle": "新しいエピソードの通知を受け取り、見たものを記録し、配信中の作品を見つけましょう。",
     "signIn": "ログイン",
     "signUp": "アカウントを作成",
-    "popularNow": "いま人気",
     "discoverMore": "もっと見る"
   },
   "userProfile": {
