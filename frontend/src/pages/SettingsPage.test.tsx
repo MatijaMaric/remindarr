@@ -517,25 +517,21 @@ describe("KioskSection", () => {
   });
 });
 
-describe("Settings breadcrumb (#1148)", () => {
-  it("renders a nav landmark with aria-current on the active tab", () => {
-    render(<SettingsPage />, { wrapper: Wrapper });
-
-    const nav = screen.getByRole("navigation", { name: /^breadcrumb$/i });
-    const current = within(nav).getByText("Account");
-    expect(current.getAttribute("aria-current")).toBe("location");
-    expect(nav.querySelector("[aria-hidden='true']")?.textContent).toBe("›");
-  });
-
-  it("marks the selected tab as the current breadcrumb location", () => {
+describe("Settings page chrome (#1415)", () => {
+  it("has no breadcrumb or build card; the highlighted tab is the location", () => {
     render(<SettingsPage />, {
       wrapper: WrapperWithPath("/settings?tab=integrations"),
     });
 
-    const nav = screen.getByRole("navigation", { name: /^breadcrumb$/i });
     expect(
-      within(nav).getByText("Integrations").getAttribute("aria-current"),
-    ).toBe("location");
-    expect(within(nav).queryByText("Account")).toBeNull();
+      screen.queryByRole("navigation", { name: /breadcrumb/i }),
+    ).toBeNull();
+    expect(screen.queryByText("/settings")).toBeNull();
+    expect(screen.queryByText("Build")).toBeNull();
+    expect(
+      screen
+        .getAllByRole("tab", { name: "Integrations" })[0]
+        .getAttribute("aria-selected"),
+    ).toBe("true");
   });
 });

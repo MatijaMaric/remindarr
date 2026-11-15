@@ -413,7 +413,7 @@ function AdminSection() {
 
   if (loading) {
     return (
-      <SCard title="Admin settings" subtitle="Server and user management">
+      <SCard title="OpenID Connect">
         <div className="text-muted-foreground text-sm">Loading settings...</div>
       </SCard>
     );
@@ -424,17 +424,9 @@ function AdminSection() {
       title="OpenID Connect"
       subtitle="Configure OIDC to enable SSO login. Values already set via environment variable are locked."
       action={
-        <div className="flex items-center gap-2">
-          <SStatusPill kind={settings?.oidc_configured ? "ok" : "neutral"}>
-            {settings?.oidc_configured ? "Configured" : "Not configured"}
-          </SStatusPill>
-          <Link
-            to="/admin/users"
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-[12px] font-semibold rounded-md bg-fill-subtle text-foreground-secondary border border-border hover:bg-accent transition-colors"
-          >
-            Manage users →
-          </Link>
-        </div>
+        <SStatusPill kind={settings?.oidc_configured ? "ok" : "neutral"}>
+          {settings?.oidc_configured ? "Configured" : "Not configured"}
+        </SStatusPill>
       }
     >
       <form onSubmit={handleSave} className="space-y-3.5">
@@ -708,17 +700,6 @@ function MaintenanceSection() {
           <SButton
             variant="ghost"
             onClick={() => {
-              if (confirm("Queue all cron jobs to run immediately?")) {
-                run("Jobs queued", api.runAllJobs);
-              }
-            }}
-            disabled={busy !== null}
-          >
-            {busy === "Jobs queued" ? "Queuing..." : "Run all jobs"}
-          </SButton>
-          <SButton
-            variant="ghost"
-            onClick={() => {
               if (confirm("Trigger a database backup now?")) {
                 run("Backup queued", api.triggerBackup);
               }
@@ -736,6 +717,17 @@ function MaintenanceSection() {
 export default function AdminTab() {
   return (
     <>
+      <Link
+        to="/admin/users"
+        className="flex items-center justify-between gap-3 mb-4 p-4 bg-card border border-border rounded-[10px] hover:bg-accent transition-colors"
+      >
+        <span className="text-sm font-semibold text-foreground">
+          Manage users
+        </span>
+        <span aria-hidden="true" className="text-primary-text font-mono">
+          →
+        </span>
+      </Link>
       <BackgroundJobsSection />
       <AdminSection />
       <RuntimeConfigSection />

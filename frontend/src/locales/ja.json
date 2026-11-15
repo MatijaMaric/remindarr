@@ -110,8 +110,7 @@
     "traktHint": "trakt.tv の Settings → Data Export からウォッチリストをエクスポートしてください。",
     "tvtimeHint": "TV Time のエクスポート ZIP から movies_history.csv または tracking-prod-records-series.csv をアップロードしてください。",
     "dropHint": "CSV ファイルをここにドラッグ＆ドロップするか、クリックして選択",
-    "importing": "インポート中...",
-    "chooseFile": "CSV ファイルを選択"
+    "importing": "インポート中..."
   },
   "home": {
     "welcomeTitle": "Remindarr へようこそ",
@@ -316,9 +315,7 @@
   },
   "profile": {
     "title": "プロフィール",
-    "username": "ユーザー名",
     "displayName": "表示名",
-    "role": "権限",
     "admin": "管理者",
     "user": "ユーザー",
     "changePassword": "パスワードを変更",
@@ -364,7 +361,6 @@
     "renamingPasskey": "名前を変更中...",
     "noPasskeys": "登録済みのパスキーはありません。追加するとパスワードなしでログインできます。",
     "passkeyUnnamed": "名前のないパスキー",
-    "editProfile": "プロフィールを編集",
     "bio": "自己紹介",
     "bioPlaceholder": "簡単な自己紹介...",
     "country": "国",
@@ -725,11 +721,7 @@
       "reduceMotion": "視差効果を減らす",
       "reduceMotionDesc": "トランジションとヘッダーの視差効果を無効にします。",
       "highContrast": "高コントラストの文字",
-      "highContrastDesc": "文字色を明るくして読みやすくします。",
-      "hideSpoilers": "エピソードのネタバレを隠す",
-      "hideSpoilersDesc": "未視聴エピソードのあらすじとタイトルをぼかします。",
-      "autoplayTrailers": "予告編を自動再生",
-      "autoplayTrailersDesc": "ヘッダーで予告編を自動的に再生します。"
+      "highContrastDesc": "文字色を明るくして読みやすくします。"
     },
     "advisory": {
       "title": "コンテンツ制限",
@@ -799,13 +791,11 @@
     "titleVisible": "プロフィールに表示",
     "titleHidden": "プロフィールに非表示",
     "noTrackedTitles": "管理する登録作品がありません。",
-    "perTitleVisibility": "表示する作品を選択:",
+    "perTitleVisibility": "追跡中のタイトルをまとめて表示・非表示:",
     "showTitle": "プロフィールに表示",
     "hideTitle": "プロフィールから隠す",
     "account": {
       "editProfileSubtitle": "表示名、自己紹介、国は公開プロフィールに表示されます。",
-      "profileSubtitle": "アカウント情報です。ユーザー名は公開プロフィールと友達のアクティビティで使われます。",
-      "authProvider": "認証プロバイダー",
       "passwordSubtitle": "6 文字以上で設定してください。長いパスフレーズをおすすめします。",
       "passwordChangeFailed": "パスワードを変更できませんでした",
       "strengthLabel": "強度: {{strength}}",
@@ -865,8 +855,6 @@
         "private": "自分のみ"
       }
     },
-    "breadcrumb": "パンくずリスト",
-    "buildInfo": "Remindarr · セルフホスト",
     "sections": "セクション",
     "sectionsLabel": "設定のセクション",
     "saving": "保存中...",

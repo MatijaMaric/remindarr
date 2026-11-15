@@ -93,9 +93,6 @@ test.describe("Settings — Notifications tab", () => {
 
     // Add notifier button
     await expect(snp.addNotifierButton()).toBeVisible();
-
-    // Breadcrumb shows "notifications"
-    await expect(page.getByText("notifications").first()).toBeVisible();
   });
 
   test("TC-02: Unauthenticated user redirected to /login", async ({ page }) => {
@@ -451,7 +448,6 @@ test.describe("Settings — Notifications tab", () => {
               ...MOCK_NOTIFIER,
               id: "notifier-new",
               streaming_alerts_enabled: false,
-              friend_activity_alerts_enabled: true,
             },
           },
         });
@@ -474,9 +470,6 @@ test.describe("Settings — Notifications tab", () => {
       .getByRole("switch", { name: /streaming availability alerts/i })
       .click();
 
-    // Toggle "Friend activity alerts" on (it defaults to off)
-    await page.getByRole("switch", { name: /friend activity alerts/i }).click();
-
     // Submit
     await page.getByRole("button", { name: /create notifier/i }).click();
 
@@ -486,9 +479,7 @@ test.describe("Settings — Notifications tab", () => {
     });
 
     // POST body has correct trigger flags
-    expect(postBody).toMatchObject({
-      streaming_alerts_enabled: false,
-      friend_activity_alerts_enabled: true,
-    });
+    expect(postBody).toMatchObject({ streaming_alerts_enabled: false });
+    expect(postBody).not.toHaveProperty("friend_activity_alerts_enabled");
   });
 });

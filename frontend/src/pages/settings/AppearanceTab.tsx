@@ -23,6 +23,7 @@ import { SCard, SSwitch, SRadioCard } from "../../components/settings/kit";
 import { useTheme } from "../../hooks/useTheme";
 import { applyAppearance } from "../../hooks/useAppearance";
 import { cn } from "@/lib/utils";
+import { SUPPORTED_LANGUAGES, setLanguage, currentLanguage } from "../../i18n";
 
 const DEFAULT_CROWDED_WEEK_THRESHOLD = 5;
 
@@ -49,6 +50,66 @@ function ThemeSection() {
       subtitle={t("settings.theme.subtitle")}
     >
       <ThemePicker />
+    </SCard>
+  );
+}
+
+function LanguageSection() {
+  const { t } = useTranslation();
+  const active = currentLanguage();
+
+  async function handleSelect(code: string) {
+    if (code === active) return;
+    await setLanguage(code);
+    // Remember the choice on the account too, so server-generated content
+    // can follow it. Best-effort: the UI switch already happened locally.
+    api.updateMyProfile({ locale: code }).catch(() => undefined);
+  }
+
+  return (
+    <SCard
+      title={t("profile.language")}
+      subtitle={t("settings.account.languageSubtitle")}
+    >
+      <div
+        role="group"
+        aria-label={t("profile.language")}
+        className="flex gap-1.5 flex-wrap"
+      >
+        {SUPPORTED_LANGUAGES.map((lang) => {
+          const selected = lang.code === active;
+          return (
+            <button
+              key={lang.code}
+              type="button"
+              lang={lang.code}
+              aria-pressed={selected}
+              onClick={() => void handleSelect(lang.code)}
+              className={cn(
+                "px-3.5 py-1.5 rounded-md text-[13px] font-semibold transition-colors cursor-pointer border flex items-center gap-1.5",
+                selected
+                  ? "bg-primary text-primary-foreground border-transparent"
+                  : "bg-muted text-foreground-secondary border-border hover:bg-muted-hover",
+              )}
+            >
+              <span
+                className={cn(
+                  "font-mono text-[11px]",
+                  selected
+                    ? "text-primary-foreground/60"
+                    : "text-muted-foreground",
+                )}
+              >
+                {lang.code}
+              </span>
+              {lang.label}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-xs text-muted-foreground mt-3">
+        {t("settings.account.languageHint")}
+      </p>
     </SCard>
   );
 }
@@ -135,18 +196,6 @@ function AppearanceControls({
             sub={t("settings.displayPrefs.highContrastDesc")}
             on={settings.highContrast === 1}
             onChange={(v) => save({ highContrast: v ? 1 : 0 })}
-          />
-          <SSwitch
-            label={t("settings.displayPrefs.hideSpoilers")}
-            sub={t("settings.displayPrefs.hideSpoilersDesc")}
-            on={settings.hideEpisodeSpoilers === 1}
-            onChange={(v) => save({ hideEpisodeSpoilers: v ? 1 : 0 })}
-          />
-          <SSwitch
-            label={t("settings.displayPrefs.autoplayTrailers")}
-            sub={t("settings.displayPrefs.autoplayTrailersDesc")}
-            on={settings.autoplayTrailers === 1}
-            onChange={(v) => save({ autoplayTrailers: v ? 1 : 0 })}
           />
         </div>
       </SCard>
@@ -339,6 +388,7 @@ function CrowdedWeekSection() {
             <button
               onClick={handleToggle}
               aria-pressed={enabled}
+              aria-label={t("settings.crowdedWeek.enableLabel")}
               className={cn(
                 "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card",
                 enabled ? "bg-primary" : "bg-muted-hover",
@@ -435,6 +485,7 @@ export default function AppearanceTab() {
   return (
     <>
       <ThemeSection />
+      <LanguageSection />
       <AppearanceSection />
       <AdvisorySection />
       <HomepageLayoutSection />

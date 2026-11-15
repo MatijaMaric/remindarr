@@ -16,7 +16,7 @@ import {
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import "../../i18n";
+import i18n, { LANGUAGE_STORAGE_KEY } from "../../i18n";
 import * as api from "../../api";
 
 function newTestClient() {
@@ -164,6 +164,94 @@ describe("AppearanceTab", () => {
     ).toBeDefined();
     expect(screen.getByText(/Hide PG-13, TV-14, and above/i)).toBeDefined();
     expect(screen.getByText(/Nothing is deleted/i)).toBeDefined();
+  });
+
+  it("only offers display preferences that do something (#1415)", async () => {
+    render(<AppearanceTab />, { wrapper: wrapper(newTestClient()) });
+
+    await screen.findByRole("switch", { name: /reduce motion/i });
+    expect(screen.getAllByRole("switch")).toHaveLength(2);
+    expect(screen.queryByText(/spoiler/i)).toBeNull();
+    expect(screen.queryByText(/auto-play trailers/i)).toBeNull();
+  });
+
+  it("names the crowded week toggle", async () => {
+    render(<AppearanceTab />, { wrapper: wrapper(newTestClient()) });
+
+    const toggle = await screen.findByRole("button", {
+      name: "Show crowded week badges",
+    });
+    expect(toggle.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  describe("language picker", () => {
+    afterEach(async () => {
+      localStorage.removeItem(LANGUAGE_STORAGE_KEY);
+      await i18n.changeLanguage("en");
+    });
+
+    it("lists every supported language and marks the active one", async () => {
+      render(<AppearanceTab />, { wrapper: wrapper(newTestClient()) });
+
+      const group = await screen.findByRole("group", { name: "Language" });
+      const buttons = Array.from(group.querySelectorAll("button"));
+      expect(buttons.map((b) => b.getAttribute("lang"))).toEqual([
+        "en",
+        "es",
+        "de",
+        "fr",
+        "pt",
+        "ja",
+      ]);
+      expect(
+        screen
+          .getByRole("button", { name: /English/ })
+          .getAttribute("aria-pressed"),
+      ).toBe("true");
+      expect(
+        screen
+          .getByRole("button", { name: /Deutsch/ })
+          .getAttribute("aria-pressed"),
+      ).toBe("false");
+    });
+
+    it("switches the UI language and saves it to the account", async () => {
+      const updateSpy = spyOn(api, "updateMyProfile").mockResolvedValue({
+        display_name: null,
+        bio: null,
+        country_code: null,
+        locale: "es",
+      });
+      spies.push(updateSpy);
+      render(<AppearanceTab />, { wrapper: wrapper(newTestClient()) });
+
+      fireEvent.click(await screen.findByRole("button", { name: /Español/ }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("group", { name: "Idioma" })).toBeDefined();
+      });
+      expect(
+        screen
+          .getByRole("button", { name: /Español/ })
+          .getAttribute("aria-pressed"),
+      ).toBe("true");
+      expect(localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe("es");
+      expect(updateSpy).toHaveBeenCalledWith({ locale: "es" });
+    });
+
+    it("keeps the new language when saving to the account fails", async () => {
+      spies.push(
+        spyOn(api, "updateMyProfile").mockRejectedValue(new Error("offline")),
+      );
+      render(<AppearanceTab />, { wrapper: wrapper(newTestClient()) });
+
+      fireEvent.click(await screen.findByRole("button", { name: /Deutsch/ }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("group", { name: "Sprache" })).toBeDefined();
+      });
+      expect(i18n.language).toBe("de");
+    });
   });
 });
 

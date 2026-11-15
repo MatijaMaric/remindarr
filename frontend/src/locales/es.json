@@ -112,8 +112,7 @@
     "traktHint": "Exporta tu watchlist desde trakt.tv: ve a Settings y luego a Data Export.",
     "tvtimeHint": "De un ZIP exportado de TV Time, sube movies_history.csv o tracking-prod-records-series.csv.",
     "dropHint": "Arrastra y suelta un archivo CSV aquí o haz clic para elegir uno",
-    "importing": "Importando...",
-    "chooseFile": "Elegir archivo CSV"
+    "importing": "Importando..."
   },
   "home": {
     "welcomeTitle": "Bienvenido a Remindarr",
@@ -332,9 +331,7 @@
   },
   "profile": {
     "title": "Perfil",
-    "username": "Nombre de usuario",
     "displayName": "Nombre visible",
-    "role": "Rol",
     "admin": "Administrador",
     "user": "Usuario",
     "changePassword": "Cambiar contraseña",
@@ -380,7 +377,6 @@
     "renamingPasskey": "Renombrando...",
     "noPasskeys": "No hay llaves de acceso registradas. Añade una para iniciar sesión sin contraseña.",
     "passkeyUnnamed": "Llave sin nombre",
-    "editProfile": "Editar perfil",
     "bio": "Biografía",
     "bioPlaceholder": "Una breve biografía sobre ti...",
     "country": "País",
@@ -757,11 +753,7 @@
       "reduceMotion": "Reducir movimiento",
       "reduceMotionDesc": "Desactiva las transiciones y el efecto parallax de la cabecera.",
       "highContrast": "Texto de alto contraste",
-      "highContrastDesc": "Usa colores de texto más brillantes para leer mejor.",
-      "hideSpoilers": "Ocultar spoilers de episodios",
-      "hideSpoilersDesc": "Difumina las descripciones y títulos de los episodios no vistos.",
-      "autoplayTrailers": "Reproducir tráileres automáticamente",
-      "autoplayTrailersDesc": "Reproduce los tráileres en la cabecera automáticamente."
+      "highContrastDesc": "Usa colores de texto más brillantes para leer mejor."
     },
     "advisory": {
       "title": "Aviso de contenido",
@@ -831,13 +823,11 @@
     "titleVisible": "Visible en el perfil",
     "titleHidden": "Oculto en el perfil",
     "noTrackedTitles": "No hay títulos en seguimiento que gestionar.",
-    "perTitleVisibility": "Elige qué títulos mostrar:",
+    "perTitleVisibility": "Muestra u oculta todos tus títulos seguidos a la vez:",
     "showTitle": "Mostrar en el perfil",
     "hideTitle": "Ocultar en el perfil",
     "account": {
       "editProfileSubtitle": "Tu nombre visible, biografía y país aparecen en tu perfil público.",
-      "profileSubtitle": "La identidad de tu cuenta. El nombre de usuario se usa en los perfiles públicos y en la actividad de amigos.",
-      "authProvider": "Proveedor de acceso",
       "passwordSubtitle": "Usa al menos 6 caracteres. Recomendamos una frase de contraseña larga.",
       "passwordChangeFailed": "No se pudo cambiar la contraseña",
       "strengthLabel": "seguridad: {{strength}}",
@@ -897,8 +887,6 @@
         "private": "Solo yo"
       }
     },
-    "breadcrumb": "Ruta de navegación",
-    "buildInfo": "Remindarr · autoalojado",
     "sections": "Secciones",
     "sectionsLabel": "Secciones de ajustes",
     "saving": "Guardando...",

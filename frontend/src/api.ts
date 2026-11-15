@@ -805,10 +805,6 @@ export async function flushCache(): Promise<{ flushed: boolean }> {
   return fetchJson("/admin/maintenance/flush-cache", { method: "POST" });
 }
 
-export async function runAllJobs(): Promise<{ queued: string[] }> {
-  return fetchJson("/admin/maintenance/run-jobs", { method: "POST" });
-}
-
 export async function triggerBackup(): Promise<{ queued: boolean }> {
   return fetchJson("/admin/maintenance/backup", { method: "POST" });
 }

@@ -171,3 +171,26 @@ it("JSON import invalidates fresh library, detail, home, stats and discovery cac
     ),
   );
 });
+
+it("CSV import has one file picker, reachable by its label (#1415)", async () => {
+  const importCsv = spyOn(api, "importCsv").mockResolvedValue({
+    imported: 2,
+    failed: 0,
+    skipped: 0,
+  } as any);
+  spies.push(importCsv);
+  const { container } = render(<IntegrationsTab />, {
+    wrapper: wrapper(newTestClient()),
+  });
+
+  expect(
+    container.querySelectorAll('input[accept=".csv,text/csv"]'),
+  ).toHaveLength(1);
+  expect(screen.queryByText("Choose CSV file")).toBeNull();
+  const input = screen.getByLabelText(/drag and drop a csv file/i);
+  fireEvent.change(input, {
+    target: { files: [new File(["a"], "list.csv", { type: "text/csv" })] },
+  });
+  await waitFor(() => expect(importCsv).toHaveBeenCalledTimes(1));
+  expect(await screen.findByText("2 titles imported.")).toBeDefined();
+});

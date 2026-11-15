@@ -112,8 +112,7 @@
     "traktHint": "Exportez votre watchlist depuis trakt.tv : allez dans Settings, puis Data Export.",
     "tvtimeHint": "Depuis un ZIP d'export TV Time, envoyez movies_history.csv ou tracking-prod-records-series.csv.",
     "dropHint": "Glissez-déposez un fichier CSV ici, ou cliquez pour en choisir un",
-    "importing": "Importation...",
-    "chooseFile": "Choisir un fichier CSV"
+    "importing": "Importation..."
   },
   "home": {
     "welcomeTitle": "Bienvenue sur Remindarr",
@@ -332,9 +331,7 @@
   },
   "profile": {
     "title": "Profil",
-    "username": "Identifiant",
     "displayName": "Nom affiché",
-    "role": "Rôle",
     "admin": "Administrateur",
     "user": "Utilisateur",
     "changePassword": "Changer le mot de passe",
@@ -380,7 +377,6 @@
     "renamingPasskey": "Renommage...",
     "noPasskeys": "Aucune clé d'accès enregistrée. Ajoutez-en une pour vous connecter sans mot de passe.",
     "passkeyUnnamed": "Clé sans nom",
-    "editProfile": "Modifier le profil",
     "bio": "Bio",
     "bioPlaceholder": "Quelques mots sur vous...",
     "country": "Pays",
@@ -757,11 +753,7 @@
       "reduceMotion": "Réduire les animations",
       "reduceMotionDesc": "Désactive les transitions et l'effet de parallaxe de l'en-tête.",
       "highContrast": "Texte à fort contraste",
-      "highContrastDesc": "Utilise des couleurs de texte plus claires pour une meilleure lisibilité.",
-      "hideSpoilers": "Masquer les spoilers d'épisodes",
-      "hideSpoilersDesc": "Floute les descriptions et titres des épisodes non vus.",
-      "autoplayTrailers": "Lecture automatique des bandes-annonces",
-      "autoplayTrailersDesc": "Lance automatiquement les bandes-annonces dans l'en-tête."
+      "highContrastDesc": "Utilise des couleurs de texte plus claires pour une meilleure lisibilité."
     },
     "advisory": {
       "title": "Avertissement de contenu",
@@ -831,13 +823,11 @@
     "titleVisible": "Visible sur le profil",
     "titleHidden": "Masqué sur le profil",
     "noTrackedTitles": "Aucun titre suivi à gérer.",
-    "perTitleVisibility": "Choisissez les titres à afficher :",
+    "perTitleVisibility": "Afficher ou masquer tous vos titres suivis d’un coup :",
     "showTitle": "Afficher sur le profil",
     "hideTitle": "Masquer sur le profil",
     "account": {
       "editProfileSubtitle": "Votre nom affiché, votre bio et votre pays apparaissent sur votre profil public.",
-      "profileSubtitle": "L'identité de votre compte. L'identifiant est utilisé sur les profils publics et dans l'activité des amis.",
-      "authProvider": "Fournisseur de connexion",
       "passwordSubtitle": "Utilisez au moins 6 caractères. Nous recommandons une longue phrase de passe.",
       "passwordChangeFailed": "Échec du changement de mot de passe",
       "strengthLabel": "robustesse : {{strength}}",
@@ -897,8 +887,6 @@
         "private": "Moi uniquement"
       }
     },
-    "breadcrumb": "Fil d'Ariane",
-    "buildInfo": "Remindarr · auto-hébergé",
     "sections": "Sections",
     "sectionsLabel": "Sections des paramètres",
     "saving": "Enregistrement...",

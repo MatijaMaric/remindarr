@@ -69,9 +69,6 @@ test.describe("Settings — Appearance tab", () => {
     await expect(sap.accentSection()).toBeVisible();
     await expect(sap.displayPrefsSection()).toBeVisible();
     await expect(sap.homepageLayoutSection()).toBeVisible();
-
-    // Breadcrumb shows "Appearance"
-    await expect(page.getByText("Appearance").first()).toBeVisible();
   });
 
   test("TC-02: Unauthenticated user redirected to /login", async ({ page }) => {
