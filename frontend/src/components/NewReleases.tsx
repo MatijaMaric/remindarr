@@ -81,8 +81,8 @@ export default function NewReleases({
   );
 
   useEffect(() => {
-    if (!data) return;
-    onResultsCount?.(hasNextPage ? null : titles.length);
+    // No data (loading or failed): drop the previous list's count.
+    onResultsCount?.(!data || hasNextPage ? null : titles.length);
   }, [data, hasNextPage, titles.length, onResultsCount]);
 
   if (isLoading) {

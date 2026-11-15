@@ -172,11 +172,22 @@ function FilterToggle({
   );
 }
 
-function PeopleList({ people }: { people: SearchPerson[] }) {
+function PeopleList({
+  people,
+  row = false,
+}: {
+  people: SearchPerson[];
+  /** One sideways-scrolling row, so titles below stay in view. */
+  row?: boolean;
+}) {
   return (
-    <ul className="flex flex-wrap gap-4">
+    <ul
+      className={
+        row ? "flex gap-4 overflow-x-auto pb-2" : "flex flex-wrap gap-4"
+      }
+    >
       {people.map((p) => (
-        <li key={p.id} className="flex flex-col items-center gap-2">
+        <li key={p.id} className="flex flex-col items-center gap-2 shrink-0">
           <PersonCard
             id={p.id}
             name={p.name}
@@ -757,7 +768,7 @@ export default function BrowsePage() {
                   <h3 className="text-sm font-semibold text-muted-foreground">
                     {t("filter.people")}
                   </h3>
-                  <PeopleList people={searchPeople} />
+                  <PeopleList people={searchPeople} row />
                 </section>
               )}
               {(searchResults?.length || !searchPeople?.length) && (

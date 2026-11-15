@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, beforeEach } from "bun:test";
+import { describe, it, expect, afterEach, beforeEach, mock } from "bun:test";
 import { render, screen, cleanup, waitFor, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -166,6 +166,27 @@ describe("CategoryBrowse list quality", () => {
     });
     await screen.findByText("Title 1");
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("CategoryBrowse results count", () => {
+  it("reports no count when the first page fails", async () => {
+    apiMock.browseTitles.mockRejectedValueOnce(new Error("Server error"));
+    const onResultsCount = mock((_: number | null) => {});
+    render(
+      <CategoryBrowse
+        category="popular"
+        type={[]}
+        genre={[]}
+        provider={[]}
+        language={[]}
+        onResultsCount={onResultsCount}
+      />,
+      { wrapper: Wrapper },
+    );
+    await screen.findByRole("alert");
+    expect(onResultsCount).toHaveBeenLastCalledWith(null);
+    expect(onResultsCount).not.toHaveBeenCalledWith(expect.any(Number));
   });
 });
 
