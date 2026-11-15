@@ -904,11 +904,10 @@
   "discovery": {
     "title": "Descubrir",
     "empty": "Todavía no hay recomendaciones. ¡Sigue a otras personas para ver sus recomendaciones!",
+    "emptyCta": "Busca y sigue títulos, y valora algunos para mejorar las recomendaciones.",
     "movie": "Película",
-    "tv": "Serie",
     "track": "Seguir",
     "dismiss": "Descartar",
-    "tracked": "«{{title}}» se añadió a tu lista",
     "trackFailed": "No se pudo seguir el título",
     "dismissFailed": "No se pudo descartar la recomendación",
     "loadFailed": "No se pudieron cargar las recomendaciones",
@@ -925,10 +924,8 @@
     "friendCount_many": "{{count}} amigos",
     "friendCount_other": "{{count}} amigos",
     "direct": "Directa",
-    "noPoster": "N/D",
     "kicker": "Según lo que ves y a quién sigues",
     "forYou": "Para ti",
-    "activity": "Actividad",
     "sessionCounts": "{{tracked}} seguidos · {{dismissed}} descartados",
     "moreForYou": {
       "kicker": "Más para ti",
@@ -939,10 +936,9 @@
       "kicker": "De las personas que sigues",
       "title": "Tus amigos recomiendan"
     },
-    "hiddenCount_one": "{{count}} oculto: ya seguido o descartado",
-    "hiddenCount_many": "{{count}} ocultos: ya seguidos o descartados",
-    "hiddenCount_other": "{{count}} ocultos: ya seguidos o descartados",
-    "allHandled": "Todas las sugerencias están seguidas o descartadas.",
+    "hiddenCount_one": "{{count}} oculto: ya seguido, visto o descartado",
+    "hiddenCount_many": "{{count}} ocultos: ya seguidos, vistos o descartados",
+    "hiddenCount_other": "{{count}} ocultos: ya seguidos, vistos o descartados",
     "hero": {
       "kicker": "Nuestra mejor sugerencia",
       "tvSeries": "Serie",
@@ -953,9 +949,7 @@
       "recCount_one": "{{count}} recomendación",
       "recCount_many": "{{count}} recomendaciones",
       "recCount_other": "{{count}} recomendaciones",
-      "noFriendRecs": "Ninguno de tus amigos lo ha recomendado todavía.",
       "viewDetails": "Ver detalles",
-      "undoDismiss": "Deshacer descarte",
       "notInterested": "No me interesa"
     }
   },

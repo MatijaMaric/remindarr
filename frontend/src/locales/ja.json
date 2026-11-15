@@ -878,11 +878,10 @@
   "discovery": {
     "title": "おすすめ",
     "empty": "まだおすすめはありません。ほかのユーザーをフォローすると、その人のおすすめが表示されます！",
+    "emptyCta": "作品を探して登録し、いくつか評価するとおすすめが良くなります。",
     "movie": "映画",
-    "tv": "番組",
     "track": "登録",
     "dismiss": "非表示",
-    "tracked": "「{{title}}」をウォッチリストに追加しました",
     "trackFailed": "作品を登録できませんでした",
     "dismissFailed": "おすすめを非表示にできませんでした",
     "loadFailed": "おすすめを読み込めませんでした",
@@ -897,10 +896,8 @@
     "undo": "元に戻す",
     "friendCount_other": "友達 {{count}} 人",
     "direct": "直接",
-    "noPoster": "なし",
     "kicker": "あなたの視聴履歴とフォロー中のユーザーから",
     "forYou": "あなたへ",
-    "activity": "アクティビティ",
     "sessionCounts": "{{tracked}} 件登録 · {{dismissed}} 件非表示",
     "moreForYou": {
       "kicker": "さらにおすすめ",
@@ -911,8 +908,7 @@
       "kicker": "フォロー中のユーザーから",
       "title": "友達のおすすめ"
     },
-    "hiddenCount_other": "{{count}} 件を非表示（登録済みまたは非表示）",
-    "allHandled": "すべてのおすすめを登録または非表示にしました。",
+    "hiddenCount_other": "{{count}} 件を非表示（登録済み・視聴済みまたは非表示）",
     "hero": {
       "kicker": "イチオシ",
       "tvSeries": "テレビシリーズ",
@@ -921,9 +917,7 @@
       "tasteProfile": "あなたの好みからのイチオシです。",
       "friends": "友達",
       "recCount_other": "おすすめ {{count}} 件",
-      "noFriendRecs": "まだ友達からのおすすめはありません。",
       "viewDetails": "詳細を見る",
-      "undoDismiss": "非表示を取り消す",
       "notInterested": "興味なし"
     }
   },

@@ -904,11 +904,10 @@
   "discovery": {
     "title": "Découvrir",
     "empty": "Aucune recommandation pour l'instant. Abonnez-vous à d'autres personnes pour voir leurs recommandations !",
+    "emptyCta": "Trouvez et suivez des titres, puis notez-en quelques-uns pour améliorer les recommandations.",
     "movie": "Film",
-    "tv": "Série",
     "track": "Suivre",
     "dismiss": "Ignorer",
-    "tracked": "« {{title}} » a été ajouté à votre liste",
     "trackFailed": "Impossible de suivre le titre",
     "dismissFailed": "Impossible d'ignorer la recommandation",
     "loadFailed": "Impossible de charger les recommandations",
@@ -925,10 +924,8 @@
     "friendCount_many": "{{count}} amis",
     "friendCount_other": "{{count}} amis",
     "direct": "Direct",
-    "noPoster": "N/D",
     "kicker": "D'après ce que vous regardez et les personnes que vous suivez",
     "forYou": "Pour vous",
-    "activity": "Activité",
     "sessionCounts": "{{tracked}} suivis · {{dismissed}} ignorés",
     "moreForYou": {
       "kicker": "Plus pour vous",
@@ -939,10 +936,9 @@
       "kicker": "Des personnes que vous suivez",
       "title": "Vos amis recommandent"
     },
-    "hiddenCount_one": "{{count}} masqué : déjà suivi ou ignoré",
-    "hiddenCount_many": "{{count}} masqués : déjà suivis ou ignorés",
-    "hiddenCount_other": "{{count}} masqués : déjà suivis ou ignorés",
-    "allHandled": "Toutes les suggestions ont été suivies ou ignorées.",
+    "hiddenCount_one": "{{count}} masqué : déjà suivi, vu ou ignoré",
+    "hiddenCount_many": "{{count}} masqués : déjà suivis, vus ou ignorés",
+    "hiddenCount_other": "{{count}} masqués : déjà suivis, vus ou ignorés",
     "hero": {
       "kicker": "Notre meilleur choix pour vous",
       "tvSeries": "Série",
@@ -953,9 +949,7 @@
       "recCount_one": "{{count}} reco",
       "recCount_many": "{{count}} recos",
       "recCount_other": "{{count}} recos",
-      "noFriendRecs": "Aucun de vos amis ne l'a encore recommandé.",
       "viewDetails": "Voir les détails",
-      "undoDismiss": "Ne plus ignorer",
       "notInterested": "Pas intéressé"
     }
   },

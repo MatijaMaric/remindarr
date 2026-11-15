@@ -891,11 +891,10 @@
   "discovery": {
     "title": "Empfehlungen",
     "empty": "Noch keine Empfehlungen. Folge anderen, um ihre Empfehlungen zu sehen!",
+    "emptyCta": "Finde und merke dir Titel und bewerte ein paar, um die Empfehlungen zu verbessern.",
     "movie": "Film",
-    "tv": "Serie",
     "track": "Merken",
     "dismiss": "Verwerfen",
-    "tracked": "„{{title}}“ wurde zu deiner Merkliste hinzugefügt",
     "trackFailed": "Titel konnte nicht gemerkt werden",
     "dismissFailed": "Empfehlung konnte nicht verworfen werden",
     "loadFailed": "Empfehlungen konnten nicht geladen werden",
@@ -911,10 +910,8 @@
     "friendCount_one": "{{count}} Freund",
     "friendCount_other": "{{count}} Freunde",
     "direct": "Direkt",
-    "noPoster": "k. A.",
     "kicker": "Basierend auf dem, was du schaust und wem du folgst",
     "forYou": "Für dich",
-    "activity": "Aktivität",
     "sessionCounts": "{{tracked}} gemerkt · {{dismissed}} verworfen",
     "moreForYou": {
       "kicker": "Mehr für dich",
@@ -925,9 +922,8 @@
       "kicker": "Von Leuten, denen du folgst",
       "title": "Freunde empfehlen"
     },
-    "hiddenCount_one": "{{count}} ausgeblendet – bereits gemerkt oder verworfen",
-    "hiddenCount_other": "{{count}} ausgeblendet – bereits gemerkt oder verworfen",
-    "allHandled": "Alle Vorschläge wurden gemerkt oder verworfen.",
+    "hiddenCount_one": "{{count}} ausgeblendet – bereits gemerkt, gesehen oder verworfen",
+    "hiddenCount_other": "{{count}} ausgeblendet – bereits gemerkt, gesehen oder verworfen",
     "hero": {
       "kicker": "Top-Tipp für dich",
       "tvSeries": "Serie",
@@ -937,9 +933,7 @@
       "friends": "Freunde",
       "recCount_one": "{{count}} Empfehlung",
       "recCount_other": "{{count}} Empfehlungen",
-      "noFriendRecs": "Keiner deiner Freunde hat das bisher empfohlen.",
       "viewDetails": "Details ansehen",
-      "undoDismiss": "Verwerfen rückgängig",
       "notInterested": "Kein Interesse"
     }
   },
