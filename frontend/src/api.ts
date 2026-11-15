@@ -1557,19 +1557,6 @@ export async function regenerateFeedToken(): Promise<{ token: string }> {
 
 export type KioskFidelity = "rich" | "lite" | "epaper";
 
-export interface KioskAiringSlot {
-  id: number;
-  title_id: string;
-  show_title: string;
-  poster_url: string | null;
-  backdrop_url: string | null;
-  season_number: number;
-  episode_number: number;
-  ep_title: string | null;
-  air_date: string | null;
-  provider: string | null;
-}
-
 export interface KioskRelease {
   id: number;
   title_id: string;
@@ -1581,7 +1568,8 @@ export interface KioskRelease {
   ep_title: string | null;
   air_date: string | null;
   provider: string | null;
-  kind: "series" | "episode";
+  kind: "premiere" | "episode";
+  is_watched: boolean;
 }
 
 export interface KioskQueueItem {
@@ -1606,9 +1594,12 @@ export interface KioskMeta {
 
 export interface KioskData {
   meta: KioskMeta;
-  airing_now: KioskAiringSlot | null;
+  /** Episodes dated today (date-only; there is no air time). */
   releasing_today: KioskRelease[];
+  /** Next unwatched episode per show, at most 8, shows in releasing_today excluded. */
   unwatched_queue: KioskQueueItem[];
+  /** Shows in the queue before the 8-row cap. */
+  queue_total: number;
 }
 
 export async function getKioskData(
@@ -1652,10 +1643,19 @@ export async function revokeWatchlistShareToken(): Promise<void> {
   await doFetch("/share/token", { method: "DELETE" });
 }
 
+/** Public share view: only what the page renders (#1412). */
+export interface SharedWatchlistTitle {
+  id: string;
+  object_type: string;
+  title: string;
+  release_year: number | null;
+  poster_url: string | null;
+}
+
 export async function getSharedWatchlist(
   token: string,
   signal?: AbortSignal,
-): Promise<{ username: string; titles: Title[] }> {
+): Promise<{ username: string; titles: SharedWatchlistTitle[] }> {
   return fetchJson(`/share/watchlist/${encodeURIComponent(token)}`, { signal });
 }
 

@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router";
 import { getSharedWatchlist } from "../api";
-import type { Title } from "../types";
+import { ApiError } from "../lib/api-error";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import { useQuery } from "@tanstack/react-query";
 
@@ -15,6 +15,9 @@ export default function SharedWatchlistPage() {
     queryKey: ["shared-watchlist", token],
     queryFn: ({ signal }) => getSharedWatchlist(token!, signal),
     enabled: !!token,
+    // A revoked or unknown link is final; retrying only delays the message.
+    retry: (failureCount, err) =>
+      !(err instanceof ApiError && err.status === 404) && failureCount < 1,
   });
 
   if (loading) {
@@ -46,7 +49,7 @@ export default function SharedWatchlistPage() {
     );
   }
 
-  const { username, titles } = data as { username: string; titles: Title[] };
+  const { username, titles } = data;
 
   return (
     <div className="space-y-6">

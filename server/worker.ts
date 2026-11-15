@@ -52,7 +52,7 @@ import {
   isOidcConfigured,
   getOidcConfig,
   getUserByWatchlistShareToken,
-  getTrackedTitles,
+  getSharedWatchlistTitles,
   getYearInReview,
   deleteExpiredSessions,
 } from "./db/repository";
@@ -698,7 +698,7 @@ function createApp(env: Env) {
     const user = await getUserByWatchlistShareToken(token);
     let ogTags = "";
     if (user) {
-      const titles = await getTrackedTitles(user.id);
+      const titles = await getSharedWatchlistTitles(user.id);
       const count = titles.length;
       const username = user.displayUsername ?? user.username;
       const firstPoster = titles[0]?.poster_url

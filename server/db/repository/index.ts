@@ -75,6 +75,7 @@ export {
   getTrackedTitleIds,
   getTrackedStatusForIds,
   getTrackedTitles,
+  getSharedWatchlistTitles,
   getPublicTrackedTitles,
   getPublicTrackedTitleIds,
   getPublicTrackedCount,
