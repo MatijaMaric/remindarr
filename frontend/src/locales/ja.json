@@ -522,35 +522,22 @@
     "hideWatched": "視聴済みを隠す",
     "showWatched": "視聴済みを表示",
     "gridView": "グリッド表示",
-    "weekView": "週表示",
     "agendaView": "予定表示",
     "close": "閉じる",
     "goToDay": "{{date}} に移動",
-    "densityCompact": "コンパクト",
-    "densityComfortable": "標準",
-    "densitySpacious": "ゆったり",
     "loadError": "カレンダーを読み込めませんでした。もう一度お試しください。",
     "stats": {
       "episodes_other": "{{count}} エピソード",
-      "titles_other": "{{count}} 作品",
-      "total_other": "合計 {{count}}"
+      "titles_other": "{{count}} 作品"
     },
     "episodes": "エピソード",
     "releases": "公開作品",
     "noReleasesOnDay": "この日に登録作品の公開はありません",
     "previousMonth": "前の月",
     "nextMonth": "次の月",
-    "month": "月",
-    "agenda": "予定",
-    "legend": {
-      "tracked": "登録済み · 放送中",
-      "followed": "フォロー中 · 新エピソード",
-      "premiere": "初回放送"
-    },
-    "episodesThisMonth_other": "今月 {{count}} エピソード",
-    "previousWeek": "前の週",
-    "nextWeek": "次の週",
-    "thisWeek": "今週"
+    "loadMonth": "{{month}}を表示",
+    "movie": "映画",
+    "show": "番組"
   },
   "landing": {
     "tagline": "好きな映画やドラマを追いかけよう",

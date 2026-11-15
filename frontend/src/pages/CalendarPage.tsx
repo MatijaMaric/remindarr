@@ -1,11 +1,6 @@
 import { invalidateLibrary } from "../lib/invalidateLibrary";
-import { useState, useEffect, useMemo, useRef, useId } from "react";
-import {
-  useQuery,
-  useQueries,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useId } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -41,14 +36,14 @@ import WatchButtonGroup from "../components/WatchButtonGroup";
 import AgendaCalendar, {
   type CalendarItem,
   type ViewMode,
-  type DensityMode,
   typeFilters,
   formatMonth,
   formatDateKey,
   getCellBorderColor,
+  dropPremiereDuplicates,
   useCalendarParam,
+  useHideWatched,
   ViewToggle,
-  DensityToggle,
 } from "../components/AgendaCalendar";
 import { PageHeader } from "../components/design";
 
@@ -91,8 +86,7 @@ function MonthStatsBar({
   titles: number;
 }) {
   const { t } = useTranslation();
-  const total = episodes + titles;
-  if (total === 0) return null;
+  if (episodes + titles === 0) return null;
   return (
     <div className="flex items-center gap-3 text-xs font-medium">
       {episodes > 0 && (
@@ -105,9 +99,6 @@ function MonthStatsBar({
           {t("calendar.stats.titles", { count: titles })}
         </span>
       )}
-      <span className="bg-primary-soft text-primary-text px-2.5 py-1 rounded-full">
-        {t("calendar.stats.total", { count: total })}
-      </span>
     </div>
   );
 }
@@ -350,220 +341,6 @@ export function SlideOverPanel({
   );
 }
 
-// ─── Mobile Calendar ─────────────────────────────────────────────────────────
-
-function MiniMonthGrid({
-  year,
-  month,
-  dotDates,
-}: {
-  year: number;
-  month: number;
-  dotDates: Set<string>;
-}) {
-  const todayStr = formatDateKey(new Date());
-  const firstDay = new Date(year, month, 1);
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  // Week starts on Monday; getDay() returns 0=Sun
-  const startDow = (firstDay.getDay() + 6) % 7;
-  const cells: (number | null)[] = [
-    ...Array(startDow).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-  const weekdays = ["M", "T", "W", "T", "F", "S", "S"];
-
-  return (
-    <div className="px-5 pb-4">
-      <div className="grid grid-cols-7 gap-0.5 mb-1 text-center text-xs text-muted-foreground">
-        {weekdays.map((d, i) => (
-          <div key={i}>{d}</div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-0.5">
-        {cells.map((day, i) => {
-          if (!day) return <div key={`e-${i}`} />;
-          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-          const isToday = dateStr === todayStr;
-          const hasDots = dotDates.has(dateStr);
-          return (
-            <div
-              key={dateStr}
-              className={`aspect-square flex flex-col items-center justify-center gap-0.5 rounded-md text-[13px] font-mono ${
-                isToday
-                  ? "border border-primary bg-primary-soft text-primary-text font-bold"
-                  : hasDots
-                    ? "bg-fill-subtle text-foreground-secondary font-medium"
-                    : "text-muted-foreground"
-              }`}
-            >
-              <span>{day}</span>
-              {hasDots && (
-                <div className="flex gap-0.5">
-                  <span className="w-1 h-1 rounded-full bg-primary" />
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function MobileCalendar({
-  searchParams,
-  setSearchParams,
-}: {
-  searchParams: URLSearchParams;
-  setSearchParams: ReturnType<typeof useSearchParams>[1];
-}) {
-  const { t } = useTranslation();
-  const [mobileView, setMobileView] = useState<"agenda" | "month">("agenda");
-  const [monthParam, setMonthParam] = useCalendarParam(
-    searchParams,
-    setSearchParams,
-    "month",
-    formatMonth(new Date()),
-  );
-
-  const currentMonth = useMemo(() => {
-    const [y, m] = monthParam.split("-").map(Number);
-    return new Date(y, m - 1, 1);
-  }, [monthParam]);
-
-  const {
-    data: mobileCalData,
-    isFetching: loadingMonth,
-    isError: monthError,
-  } = useQuery<CalendarData>({
-    queryKey: ["calendar", formatMonth(currentMonth), undefined],
-    queryFn: ({ signal }) =>
-      getCalendarTitles({ month: formatMonth(currentMonth) }, signal),
-    enabled: mobileView === "month",
-  });
-  const { actionFor } = useContentAdvisory();
-  const episodes = useMemo(() => {
-    const raw = mobileCalData?.episodes ?? [];
-    return raw.filter(
-      (ep) => actionFor(ep.age_certification, ep.title_id) !== "hide",
-    );
-  }, [mobileCalData, actionFor]);
-
-  const dotDates = useMemo(() => {
-    const set = new Set<string>();
-    for (const ep of episodes) {
-      if (ep.air_date) set.add(ep.air_date);
-    }
-    return set;
-  }, [episodes]);
-
-  const monthLabel = currentMonth.toLocaleDateString(undefined, {
-    month: "long",
-  });
-  const year = currentMonth.getFullYear();
-  const month = currentMonth.getMonth();
-
-  function prevMonth() {
-    const d = new Date(year, month - 1, 1);
-    setMonthParam(formatMonth(d));
-  }
-  function nextMonth() {
-    const d = new Date(year, month + 1, 1);
-    setMonthParam(formatMonth(d));
-  }
-
-  const mobileMonthActive = mobileView === "month";
-
-  return (
-    <div className="space-y-0">
-      {mobileView === "month" && (
-        <>
-          {/* Month header */}
-          <div className="flex items-baseline justify-between px-5 pt-3 pb-2">
-            <div>
-              <div className="text-xs text-muted-foreground mb-0.5">
-                {year}
-                {!monthError && ` · ${dotDates.size} airings`}
-              </div>
-              <h1 className="text-[32px] font-extrabold tracking-[-1.2px]">
-                {monthLabel}
-              </h1>
-            </div>
-            <div className="flex gap-2 items-center">
-              <button
-                onClick={prevMonth}
-                aria-label={t("calendar.previousMonth")}
-                className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-foreground-secondary"
-              >
-                ‹
-              </button>
-              <button
-                onClick={nextMonth}
-                aria-label={t("calendar.nextMonth")}
-                className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-foreground-secondary"
-              >
-                ›
-              </button>
-            </div>
-          </div>
-          {/* Month/Agenda toggle */}
-          <div className="flex gap-2 px-5 pb-4">
-            <button
-              onClick={() => setMobileView("month")}
-              aria-pressed={mobileMonthActive}
-              className="px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold font-mono"
-            >
-              {t("calendar.month")}
-            </button>
-            <button
-              onClick={() => setMobileView("agenda")}
-              aria-pressed={!mobileMonthActive}
-              className="px-3 py-1.5 rounded-full bg-accent text-foreground-secondary text-[11px] font-semibold font-mono"
-            >
-              {t("calendar.agenda")}
-            </button>
-          </div>
-          {loadingMonth ? (
-            <div className="text-center py-8 text-muted-foreground font-mono text-xs">
-              {t("common.loading")}
-            </div>
-          ) : monthError ? (
-            <CalendarFetchError />
-          ) : (
-            <MiniMonthGrid year={year} month={month} dotDates={dotDates} />
-          )}
-        </>
-      )}
-
-      {mobileView === "agenda" && (
-        <div>
-          {/* Month/Agenda toggle */}
-          <div className="flex gap-2 px-4 pt-2 pb-2">
-            <button
-              onClick={() => setMobileView("month")}
-              aria-pressed={mobileMonthActive}
-              className="px-3 py-1.5 rounded-full bg-accent text-foreground-secondary text-[11px] font-semibold font-mono"
-            >
-              {t("calendar.month")}
-            </button>
-            <button
-              onClick={() => setMobileView("agenda")}
-              aria-pressed={!mobileMonthActive}
-              className="px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold font-mono"
-            >
-              {t("calendar.agenda")}
-            </button>
-          </div>
-          <AgendaCalendar
-            searchParams={searchParams}
-            setSearchParams={setSearchParams}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Main Export ─────────────────────────────────────────────────────────────
 
 export default function CalendarPage() {
@@ -576,29 +353,13 @@ export default function CalendarPage() {
     "view",
     "grid",
   );
-  const viewMode = (
-    viewParam === "agenda" ? "agenda" : viewParam === "week" ? "week" : "grid"
-  ) as ViewMode;
+  const viewMode: ViewMode = viewParam === "agenda" ? "agenda" : "grid";
   const setViewMode = (mode: ViewMode) => setViewParam(mode);
 
-  const [densityParam, setDensityParam] = useCalendarParam(
-    searchParams,
-    setSearchParams,
-    "density",
-    "comfortable",
-  );
-  const density = (
-    densityParam === "compact"
-      ? "compact"
-      : densityParam === "spacious"
-        ? "spacious"
-        : "comfortable"
-  ) as DensityMode;
-  const setDensity = (mode: DensityMode) => setDensityParam(mode);
-
+  // Phones get the agenda only: its date picker already jumps to any day.
   if (isMobile) {
     return (
-      <MobileCalendar
+      <AgendaCalendar
         searchParams={searchParams}
         setSearchParams={setSearchParams}
       />
@@ -610,21 +371,6 @@ export default function CalendarPage() {
       <AgendaCalendar
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        density={density}
-        onDensityChange={setDensity}
-        searchParams={searchParams}
-        setSearchParams={setSearchParams}
-      />
-    );
-  }
-
-  if (viewMode === "week") {
-    return (
-      <WeekCalendar
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        density={density}
-        onDensityChange={setDensity}
         searchParams={searchParams}
         setSearchParams={setSearchParams}
       />
@@ -635,8 +381,6 @@ export default function CalendarPage() {
     <GridCalendar
       viewMode={viewMode}
       onViewModeChange={setViewMode}
-      density={density}
-      onDensityChange={setDensity}
       searchParams={searchParams}
       setSearchParams={setSearchParams}
     />
@@ -648,15 +392,11 @@ export default function CalendarPage() {
 function GridCalendar({
   viewMode,
   onViewModeChange,
-  density,
-  onDensityChange,
   searchParams,
   setSearchParams,
 }: {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
-  density: DensityMode;
-  onDensityChange: (mode: DensityMode) => void;
   searchParams: URLSearchParams;
   setSearchParams: ReturnType<typeof useSearchParams>[1];
 }) {
@@ -677,7 +417,10 @@ function GridCalendar({
     setSearchParams,
     "date",
   );
-  const [hideWatched, setHideWatched] = useState(false);
+  const [hideWatched, setHideWatched] = useHideWatched(
+    searchParams,
+    setSearchParams,
+  );
 
   const currentMonth = useMemo(() => {
     const [y, m] = monthParam.split("-").map(Number);
@@ -708,7 +451,10 @@ function GridCalendar({
     (crowdedWeekData?.crowdedWeekBadgeEnabled ?? 1) !== 0;
   const { actionFor } = useContentAdvisory();
   const titles = useMemo(() => {
-    const raw = calendarData?.titles ?? [];
+    const raw = dropPremiereDuplicates(
+      calendarData?.titles ?? [],
+      calendarData?.episodes ?? [],
+    );
     return raw.filter((t) => actionFor(t.age_certification, t.id) !== "hide");
   }, [calendarData, actionFor]);
   const episodes = useMemo(() => {
@@ -995,7 +741,7 @@ function GridCalendar({
         </button>
       ))}
       <button
-        onClick={() => setHideWatched((v) => !v)}
+        onClick={() => setHideWatched(!hideWatched)}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
           hideWatched
             ? "bg-primary text-primary-foreground"
@@ -1011,7 +757,6 @@ function GridCalendar({
           <EyeIcon className="size-4" />
         )}
       </button>
-      <DensityToggle density={density} onDensityChange={onDensityChange} />
       <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
     </div>
   );
@@ -1084,18 +829,7 @@ function GridCalendar({
                   const isToday = dateKey === today;
                   const isSelected = dateKey === selectedDate;
                   const borderColor = getCellBorderColor(dayItems);
-                  const minHClass =
-                    density === "compact"
-                      ? "min-h-20"
-                      : density === "spacious"
-                        ? "min-h-52"
-                        : "min-h-36";
-                  const itemCap =
-                    density === "compact"
-                      ? 2
-                      : density === "spacious"
-                        ? dayItems.length
-                        : 3;
+                  const itemCap = 3;
 
                   return (
                     <button
@@ -1104,7 +838,7 @@ function GridCalendar({
                         event.currentTarget.focus();
                         setSelectedDate(isSelected ? "" : dateKey);
                       }}
-                      className={`${minHClass} p-1.5 text-left transition-colors cursor-pointer bg-background ${
+                      className={`min-h-36 p-1.5 text-left transition-colors cursor-pointer bg-background ${
                         borderColor ? `border-l-2 ${borderColor}` : ""
                       } ${
                         isSelected
@@ -1174,27 +908,6 @@ function GridCalendar({
         </div>
       )}
 
-      {/* Legend */}
-      {!loading && !isError && (
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[11px] text-muted-foreground pt-1">
-          <div className="flex items-center gap-1.5">
-            <span className="text-primary-text">●</span>
-            <span>{t("calendar.legend.tracked")}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span style={{ color: "oklch(0.72 0.13 220)" }}>●</span>
-            <span>{t("calendar.legend.followed")}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span style={{ color: "oklch(0.72 0.15 140)" }}>●</span>
-            <span>{t("calendar.legend.premiere")}</span>
-          </div>
-          <div className="ml-auto">
-            {t("calendar.episodesThisMonth", { count: stats.episodes })}
-          </div>
-        </div>
-      )}
-
       {/* Slide-over panel for selected day */}
       {selectedDate && (
         <SlideOverPanel
@@ -1207,328 +920,6 @@ function GridCalendar({
           onBulkToggle={toggleBulkWatched}
           onToggleTitleWatched={toggleTitleWatched}
         />
-      )}
-    </div>
-  );
-}
-
-// ─── Week Calendar ───────────────────────────────────────────────────────────
-
-/** Returns the Monday of the ISO week containing `date`. */
-function getWeekStart(date: Date): Date {
-  const d = new Date(date);
-  const dow = d.getDay(); // 0 = Sun
-  const diff = (dow + 6) % 7; // days since Monday
-  d.setDate(d.getDate() - diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function WeekCalendar({
-  viewMode,
-  onViewModeChange,
-  density,
-  onDensityChange,
-  searchParams,
-  setSearchParams,
-}: {
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
-  density: DensityMode;
-  onDensityChange: (mode: DensityMode) => void;
-  searchParams: URLSearchParams;
-  setSearchParams: ReturnType<typeof useSearchParams>[1];
-}) {
-  const { t } = useTranslation();
-  const [typeFilter, setTypeFilter] = useCalendarParam(
-    searchParams,
-    setSearchParams,
-    "type",
-  );
-  const [weekParam, setWeekParam] = useCalendarParam(
-    searchParams,
-    setSearchParams,
-    "week",
-    formatDateKey(getWeekStart(new Date())),
-  );
-  const [hideWatched, setHideWatched] = useState(false);
-
-  // Derive week start from param (or default to current week's Monday)
-  const weekStart = useMemo(() => {
-    if (weekParam) {
-      const d = new Date(weekParam + "T00:00:00");
-      if (!isNaN(d.getTime())) return getWeekStart(d);
-    }
-    return getWeekStart(new Date());
-  }, [weekParam]);
-
-  // The 7 days of the week
-  const weekDays = useMemo<Date[]>(() => {
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(weekStart);
-      d.setDate(d.getDate() + i);
-      return d;
-    });
-  }, [weekStart]);
-
-  // Data loading — fetch the month(s) that overlap the week
-  const startMonth = formatMonth(weekStart);
-  const endMonth = formatMonth(weekDays[6]);
-  const weekMonths =
-    startMonth === endMonth ? [startMonth] : [startMonth, endMonth];
-  const weekTypeKey = typeFilter || undefined;
-
-  const weekQueries = useQueries({
-    queries: weekMonths.map((m) => ({
-      queryKey: ["calendar", m, weekTypeKey] as const,
-      queryFn: ({ signal }: { signal: AbortSignal }) =>
-        getCalendarTitles({ month: m, type: weekTypeKey }, signal),
-    })),
-  });
-
-  const loading = weekQueries.some((q) => q.isFetching);
-  const isError = weekQueries.some((q) => q.isError);
-
-  const weekQ0Data = weekQueries[0]?.data;
-  const weekQ1Data = weekQueries[1]?.data;
-  const { actionFor } = useContentAdvisory();
-  const { titles, episodes } = useMemo(() => {
-    const allTitles: Title[] = [];
-    const allEpisodes: Episode[] = [];
-    for (const data of [weekQ0Data, weekQ1Data]) {
-      if (data) {
-        allTitles.push(...data.titles);
-        allEpisodes.push(...(data.episodes || []));
-      }
-    }
-    const seenTitles = new Set<string>();
-    const seenEps = new Set<number>();
-    return {
-      titles: allTitles.filter((t) => {
-        if (seenTitles.has(t.id)) return false;
-        seenTitles.add(t.id);
-        return actionFor(t.age_certification, t.id) !== "hide";
-      }),
-      episodes: allEpisodes.filter((e) => {
-        if (seenEps.has(e.id)) return false;
-        seenEps.add(e.id);
-        return actionFor(e.age_certification, e.title_id) !== "hide";
-      }),
-    };
-  }, [weekQ0Data, weekQ1Data, actionFor]);
-
-  const itemsByDate = useMemo(() => {
-    const map = new Map<string, CalendarItem[]>();
-    for (const t of titles) {
-      if (!t.release_date) continue;
-      const item: CalendarItem = { type: "title", data: t };
-      const arr = map.get(t.release_date);
-      if (arr) arr.push(item);
-      else map.set(t.release_date, [item]);
-    }
-    for (const ep of episodes) {
-      if (!ep.air_date) continue;
-      if (hideWatched && ep.is_watched) continue;
-      const item: CalendarItem = { type: "episode", data: ep };
-      const arr = map.get(ep.air_date);
-      if (arr) arr.push(item);
-      else map.set(ep.air_date, [item]);
-    }
-    return map;
-  }, [titles, episodes, hideWatched]);
-
-  const today = formatDateKey(new Date());
-
-  const prevWeek = () => {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() - 7);
-    setWeekParam(formatDateKey(d));
-  };
-  const nextWeek = () => {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() + 7);
-    setWeekParam(formatDateKey(d));
-  };
-  const goToThisWeek = () =>
-    setWeekParam(formatDateKey(getWeekStart(new Date())));
-
-  const weekLabel = (() => {
-    const start = weekDays[0].toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-    });
-    const end = weekDays[6].toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-    return `${start} – ${end}`;
-  })();
-
-  const minHClass =
-    density === "compact"
-      ? "min-h-20"
-      : density === "spacious"
-        ? "min-h-96"
-        : "min-h-48";
-
-  const headerRight = (
-    <div className="flex flex-wrap items-center gap-2 justify-end">
-      <button
-        onClick={prevWeek}
-        aria-label={t("calendar.previousWeek")}
-        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-      >
-        <ChevronLeftIcon className="size-5" />
-      </button>
-      <button
-        onClick={goToThisWeek}
-        className="px-3 py-1.5 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-      >
-        {t("calendar.thisWeek")}
-      </button>
-      <button
-        onClick={nextWeek}
-        aria-label={t("calendar.nextWeek")}
-        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-      >
-        <ChevronRightIcon className="size-5" />
-      </button>
-      <div className="w-px h-5 bg-accent mx-1" />
-      {typeFilters.map((f) => (
-        <button
-          key={f.value}
-          onClick={() => setTypeFilter(f.value)}
-          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
-            typeFilter === f.value
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted"
-          }`}
-        >
-          {f.label}
-        </button>
-      ))}
-      <button
-        onClick={() => setHideWatched((v) => !v)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
-          hideWatched
-            ? "bg-primary text-primary-foreground"
-            : "text-muted-foreground hover:text-foreground hover:bg-muted"
-        }`}
-        aria-label={
-          hideWatched ? t("calendar.showWatched") : t("calendar.hideWatched")
-        }
-      >
-        {hideWatched ? (
-          <EyeOffIcon className="size-4" />
-        ) : (
-          <EyeIcon className="size-4" />
-        )}
-      </button>
-      <DensityToggle density={density} onDensityChange={onDensityChange} />
-      <ViewToggle viewMode={viewMode} onViewModeChange={onViewModeChange} />
-    </div>
-  );
-
-  return (
-    <div className="space-y-4">
-      <PageHeader
-        kicker={`Week view · ${Intl.DateTimeFormat().resolvedOptions().timeZone}`}
-        title={weekLabel}
-        right={headerRight}
-      />
-
-      {loading ? (
-        <GridCalendarSkeleton />
-      ) : isError ? (
-        <CalendarFetchError />
-      ) : (
-        <div className="border border-border rounded-lg overflow-hidden">
-          {/* Day column headers */}
-          <div className="grid grid-cols-7 bg-card border-b border-border">
-            {weekDays.map((day) => {
-              const dateKey = formatDateKey(day);
-              const isToday = dateKey === today;
-              return (
-                <div
-                  key={dateKey}
-                  className={`px-2 py-2 text-center ${
-                    isToday ? "text-primary-text" : "text-muted-foreground"
-                  }`}
-                >
-                  <div className="text-xs font-medium">
-                    {day.toLocaleDateString(undefined, { weekday: "short" })}
-                  </div>
-                  <div
-                    className={`font-mono text-lg font-bold mt-0.5 ${
-                      isToday
-                        ? "text-primary-text"
-                        : "text-foreground-secondary"
-                    }`}
-                    data-testid="week-day-number"
-                  >
-                    {day.getDate()}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Day columns body */}
-          <div className="grid grid-cols-7 gap-px bg-accent">
-            {weekDays.map((day) => {
-              const dateKey = formatDateKey(day);
-              const dayItems = itemsByDate.get(dateKey) ?? [];
-              const isToday = dateKey === today;
-              const borderColor = getCellBorderColor(dayItems);
-
-              return (
-                <div
-                  key={dateKey}
-                  data-testid="week-day-column"
-                  className={`${minHClass} p-1.5 bg-background ${
-                    borderColor ? `border-l-2 ${borderColor}` : ""
-                  } ${isToday ? "outline-2 outline-primary outline-offset-[-2px] relative z-10" : ""}`}
-                >
-                  {dayItems.map((item, idx) => {
-                    const isEp = item.type === "episode";
-                    const label = isEp
-                      ? item.data.show_title
-                      : item.type === "title"
-                        ? item.data.title
-                        : "";
-                    const prefix = isEp
-                      ? `S${item.data.season_number}E${item.data.episode_number} `
-                      : item.type === "title"
-                        ? item.data.object_type === "MOVIE"
-                          ? "FILM "
-                          : "SHOW "
-                        : "";
-                    return (
-                      <Link
-                        key={idx}
-                        to={
-                          isEp
-                            ? `/title/${item.data.title_id}/season/${item.data.season_number}/episode/${item.data.episode_number}`
-                            : `/title/${item.data.id}`
-                        }
-                        aria-label={
-                          isEp
-                            ? `${item.data.show_title} ${prefix.trim()} — ${formatDateKey(day)}`
-                            : `${label} — ${formatDateKey(day)}`
-                        }
-                        className="block mb-0.5 bg-primary-soft text-primary-text border-l-2 border-primary px-1.5 py-0.5 rounded-sm text-[11px] font-medium leading-tight overflow-hidden text-ellipsis whitespace-nowrap hover:bg-primary-soft/80 transition-colors"
-                      >
-                        <span className="font-mono">{prefix}</span>
-                        {label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        </div>
       )}
     </div>
   );
