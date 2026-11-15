@@ -604,7 +604,6 @@
       "watchTimeShows": "Temps en séries",
       "topGenres": "Genres préférés",
       "friendsCount": "Amis · {{count}}",
-      "seeAll": "Tout voir",
       "followedPeople": "Personnes suivies",
       "followedSince": "abonné depuis le {{date}}",
       "activity12m": "Activité sur 12 mois",
@@ -623,7 +622,9 @@
         "completed": "Terminé",
         "onHold": "En pause",
         "planToWatch": "À voir",
-        "dropped": "Abandonné"
+        "dropped": "Abandonné",
+        "notStarted": "Pas commencé",
+        "unreleased": "Pas encore sorti"
       },
       "activity": {
         "title": "Activité récente",

@@ -81,13 +81,13 @@ describe("GET /user/:username", () => {
     expect(body.user.username).toBe("testuser");
     expect(body.user.display_name).toBe("Test User");
     expect(body.user.member_since).toBeTruthy();
-    expect(body.stats.tracked_count).toBe(0);
-    expect(body.stats.watched_movies).toBe(0);
-    expect(body.stats.watched_episodes).toBe(0);
-    expect(body.stats.shows_completed).toBe(0);
-    expect(body.stats.shows_total).toBe(0);
-    expect(body.stats.total_watched_episodes).toBe(0);
-    expect(body.stats.total_released_episodes).toBe(0);
+    expect(body.overview.tracked_count).toBe(0);
+    expect(body.overview.watched_movies).toBe(0);
+    expect(body.overview.watched_episodes).toBe(0);
+    expect(body.overview.shows_completed).toBe(0);
+    expect(body.overview.shows_total).toBe(0);
+    expect(body.overview.total_watched_episodes).toBe(0);
+    expect(body.overview.total_released_episodes).toBe(0);
     expect(body.movies).toHaveLength(0);
     expect(body.shows).toHaveLength(0);
     expect(body.show_watchlist).toBe(false);
@@ -152,7 +152,7 @@ describe("GET /user/:username", () => {
     expect(body.show_watchlist).toBe(false);
     expect(body.movies).toHaveLength(0);
     expect(body.shows).toHaveLength(0);
-    expect(body.stats.tracked_count).toBe(0);
+    expect(body.overview.tracked_count).toBe(0);
   });
 
   it("shows public watchlist when profile_public is true", async () => {
@@ -166,7 +166,7 @@ describe("GET /user/:username", () => {
     expect(body.show_watchlist).toBe(true);
     expect(body.movies).toHaveLength(1);
     expect(body.shows).toHaveLength(0);
-    expect(body.stats.tracked_count).toBe(1);
+    expect(body.overview.tracked_count).toBe(1);
   });
 
   it("excludes hidden titles when profile is public", async () => {
@@ -184,7 +184,7 @@ describe("GET /user/:username", () => {
     const body = await res.json();
     expect(body.movies).toHaveLength(1);
     expect(body.movies[0].id).toBe("movie-1");
-    expect(body.stats.tracked_count).toBe(1);
+    expect(body.overview.tracked_count).toBe(1);
   });
 
   it("includes watched movie/episode stats regardless of watchlist visibility", async () => {
@@ -195,7 +195,7 @@ describe("GET /user/:username", () => {
     const res = await app.request("/user/testuser");
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.stats.watched_movies).toBe(1);
+    expect(body.overview.watched_movies).toBe(1);
   });
 
   it("separates movies and shows into distinct arrays", async () => {
@@ -533,10 +533,10 @@ describe("GET /user/:username", () => {
     const res = await app.request("/user/testuser");
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.stats.shows_completed).toBe(1);
-    expect(body.stats.shows_total).toBe(2);
-    expect(body.stats.total_watched_episodes).toBe(3); // 2 from show-1 + 1 from show-2
-    expect(body.stats.total_released_episodes).toBe(5); // 2 from show-1 + 3 from show-2
+    expect(body.overview.shows_completed).toBe(1);
+    expect(body.overview.shows_total).toBe(2);
+    expect(body.overview.total_watched_episodes).toBe(3); // 2 from show-1 + 1 from show-2
+    expect(body.overview.total_released_episodes).toBe(5); // 2 from show-1 + 3 from show-2
   });
 
   it("includes follower and following counts", async () => {
@@ -777,7 +777,7 @@ describe("PATCH /user/me/bio", () => {
 });
 
 describe("GET /user/:username — extended dossier fields", () => {
-  it("includes overview, genres, monthly, shows_by_status, friends on own profile", async () => {
+  it("includes overview, genres, monthly, friends on own profile", async () => {
     const res = await app.request("/user/testuser", { headers: authHeaders() });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -798,14 +798,10 @@ describe("GET /user/:username — extended dossier fields", () => {
     expect(body.monthly[0]).toHaveProperty("month");
     expect(body.monthly[0]).toHaveProperty("movies_watched");
     expect(body.monthly[0]).toHaveProperty("episodes_watched");
-    expect(body.shows_by_status).toMatchObject({
-      watching: 0,
-      completed: 0,
-      plan_to_watch: 0,
-      on_hold: 0,
-      dropped: 0,
-    });
     expect(body.friends).toEqual([]);
+    // Unused by the page: the tabs count shows client-side, overview has the totals.
+    expect(body).not.toHaveProperty("shows_by_status");
+    expect(body).not.toHaveProperty("stats");
   });
 
   it("returns mutual followers in friends list", async () => {
@@ -829,7 +825,6 @@ describe("GET /user/:username — extended dossier fields", () => {
     expect(body.genres).toEqual([]);
     expect(body.monthly).toEqual([]);
     expect(body.friends).toEqual([]);
-    expect(body.shows_by_status.watching).toBe(0);
   });
 });
 
