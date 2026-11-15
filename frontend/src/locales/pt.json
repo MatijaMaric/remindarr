@@ -1117,6 +1117,7 @@
     "bingeMeta": "{{days}} dias · {{episodes}} episódios",
     "mostRewatched": "Mais reassistido",
     "rewatches_one": "Reassistido uma vez",
+    "rewatches_many": "Reassistido {{count}} vezes",
     "rewatches_other": "Reassistido {{count}} vezes",
     "firstWatch": "Primeiro da lista",
     "lastWatch": "Último da lista",
