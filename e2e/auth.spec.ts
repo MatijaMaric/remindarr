@@ -118,7 +118,7 @@ test.describe("Login flow", () => {
     await expect(page.getByLabel("Username")).not.toBeVisible();
   });
 
-  test("reveals local login form when 'sign in with username' is clicked", async ({
+  test("shows the local login form alongside the OIDC button", async ({
     page,
   }) => {
     await page.route(isAuthGetSession, (route) =>
@@ -129,10 +129,10 @@ test.describe("Login flow", () => {
     );
 
     await page.goto("/login");
-    await page
-      .getByRole("button", { name: /sign in with username instead/i })
-      .click();
 
+    await expect(
+      page.getByRole("button", { name: /sign in with openid connect/i }),
+    ).toBeVisible();
     await expect(page.getByLabel("Username")).toBeVisible();
     await expect(page.getByLabel("Password")).toBeVisible();
   });

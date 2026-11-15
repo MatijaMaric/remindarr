@@ -289,6 +289,7 @@
   "signup": {
     "title": "Create an account",
     "username": "Username",
+    "usernameHint": "Letters, numbers, dots, dashes and underscores",
     "email": "Email",
     "displayName": "Display Name",
     "password": "Password",
@@ -298,7 +299,7 @@
     "creating": "Creating account...",
     "signUp": "Sign Up",
     "alreadyHaveAccount": "Already have an account?",
-    "signIn": "Sign in"
+    "signIn": "Sign In"
   },
   "login": {
     "title": "Sign in to Remindarr",
@@ -310,8 +311,8 @@
     "signingIn": "Signing in...",
     "signIn": "Sign In",
     "noAccount": "Don't have an account?",
-    "signUp": "Sign up",
-    "loginFailed": "Login failed: {{error}}",
+    "signUp": "Sign Up",
+    "loginFailed": "Sign-in failed. Please try again.",
     "signInWithPasskey": "Sign in with Passkey",
     "passkeyFailed": "Passkey sign-in failed",
     "recoveryTitle": "Forgot your password?",
@@ -550,8 +551,7 @@
     "tagline": "Track movies & TV shows you love",
     "subtitle": "Get notified about new episodes, track what you've watched, and discover what's streaming.",
     "signIn": "Sign In",
-    "signUp": "Create Account",
-    "popularNow": "Popular Right Now",
+    "signUp": "Sign Up",
     "discoverMore": "Discover More"
   },
   "userProfile": {

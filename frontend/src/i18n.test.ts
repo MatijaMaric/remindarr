@@ -179,10 +179,9 @@ describe("i18n", () => {
     expect(i18n.t("episodes.markAsUnwatched")).toBe("Mark as unwatched");
   });
 
-  it("handles interpolation in login failed message", () => {
-    const result = i18n.t("login.loginFailed", {
-      error: "invalid credentials",
-    });
-    expect(result).toBe("Login failed: invalid credentials");
+  it("translates the fixed login failed message", () => {
+    expect(i18n.t("login.loginFailed")).toBe(
+      "Sign-in failed. Please try again.",
+    );
   });
 });

@@ -213,40 +213,11 @@ describe("HomePage — unauthenticated landing", () => {
     const signInLink = screen.getByRole("link", { name: "Sign In" });
     expect(signInLink.getAttribute("href")).toBe("/login");
 
-    const signUpLink = screen.getByRole("link", { name: "Create Account" });
+    const signUpLink = screen.getByRole("link", { name: "Sign Up" });
     expect(signUpLink.getAttribute("href")).toBe("/signup");
   });
 
-  it("fetches and displays popular titles", async () => {
-    render(<HomePage />, { wrapper: Wrapper });
-
-    await waitFor(() => {
-      expect(screen.getByText("Title 1")).toBeDefined();
-    });
-
-    expect(apiMock.browseTitles).toHaveBeenCalledWith(
-      { category: "popular", page: 1 },
-      expect.any(AbortSignal),
-    );
-    expect(screen.getByText("Popular Right Now")).toBeDefined();
-  });
-
-  it("limits displayed titles to 12", async () => {
-    render(<HomePage />, { wrapper: Wrapper });
-
-    await waitFor(() => {
-      expect(screen.getByText("Title 12")).toBeDefined();
-    });
-
-    // Title 13 should not be rendered (sliced to 12)
-    expect(screen.queryByText("Title 13")).toBeNull();
-  });
-
-  it("renders hero even when API fails", async () => {
-    apiMock.browseTitles.mockImplementationOnce(() =>
-      Promise.reject(new Error("fail")),
-    );
-
+  it("does not fetch or show a popular titles grid (Trending covers it)", async () => {
     render(<HomePage />, { wrapper: Wrapper });
 
     await waitFor(() => {
@@ -255,8 +226,8 @@ describe("HomePage — unauthenticated landing", () => {
       ).toBeDefined();
     });
 
-    // No titles rendered but hero is still there
-    expect(screen.queryByText("Title 1")).toBeNull();
+    expect(apiMock.browseTitles).not.toHaveBeenCalled();
+    expect(screen.queryByText("Popular Right Now")).toBeNull();
   });
 
   it("shows Discover More link to /browse", async () => {

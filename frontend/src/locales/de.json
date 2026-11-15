@@ -289,6 +289,7 @@
   "signup": {
     "title": "Konto erstellen",
     "username": "Benutzername",
+    "usernameHint": "Buchstaben, Ziffern, Punkte, Bindestriche und Unterstriche",
     "email": "E-Mail",
     "displayName": "Anzeigename",
     "password": "Passwort",
@@ -311,7 +312,7 @@
     "signIn": "Anmelden",
     "noAccount": "Noch kein Konto?",
     "signUp": "Registrieren",
-    "loginFailed": "Anmeldung fehlgeschlagen: {{error}}",
+    "loginFailed": "Anmeldung fehlgeschlagen. Bitte versuche es erneut.",
     "signInWithPasskey": "Mit Passkey anmelden",
     "passkeyFailed": "Anmeldung mit Passkey fehlgeschlagen",
     "recoveryTitle": "Passwort vergessen?",
@@ -551,7 +552,6 @@
     "subtitle": "Werde über neue Episoden benachrichtigt, halte fest, was du gesehen hast, und entdecke, was gerade streamt.",
     "signIn": "Anmelden",
     "signUp": "Konto erstellen",
-    "popularNow": "Gerade beliebt",
     "discoverMore": "Mehr entdecken"
   },
   "userProfile": {

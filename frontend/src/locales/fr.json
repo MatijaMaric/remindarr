@@ -296,6 +296,7 @@
   "signup": {
     "title": "Créer un compte",
     "username": "Identifiant",
+    "usernameHint": "Lettres, chiffres, points, tirets et tirets bas",
     "email": "E-mail",
     "displayName": "Nom affiché",
     "password": "Mot de passe",
@@ -318,7 +319,7 @@
     "signIn": "Se connecter",
     "noAccount": "Pas encore de compte ?",
     "signUp": "S'inscrire",
-    "loginFailed": "Échec de la connexion : {{error}}",
+    "loginFailed": "Échec de la connexion. Veuillez réessayer.",
     "signInWithPasskey": "Se connecter avec une clé d'accès",
     "passkeyFailed": "Échec de la connexion avec la clé d'accès",
     "recoveryTitle": "Mot de passe oublié ?",
@@ -564,7 +565,6 @@
     "subtitle": "Soyez averti des nouveaux épisodes, gardez une trace de ce que vous avez vu et découvrez ce qui est en streaming.",
     "signIn": "Se connecter",
     "signUp": "Créer un compte",
-    "popularNow": "Populaire en ce moment",
     "discoverMore": "En découvrir plus"
   },
   "userProfile": {

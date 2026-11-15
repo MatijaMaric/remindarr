@@ -1,47 +1,53 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router";
+import { useNavigate, useSearchParams, useLocation, Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import { authClient } from "../lib/auth-client";
 import { getDailyPlaceholder } from "../data/movie-characters";
+import { returnTo } from "../lib/returnTo";
 
 function isWebAuthnSupported(): boolean {
   return typeof window !== "undefined" && !!window.PublicKeyCredential;
 }
 
+const SECONDARY_BUTTON =
+  "block w-full py-2.5 px-4 bg-muted-hover hover:bg-muted-hover/80 text-foreground font-medium rounded-md transition-colors text-center cursor-pointer disabled:opacity-50";
+
 export default function LoginPage() {
   const { user, providers, login, refresh } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const destination = returnTo(location.state);
   const { t } = useTranslation();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showLocalLogin, setShowLocalLogin] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
 
   const oidcConfigured = !!providers?.oidc;
   const passkeyAvailable = !!providers?.passkey && isWebAuthnSupported();
   const usernamePlaceholder = useMemo(() => getDailyPlaceholder(), []);
 
-  // Redirect if already logged in
+  // The only redirect after sign-in: login/signup/refresh set `user`, and this
+  // effect sends the user on. A second navigate would re-run the destination's
+  // effects (e.g. redeem an invite code twice).
   useEffect(() => {
-    if (user) navigate("/", { replace: true });
-  }, [user, navigate]);
+    if (user) navigate(destination, { replace: true });
+  }, [user, navigate, destination]);
 
-  // Show OIDC callback errors
+  // OIDC callback errors: the code comes from the URL, so show a fixed message
+  // rather than echoing whatever text the link carries.
   useEffect(() => {
-    const oidcError = searchParams.get("error");
-    if (oidcError) setError(t("login.loginFailed", { error: oidcError }));
+    if (searchParams.get("error")) setError(t("login.loginFailed"));
   }, [searchParams, t]);
 
-  // Enable passkey autofill (conditional UI) — only when the username field is
-  // visible, otherwise the pending ceremony has nothing to attach to and can
-  // conflict with an explicit passkey button click (surfaces as AUTH_CANCELLED).
+  // Passkey autofill (conditional UI) on the username field. An explicit
+  // passkey button click aborts this pending ceremony and starts its own.
   useEffect(() => {
-    if (!passkeyAvailable || !showLocalLogin) return;
+    if (!passkeyAvailable) return;
     let cancelled = false;
     (async () => {
       try {
@@ -54,10 +60,7 @@ export default function LoginPage() {
         if (cancelled) return;
         if (result?.error) return;
         const session = await authClient.getSession();
-        if (session.data?.user && !cancelled) {
-          await refresh();
-          if (!cancelled) navigate("/", { replace: true });
-        }
+        if (session.data?.user && !cancelled) await refresh();
       } catch {
         // Autofill silently fails if user doesn't select a passkey
       }
@@ -65,7 +68,7 @@ export default function LoginPage() {
     return () => {
       cancelled = true;
     };
-  }, [passkeyAvailable, showLocalLogin, navigate, refresh]);
+  }, [passkeyAvailable, refresh]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -73,7 +76,6 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(username, password);
-      navigate("/", { replace: true });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -84,7 +86,7 @@ export default function LoginPage() {
   function handleOidcLogin() {
     authClient.signIn.social({
       provider: "pocketid",
-      callbackURL: "/",
+      callbackURL: destination,
     });
   }
 
@@ -106,10 +108,7 @@ export default function LoginPage() {
         return;
       }
       const session = await authClient.getSession();
-      if (session.data?.user) {
-        await refresh();
-        navigate("/", { replace: true });
-      }
+      if (session.data?.user) await refresh();
     } catch (err: unknown) {
       // Don't show error if user cancelled the WebAuthn prompt
       if (err instanceof Error && err.name !== "NotAllowedError") {
@@ -120,7 +119,7 @@ export default function LoginPage() {
     } finally {
       setPasskeyLoading(false);
     }
-  }, [navigate, refresh, t]);
+  }, [refresh, t]);
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center">
@@ -135,117 +134,110 @@ export default function LoginPage() {
           </div>
         )}
 
-        {passkeyAvailable && (
-          <button
-            type="button"
-            onClick={handlePasskeyLogin}
-            disabled={passkeyLoading}
-            className="block w-full py-3 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md transition-colors text-center cursor-pointer disabled:opacity-50 mb-3"
-          >
-            {passkeyLoading
-              ? t("login.signingIn")
-              : t("login.signInWithPasskey")}
-          </button>
-        )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label
+              htmlFor="username"
+              className="block text-sm font-medium text-foreground-secondary mb-1"
+            >
+              {t("login.username")}
+            </label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border focus-visible:border-transparent"
+              placeholder={usernamePlaceholder}
+              autoComplete="username webauthn"
+              required
+            />
+          </div>
 
-        {oidcConfigured && (
-          <button
-            type="button"
-            onClick={handleOidcLogin}
-            className={`block w-full py-3 px-4 ${passkeyAvailable ? "bg-muted-hover hover:bg-muted-hover/80 text-foreground" : "bg-primary hover:bg-primary/90 text-primary-foreground"} font-medium rounded-md transition-colors text-center cursor-pointer`}
-          >
-            {t("login.signInWith", { provider: providers.oidc!.name })}
-          </button>
-        )}
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-foreground-secondary mb-1"
+            >
+              {t("login.password")}
+            </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border focus-visible:border-transparent"
+              autoComplete="current-password"
+              required
+            />
+          </div>
 
-        {(oidcConfigured || passkeyAvailable) && !showLocalLogin && (
           <button
-            type="button"
-            onClick={() => setShowLocalLogin(true)}
-            className="mt-4 w-full text-center text-sm text-foreground-secondary underline underline-offset-2 hover:text-foreground transition-colors cursor-pointer"
+            type="submit"
+            disabled={loading}
+            className="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md transition-colors disabled:opacity-50 cursor-pointer"
           >
-            {t("login.signInWithUsername")}
+            {loading ? t("login.signingIn") : t("login.signIn")}
           </button>
-        )}
+        </form>
 
-        {((!oidcConfigured && !passkeyAvailable) || showLocalLogin) && (
+        {(passkeyAvailable || oidcConfigured) && (
           <>
-            {(oidcConfigured || passkeyAvailable) && (
-              <div className="my-6 flex items-center gap-3">
-                <div className="flex-1 h-px bg-muted-hover" />
-                <span className="text-xs text-muted-foreground uppercase">
-                  {t("login.or")}
-                </span>
-                <div className="flex-1 h-px bg-muted-hover" />
-              </div>
-            )}
+            <div className="my-6 flex items-center gap-3">
+              <div className="flex-1 h-px bg-muted-hover" />
+              <span className="text-xs text-muted-foreground uppercase">
+                {t("login.or")}
+              </span>
+              <div className="flex-1 h-px bg-muted-hover" />
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label
-                  htmlFor="username"
-                  className="block text-sm font-medium text-foreground-secondary mb-1"
+            <div className="space-y-3">
+              {passkeyAvailable && (
+                <button
+                  type="button"
+                  onClick={handlePasskeyLogin}
+                  disabled={passkeyLoading}
+                  className={SECONDARY_BUTTON}
                 >
-                  {t("login.username")}
-                </label>
-                <input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border focus-visible:border-transparent"
-                  placeholder={usernamePlaceholder}
-                  autoComplete="username webauthn"
-                  required
-                />
-              </div>
+                  {passkeyLoading
+                    ? t("login.signingIn")
+                    : t("login.signInWithPasskey")}
+                </button>
+              )}
 
-              <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-foreground-secondary mb-1"
+              {oidcConfigured && (
+                <button
+                  type="button"
+                  onClick={handleOidcLogin}
+                  className={SECONDARY_BUTTON}
                 >
-                  {t("login.password")}
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border focus-visible:border-transparent"
-                  autoComplete="current-password"
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md transition-colors disabled:opacity-50 cursor-pointer"
-              >
-                {loading ? t("login.signingIn") : t("login.signIn")}
-              </button>
-            </form>
-            <details className="mt-4 text-sm text-foreground-secondary">
-              <summary className="cursor-pointer underline">
-                {t("login.recoveryTitle")}
-              </summary>
-              <p className="mt-2">{t("login.recoveryHelp")}</p>
-            </details>
+                  {t("login.signInWith", { provider: providers.oidc!.name })}
+                </button>
+              )}
+            </div>
           </>
         )}
+
+        <details className="mt-6 text-sm text-foreground-secondary">
+          <summary className="cursor-pointer underline">
+            {t("login.recoveryTitle")}
+          </summary>
+          <p className="mt-2">{t("login.recoveryHelp")}</p>
+        </details>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
           {t("login.noAccount")}{" "}
           <Link
             to="/signup"
+            state={location.state}
             className="text-primary-text hover:text-primary-text transition-colors underline underline-offset-2"
           >
             {t("login.signUp")}
           </Link>
         </p>
 
-        <p className="mt-6 text-center text-xs text-muted-foreground">
+        {/* Phones only: on wider screens the site footer has these links. */}
+        <p className="mt-6 text-center text-xs text-muted-foreground md:hidden">
           <Link
             to="/privacy"
             className="hover:text-foreground-secondary transition-colors"
