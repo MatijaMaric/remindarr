@@ -22,10 +22,4 @@ export class KioskPage extends BasePage {
   errorHeading() {
     return this.page.getByRole("heading", { name: "Kiosk unavailable" });
   }
-
-  fidelityBadge(fidelity: string) {
-    return this.page.getByText(`KIOSK · ${fidelity.toUpperCase()}`, {
-      exact: true,
-    });
-  }
 }
