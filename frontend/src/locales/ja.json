@@ -271,17 +271,12 @@
     "title": "探す",
     "kicker": {
       "search": "検索",
-      "searchResults_other": "検索 · {{count}} 件",
       "catalog": "カタログ · 作品を探す",
       "catalogCount_other": "カタログ · {{formatted}} 作品"
     },
     "hideFilters": "フィルターを隠す",
     "showFilters": "フィルターを表示",
-    "clearAllFilters": "すべてのフィルターをクリア",
-    "removeFilter": "{{name}} のフィルターを解除",
-    "removeLanguageFilter": "言語フィルター {{name}} を解除",
-    "removeYearFilter": "年の範囲フィルターを解除",
-    "removeRatingFilter": "最低評価フィルターを解除"
+    "clearAllFilters": "すべてのフィルターをクリア"
   },
   "signup": {
     "title": "アカウントを作成",
@@ -376,11 +371,8 @@
     "movies": "映画",
     "shows": "番組",
     "people": "人物",
-    "allGenres": "すべてのジャンル",
-    "allPlatforms": "すべてのプラットフォーム",
     "allLanguages": "すべての言語",
     "hideTracked": "登録済みを隠す",
-    "clearFilters": "フィルターをクリア",
     "search": "検索...",
     "yearFrom": "開始年",
     "yearTo": "終了年",
@@ -414,7 +406,8 @@
   },
   "releases": {
     "loading": "読み込み中...",
-    "empty": "公開情報が見つかりません。"
+    "empty": "公開情報が見つかりません。",
+    "loadMore": "さらに読み込む"
   },
   "track": {
     "track": "ウォッチリストに追加",
@@ -522,35 +515,22 @@
     "hideWatched": "視聴済みを隠す",
     "showWatched": "視聴済みを表示",
     "gridView": "グリッド表示",
-    "weekView": "週表示",
     "agendaView": "予定表示",
     "close": "閉じる",
     "goToDay": "{{date}} に移動",
-    "densityCompact": "コンパクト",
-    "densityComfortable": "標準",
-    "densitySpacious": "ゆったり",
     "loadError": "カレンダーを読み込めませんでした。もう一度お試しください。",
     "stats": {
       "episodes_other": "{{count}} エピソード",
-      "titles_other": "{{count}} 作品",
-      "total_other": "合計 {{count}}"
+      "titles_other": "{{count}} 作品"
     },
     "episodes": "エピソード",
     "releases": "公開作品",
     "noReleasesOnDay": "この日に登録作品の公開はありません",
     "previousMonth": "前の月",
     "nextMonth": "次の月",
-    "month": "月",
-    "agenda": "予定",
-    "legend": {
-      "tracked": "登録済み · 放送中",
-      "followed": "フォロー中 · 新エピソード",
-      "premiere": "初回放送"
-    },
-    "episodesThisMonth_other": "今月 {{count}} エピソード",
-    "previousWeek": "前の週",
-    "nextWeek": "次の週",
-    "thisWeek": "今週"
+    "loadMonth": "{{month}}を表示",
+    "movie": "映画",
+    "show": "番組"
   },
   "landing": {
     "tagline": "好きな映画やドラマを追いかけよう",
@@ -598,7 +578,6 @@
       "watchTimeShows": "番組の視聴時間",
       "topGenres": "よく見るジャンル",
       "friendsCount": "友達 · {{count}}",
-      "seeAll": "すべて表示",
       "followedPeople": "フォロー中の人物",
       "followedSince": "{{date}} からフォロー",
       "activity12m": "過去 12 か月のアクティビティ",
@@ -617,7 +596,9 @@
         "completed": "視聴完了",
         "onHold": "一時停止",
         "planToWatch": "見たい",
-        "dropped": "視聴中止"
+        "dropped": "視聴中止",
+        "notStarted": "未視聴",
+        "unreleased": "未公開"
       },
       "activity": {
         "title": "最近のアクティビティ",
@@ -898,11 +879,10 @@
   "discovery": {
     "title": "おすすめ",
     "empty": "まだおすすめはありません。ほかのユーザーをフォローすると、その人のおすすめが表示されます！",
+    "emptyCta": "作品を探して登録し、いくつか評価するとおすすめが良くなります。",
     "movie": "映画",
-    "tv": "番組",
     "track": "登録",
     "dismiss": "非表示",
-    "tracked": "「{{title}}」をウォッチリストに追加しました",
     "trackFailed": "作品を登録できませんでした",
     "dismissFailed": "おすすめを非表示にできませんでした",
     "loadFailed": "おすすめを読み込めませんでした",
@@ -917,10 +897,8 @@
     "undo": "元に戻す",
     "friendCount_other": "友達 {{count}} 人",
     "direct": "直接",
-    "noPoster": "なし",
     "kicker": "あなたの視聴履歴とフォロー中のユーザーから",
     "forYou": "あなたへ",
-    "activity": "アクティビティ",
     "sessionCounts": "{{tracked}} 件登録 · {{dismissed}} 件非表示",
     "moreForYou": {
       "kicker": "さらにおすすめ",
@@ -931,8 +909,7 @@
       "kicker": "フォロー中のユーザーから",
       "title": "友達のおすすめ"
     },
-    "hiddenCount_other": "{{count}} 件を非表示（登録済みまたは非表示）",
-    "allHandled": "すべてのおすすめを登録または非表示にしました。",
+    "hiddenCount_other": "{{count}} 件を非表示（登録済み・視聴済みまたは非表示）",
     "hero": {
       "kicker": "イチオシ",
       "tvSeries": "テレビシリーズ",
@@ -941,9 +918,7 @@
       "tasteProfile": "あなたの好みからのイチオシです。",
       "friends": "友達",
       "recCount_other": "おすすめ {{count}} 件",
-      "noFriendRecs": "まだ友達からのおすすめはありません。",
       "viewDetails": "詳細を見る",
-      "undoDismiss": "非表示を取り消す",
       "notInterested": "興味なし"
     }
   },

@@ -283,9 +283,6 @@
     "title": "Explorer",
     "kicker": {
       "search": "Recherche",
-      "searchResults_one": "Recherche · {{count}} résultat",
-      "searchResults_many": "Recherche · {{count}} résultats",
-      "searchResults_other": "Recherche · {{count}} résultats",
       "catalog": "Catalogue · découvrir des titres",
       "catalogCount_one": "Catalogue · {{formatted}} titre",
       "catalogCount_many": "Catalogue · {{formatted}} titres",
@@ -293,11 +290,7 @@
     },
     "hideFilters": "Masquer les filtres",
     "showFilters": "Afficher les filtres",
-    "clearAllFilters": "Effacer tous les filtres",
-    "removeFilter": "Retirer le filtre {{name}}",
-    "removeLanguageFilter": "Retirer le filtre de langue {{name}}",
-    "removeYearFilter": "Retirer le filtre d'années",
-    "removeRatingFilter": "Retirer le filtre de note minimale"
+    "clearAllFilters": "Effacer tous les filtres"
   },
   "signup": {
     "title": "Créer un compte",
@@ -392,11 +385,8 @@
     "movies": "Films",
     "shows": "Séries",
     "people": "Personnes",
-    "allGenres": "Tous les genres",
-    "allPlatforms": "Toutes les plateformes",
     "allLanguages": "Toutes les langues",
     "hideTracked": "Masquer les suivis",
-    "clearFilters": "Effacer les filtres",
     "search": "Rechercher...",
     "yearFrom": "À partir de l'année",
     "yearTo": "Jusqu'à l'année",
@@ -430,7 +420,8 @@
   },
   "releases": {
     "loading": "Chargement...",
-    "empty": "Aucune sortie trouvée."
+    "empty": "Aucune sortie trouvée.",
+    "loadMore": "Charger plus"
   },
   "track": {
     "track": "Ajouter à ma liste",
@@ -546,13 +537,9 @@
     "hideWatched": "Masquer les vus",
     "showWatched": "Afficher les vus",
     "gridView": "Vue grille",
-    "weekView": "Vue semaine",
     "agendaView": "Vue agenda",
     "close": "Fermer",
     "goToDay": "Aller au {{date}}",
-    "densityCompact": "Compacte",
-    "densityComfortable": "Confortable",
-    "densitySpacious": "Aérée",
     "loadError": "Impossible de charger le calendrier. Veuillez réessayer.",
     "stats": {
       "episodes_one": "{{count}} épisode",
@@ -560,29 +547,16 @@
       "episodes_other": "{{count}} épisodes",
       "titles_one": "{{count}} titre",
       "titles_many": "{{count}} titres",
-      "titles_other": "{{count}} titres",
-      "total_one": "{{count}} au total",
-      "total_many": "{{count}} au total",
-      "total_other": "{{count}} au total"
+      "titles_other": "{{count}} titres"
     },
     "episodes": "Épisodes",
     "releases": "Sorties",
     "noReleasesOnDay": "Aucune sortie suivie ce jour-là",
     "previousMonth": "Mois précédent",
     "nextMonth": "Mois suivant",
-    "month": "Mois",
-    "agenda": "Agenda",
-    "legend": {
-      "tracked": "Suivi · en diffusion",
-      "followed": "Suivi · nouvel épisode",
-      "premiere": "Première"
-    },
-    "episodesThisMonth_one": "{{count}} épisode ce mois-ci",
-    "episodesThisMonth_many": "{{count}} épisodes ce mois-ci",
-    "episodesThisMonth_other": "{{count}} épisodes ce mois-ci",
-    "previousWeek": "Semaine précédente",
-    "nextWeek": "Semaine suivante",
-    "thisWeek": "Cette semaine"
+    "loadMonth": "Afficher {{month}}",
+    "movie": "Film",
+    "show": "Série"
   },
   "landing": {
     "tagline": "Suivez les films et séries que vous aimez",
@@ -630,7 +604,6 @@
       "watchTimeShows": "Temps en séries",
       "topGenres": "Genres préférés",
       "friendsCount": "Amis · {{count}}",
-      "seeAll": "Tout voir",
       "followedPeople": "Personnes suivies",
       "followedSince": "abonné depuis le {{date}}",
       "activity12m": "Activité sur 12 mois",
@@ -649,7 +622,9 @@
         "completed": "Terminé",
         "onHold": "En pause",
         "planToWatch": "À voir",
-        "dropped": "Abandonné"
+        "dropped": "Abandonné",
+        "notStarted": "Pas commencé",
+        "unreleased": "Pas encore sorti"
       },
       "activity": {
         "title": "Activité récente",
@@ -930,11 +905,10 @@
   "discovery": {
     "title": "Découvrir",
     "empty": "Aucune recommandation pour l'instant. Abonnez-vous à d'autres personnes pour voir leurs recommandations !",
+    "emptyCta": "Trouvez et suivez des titres, puis notez-en quelques-uns pour améliorer les recommandations.",
     "movie": "Film",
-    "tv": "Série",
     "track": "Suivre",
     "dismiss": "Ignorer",
-    "tracked": "« {{title}} » a été ajouté à votre liste",
     "trackFailed": "Impossible de suivre le titre",
     "dismissFailed": "Impossible d'ignorer la recommandation",
     "loadFailed": "Impossible de charger les recommandations",
@@ -951,10 +925,8 @@
     "friendCount_many": "{{count}} amis",
     "friendCount_other": "{{count}} amis",
     "direct": "Direct",
-    "noPoster": "N/D",
     "kicker": "D'après ce que vous regardez et les personnes que vous suivez",
     "forYou": "Pour vous",
-    "activity": "Activité",
     "sessionCounts": "{{tracked}} suivis · {{dismissed}} ignorés",
     "moreForYou": {
       "kicker": "Plus pour vous",
@@ -965,10 +937,9 @@
       "kicker": "Des personnes que vous suivez",
       "title": "Vos amis recommandent"
     },
-    "hiddenCount_one": "{{count}} masqué : déjà suivi ou ignoré",
-    "hiddenCount_many": "{{count}} masqués : déjà suivis ou ignorés",
-    "hiddenCount_other": "{{count}} masqués : déjà suivis ou ignorés",
-    "allHandled": "Toutes les suggestions ont été suivies ou ignorées.",
+    "hiddenCount_one": "{{count}} masqué : déjà suivi, vu ou ignoré",
+    "hiddenCount_many": "{{count}} masqués : déjà suivis, vus ou ignorés",
+    "hiddenCount_other": "{{count}} masqués : déjà suivis, vus ou ignorés",
     "hero": {
       "kicker": "Notre meilleur choix pour vous",
       "tvSeries": "Série",
@@ -979,9 +950,7 @@
       "recCount_one": "{{count}} reco",
       "recCount_many": "{{count}} recos",
       "recCount_other": "{{count}} recos",
-      "noFriendRecs": "Aucun de vos amis ne l'a encore recommandé.",
       "viewDetails": "Voir les détails",
-      "undoDismiss": "Ne plus ignorer",
       "notInterested": "Pas intéressé"
     }
   },

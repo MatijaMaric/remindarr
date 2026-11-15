@@ -1,5 +1,6 @@
 import { invalidateLibrary } from "../lib/invalidateLibrary";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -15,24 +16,12 @@ import { normalizeSearchTitle } from "../types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "../components/ui/skeleton";
 import { Card } from "../components/ui/card";
-import { PageHeader, Kicker, Pill, Chip } from "../components/design";
+import { PageHeader, Kicker, Chip } from "../components/design";
 import ScrollableRow from "../components/ScrollableRow";
 import { MediaCard } from "../components/MediaCard";
 import { posterUrl } from "../lib/tmdb-images";
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
-
-function formatRelativeTime(dateStr: string, t: TFunction): string {
-  const diffMs = Date.now() - new Date(dateStr).getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  const diffHr = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffMin < 1) return t("common.relative.justNow");
-  if (diffMin < 60) return t("common.relative.minutesAgo", { count: diffMin });
-  if (diffHr < 24) return t("common.relative.hoursAgo", { count: diffHr });
-  if (diffDay < 30) return t("common.relative.daysAgo", { count: diffDay });
-  return new Date(dateStr).toLocaleDateString();
-}
 
 function becausePrefix(reason: SuggestionSeedReason, t: TFunction): string {
   if (reason === "loved") return t("discovery.because.loved");
@@ -60,6 +49,14 @@ type FriendInfo = {
   displayName: string | null;
   image: string | null;
 };
+
+function toFriend(r: Recommendation): FriendInfo {
+  return {
+    username: r.from_user.username,
+    displayName: r.from_user.display_name ?? null,
+    image: r.from_user.image ?? null,
+  };
+}
 
 function FriendDot({
   friend,
@@ -133,23 +130,6 @@ function FriendStack({
   );
 }
 
-function StateBadge({ state }: { state: "tracked" | "dismissed" | null }) {
-  const { t } = useTranslation();
-  if (!state) return null;
-  if (state === "tracked") {
-    return (
-      <div className="absolute top-2 right-2 px-2 py-0.5 rounded-sm bg-primary/90 text-primary-foreground text-[11px] font-semibold">
-        ✓ {t("discovery.trackedBadge")}
-      </div>
-    );
-  }
-  return (
-    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-sm bg-background/85 text-muted-foreground border border-border text-[11px] font-bold">
-      {t("discovery.dismissed")}
-    </div>
-  );
-}
-
 // ─── Suggestion card ──────────────────────────────────────────────────────────
 
 interface CardItem {
@@ -161,6 +141,8 @@ interface CardItem {
 function SuggestionCard({
   item,
   friends = [],
+  unread,
+  note,
   isTracked,
   isDismissed,
   onTrack,
@@ -169,6 +151,8 @@ function SuggestionCard({
 }: {
   item: CardItem;
   friends?: FriendInfo[];
+  unread?: boolean;
+  note?: ReactNode;
   isTracked: boolean;
   isDismissed: boolean;
   onTrack: () => void;
@@ -189,6 +173,7 @@ function SuggestionCard({
         to={`/title/${item.id}`}
         imageUrl={src}
         imageAlt={item.title}
+        unread={unread && !state}
         title={
           isDismissed ? (
             <span className="line-through">{item.title}</span>
@@ -214,6 +199,7 @@ function SuggestionCard({
             </span>
           ) : undefined
         }
+        meta={note}
         footer={
           <div className="flex gap-1.5">
             {isTracked ? (
@@ -265,34 +251,101 @@ function SuggestionCard({
   );
 }
 
+// ─── Friend recommendation card ───────────────────────────────────────────────
+
+/**
+ * A title one or more friends recommended. Carries the sender's message and
+ * marks the recommendations read once the card is on screen, so the unread
+ * count (bottom tab bar, More page) clears without a separate list.
+ */
+function FriendRecCard({
+  recs,
+  onMarkRead,
+  ...card
+}: {
+  recs: Recommendation[];
+  onMarkRead: (id: string) => void;
+} & Omit<
+  Parameters<typeof SuggestionCard>[0],
+  "item" | "friends" | "unread" | "note"
+>) {
+  const { t } = useTranslation();
+  const ref = useRef<HTMLDivElement>(null);
+  const first = recs[0];
+  const unreadKey = recs
+    .filter((r) => !r.read_at)
+    .map((r) => r.id)
+    .join(",");
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!unreadKey || !el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0].isIntersecting) return;
+        observer.disconnect();
+        for (const id of unreadKey.split(",")) onMarkRead(id);
+      },
+      { threshold: 0.5 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [unreadKey, onMarkRead]);
+
+  const withMessage = recs.find((r) => r.message);
+  const isDirect = recs.some((r) => r.is_targeted);
+  const note =
+    withMessage || isDirect ? (
+      <span className="block line-clamp-2 select-text">
+        {isDirect && (
+          <span className="not-italic font-semibold text-primary-text mr-1">
+            {t("discovery.direct")}
+          </span>
+        )}
+        {withMessage && (
+          <>
+            <span className="italic">&ldquo;{withMessage.message}&rdquo;</span>{" "}
+            — @{withMessage.from_user.username}
+          </>
+        )}
+      </span>
+    ) : undefined;
+
+  return (
+    <div ref={ref} className="shrink-0">
+      <SuggestionCard
+        {...card}
+        item={{
+          id: first.title.id,
+          title: first.title.title,
+          posterUrl: first.title.poster_url,
+        }}
+        friends={recs.map(toFriend)}
+        unread={unreadKey !== ""}
+        note={note}
+      />
+    </div>
+  );
+}
+
 // ─── Hero card ────────────────────────────────────────────────────────────────
 
 function DiscoveryHero({
   hero,
   algoGroup,
   friendRecs,
-  isTracked,
-  isDismissed,
   onTrack,
   onDismiss,
-  onUndismiss,
 }: {
   hero: SearchTitle;
   algoGroup: SuggestionsGroup | null;
   friendRecs: Recommendation[];
-  isTracked: boolean;
-  isDismissed: boolean;
   onTrack: () => void;
   onDismiss: () => void;
-  onUndismiss: () => void;
 }) {
   const { t } = useTranslation();
-  const src = hero.posterUrl ? posterUrl(hero.posterUrl, "w342") : null;
-  const sourceSrc = algoGroup?.source.posterUrl
-    ? posterUrl(algoGroup.source.posterUrl, "w92")
-    : null;
-  const state = isTracked ? "tracked" : isDismissed ? "dismissed" : null;
-
+  const src = posterUrl(hero.posterUrl, "w342");
+  const sourceSrc = posterUrl(algoGroup?.source.posterUrl, "w92");
   const topFriend = friendRecs[0] ?? null;
 
   return (
@@ -317,7 +370,6 @@ function DiscoveryHero({
             <div className="w-full h-full bg-muted" />
           )}
         </Link>
-        <StateBadge state={state} />
       </div>
 
       {/* Info */}
@@ -351,8 +403,10 @@ function DiscoveryHero({
           )}
         </div>
 
-        {/* Two-source signal grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+        {/* Signal grid: algo source, plus friends when any recommended it */}
+        <div
+          className={`grid grid-cols-1 gap-3 mb-5 ${friendRecs.length > 0 ? "sm:grid-cols-2" : ""}`}
+        >
           {/* Algo source */}
           <div className="bg-fill-subtle border border-border rounded-lg p-3.5 flex flex-col gap-2.5">
             <div className="flex items-center gap-2">
@@ -394,26 +448,19 @@ function DiscoveryHero({
           </div>
 
           {/* Friends source */}
-          <div className="bg-fill-subtle border border-border rounded-lg p-3.5 flex flex-col gap-2.5">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm text-[11px] font-semibold bg-info/[0.10] text-info border border-info/[0.2]">
-                {t("discovery.hero.friends")}
-              </span>
-              <span className="text-[11px] text-muted-foreground font-mono">
-                {t("discovery.hero.recCount", { count: friendRecs.length })}
-              </span>
-            </div>
-            {friendRecs.length > 0 ? (
+          {friendRecs.length > 0 && (
+            <div className="bg-fill-subtle border border-border rounded-lg p-3.5 flex flex-col gap-2.5">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm text-[11px] font-semibold bg-info/[0.10] text-info border border-info/[0.2]">
+                  {t("discovery.hero.friends")}
+                </span>
+                <span className="text-[11px] text-muted-foreground font-mono">
+                  {t("discovery.hero.recCount", { count: friendRecs.length })}
+                </span>
+              </div>
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  <FriendStack
-                    friends={friendRecs.map((r) => ({
-                      username: r.from_user.username,
-                      displayName: r.from_user.display_name ?? null,
-                      image: r.from_user.image ?? null,
-                    }))}
-                    max={4}
-                  />
+                  <FriendStack friends={friendRecs.map(toFriend)} max={4} />
                   <span className="text-xs text-foreground-secondary truncate">
                     {friendRecs
                       .slice(0, 2)
@@ -442,52 +489,31 @@ function DiscoveryHero({
                   </span>
                 )}
               </div>
-            ) : (
-              <p className="text-xs text-muted-foreground leading-snug">
-                {t("discovery.hero.noFriendRecs")}
-              </p>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
-        {/* Actions */}
+        {/* Actions. The hero is always an untracked, undismissed title: acting
+            on it moves the next suggestion into its place. */}
         <div className="flex flex-wrap gap-2.5 mt-auto">
-          {isTracked ? (
-            <button
-              onClick={onTrack}
-              className="inline-flex items-center justify-center px-5 py-2.5 rounded-md text-sm font-bold bg-primary-soft text-primary-text border border-primary-border cursor-pointer"
-            >
-              ✓ {t("discovery.trackedBadge")}
-            </button>
-          ) : (
-            <button
-              onClick={onTrack}
-              className="inline-flex items-center justify-center px-5 py-2.5 rounded-md text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
-            >
-              {t("discovery.track")}
-            </button>
-          )}
+          <button
+            onClick={onTrack}
+            className="inline-flex items-center justify-center px-5 py-2.5 rounded-md text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
+          >
+            {t("discovery.track")}
+          </button>
           <Link
             to={`/title/${hero.id}`}
             className="inline-flex items-center justify-center px-[18px] py-2.5 rounded-md text-sm font-semibold bg-fill-subtle border border-border text-foreground hover:bg-accent transition-colors"
           >
             {t("discovery.hero.viewDetails")}
           </Link>
-          {isDismissed ? (
-            <button
-              onClick={onUndismiss}
-              className="inline-flex items-center justify-center px-[14px] py-2.5 rounded-md text-sm font-medium bg-fill-subtle text-muted-foreground border border-border cursor-pointer"
-            >
-              {t("discovery.hero.undoDismiss")}
-            </button>
-          ) : (
-            <button
-              onClick={onDismiss}
-              className="inline-flex items-center justify-center px-[14px] py-2.5 rounded-md text-sm font-semibold text-muted-foreground border border-border hover:text-foreground-secondary hover:border-border transition-colors cursor-pointer"
-            >
-              {t("discovery.hero.notInterested")}
-            </button>
-          )}
+          <button
+            onClick={onDismiss}
+            className="inline-flex items-center justify-center px-[14px] py-2.5 rounded-md text-sm font-semibold text-muted-foreground border border-border hover:text-foreground-secondary hover:border-border transition-colors cursor-pointer"
+          >
+            {t("discovery.hero.notInterested")}
+          </button>
         </div>
       </div>
     </Card>
@@ -560,146 +586,19 @@ function DiscoverySkeleton() {
   );
 }
 
-// ─── Activity-tab recommendation card ────────────────────────────────────────
-
-function RecommendationCard({
-  rec,
-  onTrack,
-  onDismiss,
-  onMarkRead,
-}: {
-  rec: Recommendation;
-  onTrack: (rec: Recommendation) => void;
-  onDismiss: (rec: Recommendation) => void;
-  onMarkRead: (rec: Recommendation) => void;
-}) {
-  const { t } = useTranslation();
-  const cardRef = useRef<HTMLDivElement>(null);
-  const markedRef = useRef(false);
-
-  useEffect(() => {
-    if (rec.read_at || markedRef.current) return;
-    const el = cardRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !markedRef.current) {
-          markedRef.current = true;
-          onMarkRead(rec);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.5 },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [rec, onMarkRead]);
-
-  const isUnread = !rec.read_at;
-  const src = posterUrl(rec.title.poster_url, "w92");
-  const senderName = rec.from_user.display_name ?? rec.from_user.username;
-  const senderInitial = (senderName || "?")[0].toUpperCase();
-
-  return (
-    <div
-      ref={cardRef}
-      className={`bg-card rounded-md p-4 ${isUnread ? "border-l-2 border-l-primary" : ""}`}
-    >
-      <div className="flex items-center gap-2 mb-3">
-        {rec.from_user.image ? (
-          <img
-            src={rec.from_user.image}
-            alt=""
-            className="w-7 h-7 rounded-full object-cover flex-shrink-0"
-          />
-        ) : (
-          <div className="w-7 h-7 rounded-full bg-muted-hover flex items-center justify-center text-xs font-medium text-foreground-secondary flex-shrink-0">
-            {senderInitial}
-          </div>
-        )}
-        <span className="text-sm text-foreground-secondary font-medium select-text">
-          {senderName}
-        </span>
-        {rec.is_targeted && (
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm text-[11px] font-medium bg-primary-soft text-primary-text border border-primary-border">
-            {t("discovery.direct")}
-          </span>
-        )}
-        <span className="text-xs text-muted-foreground ml-auto">
-          {formatRelativeTime(rec.created_at, t)}
-        </span>
-      </div>
-
-      <div className="flex gap-3 mb-3">
-        <Link to={`/title/${rec.title.id}`} className="flex-shrink-0">
-          {src ? (
-            <img
-              src={src}
-              alt={rec.title.title}
-              className="w-12 h-[72px] rounded-sm object-cover"
-              loading="lazy"
-              width={92}
-              height={138}
-            />
-          ) : (
-            <div className="w-12 h-[72px] rounded-sm bg-muted flex items-center justify-center text-muted-foreground text-xs">
-              {t("discovery.noPoster")}
-            </div>
-          )}
-        </Link>
-        <div className="flex-1 min-w-0">
-          <Link
-            to={`/title/${rec.title.id}`}
-            className="text-sm font-medium text-foreground hover:text-primary-text transition-colors line-clamp-2"
-          >
-            {rec.title.title}
-          </Link>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {rec.title.object_type === "MOVIE"
-              ? t("discovery.movie")
-              : t("discovery.tv")}
-          </p>
-        </div>
-      </div>
-
-      {rec.message && (
-        <p className="text-sm text-muted-foreground mb-3 italic select-text">
-          &ldquo;{rec.message}&rdquo;
-        </p>
-      )}
-
-      <div className="flex gap-2">
-        <button
-          onClick={() => onTrack(rec)}
-          className="inline-flex items-center justify-center px-3 py-1.5 rounded-sm text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
-        >
-          {t("discovery.track")}
-        </button>
-        <button
-          onClick={() => onDismiss(rec)}
-          className="inline-flex items-center justify-center px-3 py-1.5 rounded-sm text-xs font-medium bg-muted-hover text-foreground-secondary hover:bg-muted-hover/80 transition-colors cursor-pointer"
-        >
-          {t("discovery.dismiss")}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function DiscoveryPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"foryou" | "activity">("foryou");
   const [trackedSet, setTrackedSet] = useState<Set<string>>(() => new Set());
   const [dismissedSet, setDismissedSet] = useState<Set<string>>(
     () => new Set(),
   );
 
   const {
-    isLoading: loading,
-    isError: error,
+    isLoading: recsLoading,
+    isError: recsError,
     data: recsData,
   } = useQuery({
     queryKey: ["recommendations"],
@@ -711,13 +610,11 @@ export default function DiscoveryPage() {
     [recsData],
   );
 
-  const { data: countData } = useQuery({
-    queryKey: ["notification-count"],
-    queryFn: ({ signal }) => api.getUnreadRecommendationCount(signal),
-  });
-  const unreadCount = countData?.count ?? 0;
-
-  const { data: aggregate } = useQuery({
+  const {
+    isLoading: aggLoading,
+    isError: aggError,
+    data: aggregate,
+  } = useQuery({
     queryKey: ["suggestions", 60],
     queryFn: ({ signal }) => api.getSuggestionsAggregate({ limit: 60 }, signal),
     staleTime: 5 * 60_000,
@@ -763,7 +660,30 @@ export default function DiscoveryPage() {
     [aggregate, hero, trackedSet, dismissedSet],
   );
 
-  // ─── Suggestion (algo) handlers ───────────────────────────────────────────
+  // "Because you…" rows: each title appears once on the page. A row drops
+  // titles already shown in the hero, "Suggested next", the friends row, or
+  // an earlier row; a row left with nothing is not rendered (#1407).
+  const becauseRows = useMemo(() => {
+    const shown = new Set<string>([
+      ...(hero ? [hero.id] : []),
+      ...moreForYou.map((s) => s.id),
+      ...Object.keys(recsByTitle),
+    ]);
+    return (aggregate?.groups ?? []).flatMap((group) => {
+      const visible = group.suggestions.filter(
+        (s) =>
+          !shown.has(s.id) && !trackedSet.has(s.id) && !dismissedSet.has(s.id),
+      );
+      for (const s of visible) shown.add(s.id);
+      if (visible.length === 0) return [];
+      const sessionHidden = group.suggestions.filter(
+        (s) => trackedSet.has(s.id) || dismissedSet.has(s.id),
+      ).length;
+      return [{ group, visible, hidden: group.hiddenCount + sessionHidden }];
+    });
+  }, [aggregate, hero, moreForYou, recsByTitle, trackedSet, dismissedSet]);
+
+  // ─── Suggestion handlers ──────────────────────────────────────────────────
 
   const handleTrackSuggestion = useCallback(
     async (titleId: string, titleData?: SearchTitle) => {
@@ -851,12 +771,10 @@ export default function DiscoveryPage() {
     [qc, t],
   );
 
-  // ─── Activity-tab handlers ────────────────────────────────────────────────
-
   const handleMarkRead = useCallback(
-    async (rec: Recommendation) => {
+    async (id: string) => {
       try {
-        await api.markRecommendationRead(rec.id);
+        await api.markRecommendationRead(id);
         qc.setQueryData<{ recommendations: Recommendation[] }>(
           ["recommendations"],
           (old) => {
@@ -864,9 +782,7 @@ export default function DiscoveryPage() {
             return {
               ...old,
               recommendations: old.recommendations.map((r) =>
-                r.id === rec.id
-                  ? { ...r, read_at: new Date().toISOString() }
-                  : r,
+                r.id === id ? { ...r, read_at: new Date().toISOString() } : r,
               ),
             };
           },
@@ -879,65 +795,11 @@ export default function DiscoveryPage() {
     [qc],
   );
 
-  const handleTrackRec = useCallback(
-    async (rec: Recommendation) => {
-      try {
-        await api.trackTitle(rec.title.id);
-        await invalidateLibrary(qc);
-        if (!rec.read_at) await api.markRecommendationRead(rec.id);
-        qc.setQueryData<{ recommendations: Recommendation[] }>(
-          ["recommendations"],
-          (old) => {
-            if (!old) return old;
-            return {
-              ...old,
-              recommendations: old.recommendations.filter(
-                (r) => r.id !== rec.id,
-              ),
-            };
-          },
-        );
-        void qc.invalidateQueries({ queryKey: ["notification-count"] });
-        toast.success(t("discovery.tracked", { title: rec.title.title }));
-      } catch {
-        toast.error(t("discovery.trackFailed"));
-      }
-    },
-    [t, qc],
-  );
+  // ─── Render ───────────────────────────────────────────────────────────────
 
-  const handleDismissRec = useCallback(
-    async (rec: Recommendation) => {
-      try {
-        await api.deleteRecommendation(rec.id);
-        await invalidateLibrary(qc);
-        qc.setQueryData<{ recommendations: Recommendation[] }>(
-          ["recommendations"],
-          (old) => {
-            if (!old) return old;
-            return {
-              ...old,
-              recommendations: old.recommendations.filter(
-                (r) => r.id !== rec.id,
-              ),
-            };
-          },
-        );
-        void qc.invalidateQueries({ queryKey: ["notification-count"] });
-      } catch {
-        toast.error(t("discovery.dismissFailed"));
-      }
-    },
-    [t, qc],
-  );
-
-  // ─── Derived counts ───────────────────────────────────────────────────────
-
+  const friendEntries = Object.entries(recsByTitle);
   const isEmpty =
-    !hero &&
-    moreForYou.length === 0 &&
-    Object.keys(recsByTitle).length === 0 &&
-    (!aggregate || aggregate.groups.length === 0);
+    !hero && friendEntries.length === 0 && becauseRows.length === 0;
 
   return (
     <div className="space-y-0">
@@ -956,210 +818,123 @@ export default function DiscoveryPage() {
         }
       />
 
-      {/* Tab toggle */}
-      <div className="flex gap-2 mb-6">
-        <Pill active={tab === "foryou"} onClick={() => setTab("foryou")}>
-          {t("discovery.forYou")}
-        </Pill>
-        <Pill active={tab === "activity"} onClick={() => setTab("activity")}>
-          {t("discovery.activity")}
-          {unreadCount > 0 && (
-            <span className="ml-1.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-primary text-primary-foreground text-[11px] font-bold">
-              {unreadCount}
-            </span>
-          )}
-        </Pill>
-      </div>
-
-      {/* ── For you tab ─────────────────────────────────────────────────── */}
-      {tab === "foryou" &&
-        (loading ? (
-          <DiscoverySkeleton />
-        ) : error ? (
+      {/* Wait for both sources: an empty friends feed must not show the empty
+          state while suggestions are still loading (#1407). */}
+      {recsLoading || aggLoading ? (
+        <DiscoverySkeleton />
+      ) : isEmpty ? (
+        recsError || aggError ? (
           <div className="bg-destructive-soft border border-destructive/40 text-destructive px-4 py-2 rounded-md text-sm">
-            {t("discovery.loadFailed", "Failed to load recommendations")}
+            {t("discovery.loadFailed")}
           </div>
-        ) : isEmpty ? (
+        ) : (
           <p className="text-muted-foreground text-sm py-8 text-center">
             {t("discovery.empty")}{" "}
             <Link to="/browse" className="underline">
-              Find and track titles, then rate a few to improve recommendations.
+              {t("discovery.emptyCta")}
             </Link>
           </p>
-        ) : (
-          <div className="space-y-8">
-            {/* Hero — combined algo + friends */}
-            {hero && (
-              <DiscoveryHero
-                hero={hero}
-                algoGroup={heroAlgoGroup}
-                friendRecs={heroFriendRecs}
-                isTracked={trackedSet.has(hero.id)}
-                isDismissed={dismissedSet.has(hero.id)}
-                onTrack={() => handleTrackSuggestion(hero.id, hero)}
-                onDismiss={() => handleDismissSuggestion(hero.id)}
-                onUndismiss={() => handleUndismiss(hero.id)}
+        )
+      ) : (
+        <div className="space-y-8">
+          {/* Hero — combined algo + friends */}
+          {hero && (
+            <DiscoveryHero
+              hero={hero}
+              algoGroup={heroAlgoGroup}
+              friendRecs={heroFriendRecs}
+              onTrack={() => handleTrackSuggestion(hero.id, hero)}
+              onDismiss={() => handleDismissSuggestion(hero.id)}
+            />
+          )}
+
+          {/* More for you rail */}
+          {moreForYou.length > 0 && (
+            <section>
+              <SectionHead
+                kicker={t("discovery.moreForYou.kicker")}
+                title={t("discovery.moreForYou.title")}
+                sub={t("discovery.moreForYou.sub")}
               />
-            )}
-
-            {/* More for you rail */}
-            {moreForYou.length > 0 && (
-              <section>
-                <SectionHead
-                  kicker={t("discovery.moreForYou.kicker")}
-                  title={t("discovery.moreForYou.title")}
-                  sub={t("discovery.moreForYou.sub")}
-                />
-                <ScrollableRow className="gap-3 pb-2">
-                  {moreForYou.map((title) => (
-                    <SuggestionCard
-                      key={title.id}
-                      item={{
-                        id: title.id,
-                        title: title.title,
-                        posterUrl: title.posterUrl,
-                      }}
-                      friends={(recsByTitle[title.id] ?? []).map((r) => ({
-                        username: r.from_user.username,
-                        displayName: r.from_user.display_name ?? null,
-                        image: r.from_user.image ?? null,
-                      }))}
-                      isTracked={trackedSet.has(title.id)}
-                      isDismissed={dismissedSet.has(title.id)}
-                      onTrack={() => handleTrackSuggestion(title.id, title)}
-                      onDismiss={() => handleDismissSuggestion(title.id)}
-                      onUndismiss={() => handleUndismiss(title.id)}
-                    />
-                  ))}
-                </ScrollableRow>
-              </section>
-            )}
-
-            {/* Friends are recommending */}
-            {Object.keys(recsByTitle).length > 0 && (
-              <section>
-                <SectionHead
-                  kicker={t("discovery.friendRecs.kicker")}
-                  title={t("discovery.friendRecs.title")}
-                />
-                <ScrollableRow className="gap-3 pb-2">
-                  {Object.entries(recsByTitle).map(([titleId, recs]) => {
-                    const first = recs[0];
-                    return (
-                      <SuggestionCard
-                        key={titleId}
-                        item={{
-                          id: titleId,
-                          title: first.title.title,
-                          posterUrl: first.title.poster_url,
-                        }}
-                        friends={recs.map((r) => ({
-                          username: r.from_user.username,
-                          displayName: r.from_user.display_name ?? null,
-                          image: r.from_user.image ?? null,
-                        }))}
-                        isTracked={trackedSet.has(titleId)}
-                        isDismissed={dismissedSet.has(titleId)}
-                        onTrack={() => handleTrackSuggestion(titleId)}
-                        onDismiss={() => handleDismissSuggestion(titleId)}
-                        onUndismiss={() => handleUndismiss(titleId)}
-                      />
-                    );
-                  })}
-                </ScrollableRow>
-              </section>
-            )}
-
-            {/* Because you … rails */}
-            {aggregate?.groups.map((group) => {
-              const visibleSuggestions = group.suggestions.filter(
-                (s) => !trackedSet.has(s.id) && !dismissedSet.has(s.id),
-              );
-              const sessionHidden = group.suggestions.filter(
-                (s) => trackedSet.has(s.id) || dismissedSet.has(s.id),
-              ).length;
-              const totalHidden = group.hiddenCount + sessionHidden;
-              const sourceSrc = group.source.posterUrl
-                ? posterUrl(group.source.posterUrl, "w92")
-                : null;
-
-              if (visibleSuggestions.length === 0 && totalHidden === 0)
-                return null;
-
-              return (
-                <section key={group.source.id}>
-                  <SectionHead
-                    title={becauseLabel(
-                      group.source.reason,
-                      group.source.title,
-                      t,
-                    )}
-                    sub={
-                      totalHidden > 0
-                        ? t("discovery.hiddenCount", { count: totalHidden })
-                        : undefined
-                    }
-                    sourcePosterUrl={sourceSrc}
-                    sourceId={group.source.id}
+              <ScrollableRow className="gap-3 pb-2">
+                {moreForYou.map((title) => (
+                  <SuggestionCard
+                    key={title.id}
+                    item={{
+                      id: title.id,
+                      title: title.title,
+                      posterUrl: title.posterUrl,
+                    }}
+                    friends={(recsByTitle[title.id] ?? []).map(toFriend)}
+                    isTracked={trackedSet.has(title.id)}
+                    isDismissed={dismissedSet.has(title.id)}
+                    onTrack={() => handleTrackSuggestion(title.id, title)}
+                    onDismiss={() => handleDismissSuggestion(title.id)}
+                    onUndismiss={() => handleUndismiss(title.id)}
                   />
-                  {visibleSuggestions.length > 0 ? (
-                    <ScrollableRow className="gap-3 pb-2">
-                      {visibleSuggestions.map((title) => (
-                        <SuggestionCard
-                          key={title.id}
-                          item={{
-                            id: title.id,
-                            title: title.title,
-                            posterUrl: title.posterUrl,
-                          }}
-                          friends={(recsByTitle[title.id] ?? []).map((r) => ({
-                            username: r.from_user.username,
-                            displayName: r.from_user.display_name ?? null,
-                            image: r.from_user.image ?? null,
-                          }))}
-                          isTracked={trackedSet.has(title.id)}
-                          isDismissed={dismissedSet.has(title.id)}
-                          onTrack={() => handleTrackSuggestion(title.id, title)}
-                          onDismiss={() => handleDismissSuggestion(title.id)}
-                          onUndismiss={() => handleUndismiss(title.id)}
-                        />
-                      ))}
-                    </ScrollableRow>
-                  ) : (
-                    <p className="text-xs text-muted-foreground py-2">
-                      {t("discovery.allHandled")}
-                    </p>
-                  )}
-                </section>
-              );
-            })}
-          </div>
-        ))}
+                ))}
+              </ScrollableRow>
+            </section>
+          )}
 
-      {/* ── Activity tab ─────────────────────────────────────────────────── */}
-      {tab === "activity" &&
-        (loading ? (
-          <DiscoverySkeleton />
-        ) : recommendations.length === 0 ? (
-          <p className="text-muted-foreground text-sm py-8 text-center">
-            {t("discovery.empty")}{" "}
-            <Link to="/browse" className="underline">
-              Find and track titles, then rate a few to improve recommendations.
-            </Link>
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {recommendations.map((rec) => (
-              <RecommendationCard
-                key={rec.id}
-                rec={rec}
-                onTrack={handleTrackRec}
-                onDismiss={handleDismissRec}
-                onMarkRead={handleMarkRead}
+          {/* Friends are recommending — the one place friend picks are listed */}
+          {friendEntries.length > 0 && (
+            <section>
+              <SectionHead
+                kicker={t("discovery.friendRecs.kicker")}
+                title={t("discovery.friendRecs.title")}
               />
-            ))}
-          </div>
-        ))}
+              <ScrollableRow className="gap-3 pb-2">
+                {friendEntries.map(([titleId, recs]) => (
+                  <FriendRecCard
+                    key={titleId}
+                    recs={recs}
+                    onMarkRead={handleMarkRead}
+                    isTracked={trackedSet.has(titleId)}
+                    isDismissed={dismissedSet.has(titleId)}
+                    onTrack={() => handleTrackSuggestion(titleId)}
+                    onDismiss={() => handleDismissSuggestion(titleId)}
+                    onUndismiss={() => handleUndismiss(titleId)}
+                  />
+                ))}
+              </ScrollableRow>
+            </section>
+          )}
+
+          {/* Because you … rails */}
+          {becauseRows.map(({ group, visible, hidden }) => (
+            <section key={group.source.id}>
+              <SectionHead
+                title={becauseLabel(group.source.reason, group.source.title, t)}
+                sub={
+                  hidden > 0
+                    ? t("discovery.hiddenCount", { count: hidden })
+                    : undefined
+                }
+                sourcePosterUrl={posterUrl(group.source.posterUrl, "w92")}
+                sourceId={group.source.id}
+              />
+              <ScrollableRow className="gap-3 pb-2">
+                {visible.map((title) => (
+                  <SuggestionCard
+                    key={title.id}
+                    item={{
+                      id: title.id,
+                      title: title.title,
+                      posterUrl: title.posterUrl,
+                    }}
+                    isTracked={false}
+                    isDismissed={false}
+                    onTrack={() => handleTrackSuggestion(title.id, title)}
+                    onDismiss={() => handleDismissSuggestion(title.id)}
+                    onUndismiss={() => handleUndismiss(title.id)}
+                  />
+                ))}
+              </ScrollableRow>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

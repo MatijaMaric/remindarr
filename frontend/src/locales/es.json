@@ -283,9 +283,6 @@
     "title": "Explorar",
     "kicker": {
       "search": "Buscar",
-      "searchResults_one": "Búsqueda · {{count}} resultado",
-      "searchResults_many": "Búsqueda · {{count}} resultados",
-      "searchResults_other": "Búsqueda · {{count}} resultados",
       "catalog": "Catálogo · descubre títulos",
       "catalogCount_one": "Catálogo · {{formatted}} título",
       "catalogCount_many": "Catálogo · {{formatted}} títulos",
@@ -293,11 +290,7 @@
     },
     "hideFilters": "Ocultar filtros",
     "showFilters": "Mostrar filtros",
-    "clearAllFilters": "Borrar todos los filtros",
-    "removeFilter": "Quitar el filtro {{name}}",
-    "removeLanguageFilter": "Quitar el filtro de idioma {{name}}",
-    "removeYearFilter": "Quitar el filtro de años",
-    "removeRatingFilter": "Quitar el filtro de nota mínima"
+    "clearAllFilters": "Borrar todos los filtros"
   },
   "signup": {
     "title": "Crear una cuenta",
@@ -392,11 +385,8 @@
     "movies": "Películas",
     "shows": "Series",
     "people": "Personas",
-    "allGenres": "Todos los géneros",
-    "allPlatforms": "Todas las plataformas",
     "allLanguages": "Todos los idiomas",
     "hideTracked": "Ocultar seguidos",
-    "clearFilters": "Borrar filtros",
     "search": "Buscar...",
     "yearFrom": "Desde el año",
     "yearTo": "Hasta el año",
@@ -430,7 +420,8 @@
   },
   "releases": {
     "loading": "Cargando...",
-    "empty": "No se encontraron estrenos."
+    "empty": "No se encontraron estrenos.",
+    "loadMore": "Cargar más"
   },
   "track": {
     "track": "Añadir a mi lista",
@@ -546,13 +537,9 @@
     "hideWatched": "Ocultar vistos",
     "showWatched": "Mostrar vistos",
     "gridView": "Vista de cuadrícula",
-    "weekView": "Vista semanal",
     "agendaView": "Vista de agenda",
     "close": "Cerrar",
     "goToDay": "Ir al {{date}}",
-    "densityCompact": "Compacta",
-    "densityComfortable": "Cómoda",
-    "densitySpacious": "Amplia",
     "loadError": "No se pudo cargar el calendario. Inténtalo de nuevo.",
     "stats": {
       "episodes_one": "{{count}} episodio",
@@ -560,29 +547,16 @@
       "episodes_other": "{{count}} episodios",
       "titles_one": "{{count}} título",
       "titles_many": "{{count}} títulos",
-      "titles_other": "{{count}} títulos",
-      "total_one": "{{count}} en total",
-      "total_many": "{{count}} en total",
-      "total_other": "{{count}} en total"
+      "titles_other": "{{count}} títulos"
     },
     "episodes": "Episodios",
     "releases": "Estrenos",
     "noReleasesOnDay": "No hay estrenos seguidos este día",
     "previousMonth": "Mes anterior",
     "nextMonth": "Mes siguiente",
-    "month": "Mes",
-    "agenda": "Agenda",
-    "legend": {
-      "tracked": "Seguido · en emisión",
-      "followed": "Seguido · episodio nuevo",
-      "premiere": "Estreno"
-    },
-    "episodesThisMonth_one": "{{count}} episodio este mes",
-    "episodesThisMonth_many": "{{count}} episodios este mes",
-    "episodesThisMonth_other": "{{count}} episodios este mes",
-    "previousWeek": "Semana anterior",
-    "nextWeek": "Semana siguiente",
-    "thisWeek": "Esta semana"
+    "loadMonth": "Mostrar {{month}}",
+    "movie": "Película",
+    "show": "Serie"
   },
   "landing": {
     "tagline": "Sigue las películas y series que te encantan",
@@ -630,7 +604,6 @@
       "watchTimeShows": "Tiempo en series",
       "topGenres": "Géneros favoritos",
       "friendsCount": "Amigos · {{count}}",
-      "seeAll": "Ver todo",
       "followedPeople": "Personas que sigue",
       "followedSince": "siguiendo desde {{date}}",
       "activity12m": "Actividad de 12 meses",
@@ -649,7 +622,9 @@
         "completed": "Completada",
         "onHold": "En pausa",
         "planToWatch": "Pendiente",
-        "dropped": "Abandonada"
+        "dropped": "Abandonada",
+        "notStarted": "Sin empezar",
+        "unreleased": "Sin estrenar"
       },
       "activity": {
         "title": "Actividad reciente",
@@ -930,11 +905,10 @@
   "discovery": {
     "title": "Descubrir",
     "empty": "Todavía no hay recomendaciones. ¡Sigue a otras personas para ver sus recomendaciones!",
+    "emptyCta": "Busca y sigue títulos, y valora algunos para mejorar las recomendaciones.",
     "movie": "Película",
-    "tv": "Serie",
     "track": "Seguir",
     "dismiss": "Descartar",
-    "tracked": "«{{title}}» se añadió a tu lista",
     "trackFailed": "No se pudo seguir el título",
     "dismissFailed": "No se pudo descartar la recomendación",
     "loadFailed": "No se pudieron cargar las recomendaciones",
@@ -951,10 +925,8 @@
     "friendCount_many": "{{count}} amigos",
     "friendCount_other": "{{count}} amigos",
     "direct": "Directa",
-    "noPoster": "N/D",
     "kicker": "Según lo que ves y a quién sigues",
     "forYou": "Para ti",
-    "activity": "Actividad",
     "sessionCounts": "{{tracked}} seguidos · {{dismissed}} descartados",
     "moreForYou": {
       "kicker": "Más para ti",
@@ -965,10 +937,9 @@
       "kicker": "De las personas que sigues",
       "title": "Tus amigos recomiendan"
     },
-    "hiddenCount_one": "{{count}} oculto: ya seguido o descartado",
-    "hiddenCount_many": "{{count}} ocultos: ya seguidos o descartados",
-    "hiddenCount_other": "{{count}} ocultos: ya seguidos o descartados",
-    "allHandled": "Todas las sugerencias están seguidas o descartadas.",
+    "hiddenCount_one": "{{count}} oculto: ya seguido, visto o descartado",
+    "hiddenCount_many": "{{count}} ocultos: ya seguidos, vistos o descartados",
+    "hiddenCount_other": "{{count}} ocultos: ya seguidos, vistos o descartados",
     "hero": {
       "kicker": "Nuestra mejor sugerencia",
       "tvSeries": "Serie",
@@ -979,9 +950,7 @@
       "recCount_one": "{{count}} recomendación",
       "recCount_many": "{{count}} recomendaciones",
       "recCount_other": "{{count}} recomendaciones",
-      "noFriendRecs": "Ninguno de tus amigos lo ha recomendado todavía.",
       "viewDetails": "Ver detalles",
-      "undoDismiss": "Deshacer descarte",
       "notInterested": "No me interesa"
     }
   },

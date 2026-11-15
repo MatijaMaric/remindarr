@@ -25,6 +25,9 @@ export function posterUrl(
   size: PosterSize = "w342",
 ): string | null {
   if (!path) return null;
+  // Titles from our API already carry a full URL; prefixing it again produced
+  // ".../w92https://image.tmdb.org/..." (#1407).
+  if (/^https?:\/\//.test(path)) return path;
   return `${BASE}/${size}${path}`;
 }
 

@@ -10,41 +10,43 @@ import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import { useQuery } from "@tanstack/react-query";
 import { profileUrl, posterUrl as mkPosterUrl } from "../lib/tmdb-images";
 import { formatDate } from "../components/title-detail/utils";
+import { ApiError } from "../lib/api-error";
 
 const BIO_TRUNCATE_LENGTH = 600;
 
-function getYear(dateStr?: string): string {
-  if (!dateStr) return "";
-  return dateStr.substring(0, 4);
+type Credit = PersonCastCredit | PersonCrewCredit;
+
+function creditDate(credit: Credit): string {
+  return credit.release_date || credit.first_air_date || "";
 }
 
-function creditTitle(credit: PersonCastCredit | PersonCrewCredit): string {
+function creditTitle(credit: Credit): string {
   return credit.title || credit.name || "Untitled";
 }
 
-function creditTitleId(credit: PersonCastCredit | PersonCrewCredit): string {
+/** `movie-N` / `tv-N`: the title's id in the app, and its identity here. */
+export function creditTitleId(credit: Credit): string {
   return credit.media_type === "movie"
     ? `movie-${credit.id}`
     : `tv-${credit.id}`;
 }
 
-function creditSubtitle(credit: PersonCastCredit | PersonCrewCredit): string {
+function creditRole(credit: Credit): string {
   return "character" in credit ? credit.character : credit.job;
 }
 
 /** Max number of titles shown in the "Known For" row. */
 export const KNOWN_FOR_LIMIT = 10;
 
+/** Cards shown in a filmography row before "Show all". */
+export const ROW_LIMIT = 12;
+
 /**
  * True for non-narrative "Self" appearances (talk-show guest/host spots, award
- * shows, etc.). These inherit the high `popularity` of long-running shows but
- * are not roles a person is "known for", so they are excluded — mirroring how
- * TMDB's own Known For omits them. Only cast credits carry `character`; crew
- * credits (which have `job`) are never treated as self-appearances.
+ * shows, etc.). Only cast credits carry `character`; crew credits (which have
+ * `job`) are never treated as self-appearances.
  */
-function isSelfAppearance(
-  credit: PersonCastCredit | PersonCrewCredit,
-): boolean {
+export function isSelfAppearance(credit: Credit): boolean {
   if (!("character" in credit)) return false;
   const role = credit.character.trim().toLowerCase();
   return (
@@ -58,23 +60,44 @@ function isSelfAppearance(
 }
 
 /**
- * Selects a person's most notable titles for the "Known For" row: merges the
- * already-combined cast + crew credits, drops non-narrative "Self" appearances,
- * ranks by `vote_count` descending (rating volume is TMDB's notability signal —
- * `popularity` is trending velocity, which lets daily talk shows dominate),
- * de-duplicates by the `${media_type}-${id}` title key (keeping the
- * highest-ranked occurrence so a title held in multiple roles appears once),
- * and caps the result at `limit`. Pure — no padding, no fabrication.
+ * How notable a credit is for "Known For": the title's rating volume
+ * (`vote_count`; `popularity` is trending velocity, which lets daily talk shows
+ * dominate), shrunk for one-off TV spots and uncredited cameos so a 180-episode
+ * lead beats a single guest voice role on a bigger show.
+ * ponytail: fixed weights (10 episodes = a regular, uncredited = 1/10), tune
+ * here if real people rank oddly.
+ */
+export function knownForScore(credit: Credit): number {
+  let weight = 1;
+  if (credit.media_type === "tv" && credit.episode_count != null) {
+    weight = Math.min(1, credit.episode_count / 10);
+  }
+  if (/uncredited/i.test(creditRole(credit))) weight = Math.min(weight, 0.1);
+  return (credit.vote_count ?? 0) * weight;
+}
+
+/**
+ * Selects a person's most notable titles for the "Known For" row. Titles in
+ * the viewer's library come first (that is usually why they opened the page),
+ * then narrative roles by `knownForScore`, then "Self" appearances, which only
+ * fill slots nothing else claims (a farmer or presenter whose show is all
+ * they are known for still gets it). De-duplicates by `${media_type}-${id}`,
+ * keeping the best-ranked role, and caps at `limit`. No padding.
  */
 export function selectKnownFor(
-  credits: (PersonCastCredit | PersonCrewCredit)[],
+  credits: Credit[],
   limit = KNOWN_FOR_LIMIT,
-): (PersonCastCredit | PersonCrewCredit)[] {
-  const sorted = credits
-    .filter((credit) => !isSelfAppearance(credit))
-    .sort((a, b) => b.vote_count - a.vote_count || b.popularity - a.popularity);
+): Credit[] {
+  const tier = (c: Credit) =>
+    (c.in_library ? 0 : 2) + (isSelfAppearance(c) ? 1 : 0);
+  const sorted = [...credits].sort(
+    (a, b) =>
+      tier(a) - tier(b) ||
+      knownForScore(b) - knownForScore(a) ||
+      b.popularity - a.popularity,
+  );
   const seen = new Set<string>();
-  const result: (PersonCastCredit | PersonCrewCredit)[] = [];
+  const result: Credit[] = [];
   for (const credit of sorted) {
     const key = creditTitleId(credit);
     if (seen.has(key)) continue;
@@ -85,36 +108,76 @@ export function selectKnownFor(
   return result;
 }
 
-function deduplicateCast(credits: PersonCastCredit[]): PersonCastCredit[] {
-  const seen = new Set<number>();
-  return credits.filter((c) => {
-    if (seen.has(c.id)) return false;
-    seen.add(c.id);
-    return true;
-  });
+/** One card: a title with every role the person held on it. */
+export interface TitleCredit {
+  key: string;
+  credit: Credit;
+  roles: string;
+  /** Every role on the title is a "Self" appearance. */
+  self: boolean;
 }
 
-function deduplicateCrew(credits: PersonCrewCredit[]): PersonCrewCredit[] {
-  const seen = new Set<string>();
-  return credits.filter((c) => {
-    const key = `${c.id}-${c.job}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+/**
+ * Collapses credits to one entry per title, joining distinct roles
+ * ("Producer · Director") so a title held in several jobs or characters is
+ * shown once.
+ */
+export function mergeByTitle(credits: Credit[]): TitleCredit[] {
+  const byKey = new Map<
+    string,
+    { credit: Credit; roles: string[]; self: boolean }
+  >();
+  for (const credit of credits) {
+    const key = creditTitleId(credit);
+    const role = creditRole(credit).trim();
+    const entry = byKey.get(key);
+    if (!entry) {
+      byKey.set(key, {
+        credit,
+        roles: role ? [role] : [],
+        self: isSelfAppearance(credit),
+      });
+      continue;
+    }
+    if (role && !entry.roles.includes(role)) entry.roles.push(role);
+    entry.self &&= isSelfAppearance(credit);
+  }
+  return [...byKey].map(([key, e]) => ({
+    key,
+    credit: e.credit,
+    roles: e.roles.join(" · "),
+    self: e.self,
+  }));
+}
+
+/**
+ * Filmography order: newest first, undated titles after dated ones, and
+ * "Self" appearances (talk shows, award shows) grouped at the end.
+ */
+export function sortFilmography(titles: TitleCredit[]): TitleCredit[] {
+  return [...titles].sort((a, b) => {
+    if (a.self !== b.self) return a.self ? 1 : -1;
+    const da = creditDate(a.credit);
+    const db = creditDate(b.credit);
+    if (!da || !db) return da ? -1 : db ? 1 : 0;
+    return db.localeCompare(da);
   });
 }
 
 function CreditCard({
   credit,
   subtitle,
+  className = "flex-shrink-0 w-32 sm:w-36",
 }: {
-  credit: PersonCastCredit | PersonCrewCredit;
+  credit: Credit;
   subtitle: string;
+  className?: string;
 }) {
+  const year = creditDate(credit).substring(0, 4);
   return (
     <Link
       to={`/title/${creditTitleId(credit)}`}
-      className="flex-shrink-0 w-32 sm:w-36 group"
+      className={`${className} group`}
     >
       <div className="aspect-[2/3] rounded-md overflow-hidden bg-muted mb-2">
         {credit.poster_path ? (
@@ -135,13 +198,61 @@ function CreditCard({
       <p className="text-sm font-medium text-foreground truncate group-hover:text-primary-text transition-colors">
         {creditTitle(credit)}
       </p>
-      <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
-      {getYear(credit.release_date || credit.first_air_date) && (
-        <p className="text-xs text-muted-foreground">
-          {getYear(credit.release_date || credit.first_air_date)}
-        </p>
+      {subtitle && (
+        <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
       )}
+      {year && <p className="text-xs text-muted-foreground">{year}</p>}
     </Link>
+  );
+}
+
+/** A filmography row capped at ROW_LIMIT, expandable into a wrapping grid. */
+function CreditSection({
+  label,
+  titles,
+}: {
+  label: string;
+  titles: TitleCredit[];
+}) {
+  const [expanded, setExpanded] = useState(false);
+  if (titles.length === 0) return null;
+  const canExpand = titles.length > ROW_LIMIT;
+  const cards = (list: TitleCredit[], className?: string) =>
+    list.map((t) => (
+      <CreditCard
+        key={t.key}
+        credit={t.credit}
+        subtitle={t.roles}
+        className={className}
+      />
+    ));
+  return (
+    <section className="space-y-3">
+      <div className="flex items-baseline justify-between gap-4">
+        <h2 className="text-lg font-semibold text-foreground">
+          {label} ({titles.length})
+        </h2>
+        {canExpand && (
+          <button
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            aria-expanded={expanded}
+            className="min-h-8 px-2 text-sm text-primary-text hover:underline cursor-pointer"
+          >
+            {expanded ? "Show fewer" : `Show all ${titles.length}`}
+          </button>
+        )}
+      </div>
+      {expanded ? (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-4">
+          {cards(titles, "w-full")}
+        </div>
+      ) : (
+        <ScrollableRow className="gap-4 pb-2">
+          {cards(titles.slice(0, ROW_LIMIT))}
+        </ScrollableRow>
+      )}
+    </section>
   );
 }
 
@@ -152,7 +263,8 @@ export default function PersonPage() {
   const {
     data,
     isLoading: loading,
-    isError: error,
+    error,
+    refetch,
   } = useQuery({
     queryKey: ["person", personId],
     queryFn: ({ signal }) => api.getPersonDetails(Number(personId), signal),
@@ -161,19 +273,37 @@ export default function PersonPage() {
 
   const cast = data?.person.combined_credits.cast;
   const crew = data?.person.combined_credits.crew;
-  const knownForCredits = useMemo(
-    () => selectKnownFor([...(cast ?? []), ...(crew ?? [])]),
-    [cast, crew],
-  );
+  const { knownFor, acting, crewTitles } = useMemo(() => {
+    const all = [...(cast ?? []), ...(crew ?? [])];
+    const distinctTitles = new Set(all.map(creditTitleId)).size;
+    return {
+      // With this few titles the rows below already show everything.
+      knownFor: distinctTitles > KNOWN_FOR_LIMIT ? selectKnownFor(all) : [],
+      acting: sortFilmography(mergeByTitle(cast ?? [])),
+      crewTitles: sortFilmography(mergeByTitle(crew ?? [])),
+    };
+  }, [cast, crew]);
 
   if (loading) {
     return <DetailPageSkeleton />;
   }
 
   if (error || !data) {
+    const notFound = error instanceof ApiError && error.status === 404;
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-destructive">Person not found</div>
+      <div className="flex flex-col items-center justify-center gap-3 py-20">
+        <div className="text-destructive">
+          {notFound ? "Person not found" : "Couldn't load this person"}
+        </div>
+        {!notFound && (
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="min-h-8 px-3 rounded-sm bg-muted text-sm text-foreground hover:bg-muted-hover cursor-pointer"
+          >
+            Try again
+          </button>
+        )}
       </div>
     );
   }
@@ -185,17 +315,6 @@ export default function PersonPage() {
     bioExpanded || !showBioToggle
       ? biography
       : biography.slice(0, BIO_TRUNCATE_LENGTH) + "...";
-
-  const castCredits = deduplicateCast(
-    [...person.combined_credits.cast].sort(
-      (a, b) => b.popularity - a.popularity,
-    ),
-  );
-  const crewCredits = deduplicateCrew(
-    [...person.combined_credits.crew].sort(
-      (a, b) => b.popularity - a.popularity,
-    ),
-  );
 
   return (
     <div className="space-y-8">
@@ -294,56 +413,32 @@ export default function PersonPage() {
       )}
 
       {/* Known For */}
-      {knownForCredits.length > 0 && (
+      {knownFor.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-foreground">Known For</h2>
           <ScrollableRow className="gap-4 pb-2">
-            {knownForCredits.map((c) => (
+            {knownFor.map((c) => (
               <CreditCard
                 key={creditTitleId(c)}
                 credit={c}
-                subtitle={creditSubtitle(c)}
+                subtitle={creditRole(c)}
               />
             ))}
           </ScrollableRow>
         </section>
       )}
 
-      {/* Acting Credits */}
-      {castCredits.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-foreground">
-            Acting ({castCredits.length})
-          </h2>
-          <ScrollableRow className="gap-4 pb-2">
-            {castCredits.map((c) => (
-              <CreditCard
-                key={`cast-${c.id}-${c.character}`}
-                credit={c}
-                subtitle={c.character}
-              />
-            ))}
-          </ScrollableRow>
-        </section>
-      )}
-
-      {/* Crew Credits */}
-      {crewCredits.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold text-foreground">
-            Crew ({crewCredits.length})
-          </h2>
-          <ScrollableRow className="gap-4 pb-2">
-            {crewCredits.map((c) => (
-              <CreditCard
-                key={`crew-${c.id}-${c.job}`}
-                credit={c}
-                subtitle={c.job}
-              />
-            ))}
-          </ScrollableRow>
-        </section>
-      )}
+      {/* Keyed by person so "Show all" resets when navigating to another person. */}
+      <CreditSection
+        key={`acting-${person.id}`}
+        label="Acting"
+        titles={acting}
+      />
+      <CreditSection
+        key={`crew-${person.id}`}
+        label="Crew"
+        titles={crewTitles}
+      />
     </div>
   );
 }

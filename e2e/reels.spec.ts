@@ -79,19 +79,17 @@ test.describe("Reels page", () => {
     const rp = new ReelsPage(page);
     await setupBaseMocks(page);
     await rp.goto();
-    await rp.waitForVisible(rp.comingSoonChip());
+    await rp.waitForVisible(rp.upNextChip());
 
-    // Reels label visible in overlay
-    await expect(page.getByText("Reels")).toBeVisible();
     // Home link in the reels overlay (the old Feed link was removed)
     await expect(
       page.getByRole("link", { name: "Home" }).first(),
     ).toBeVisible();
     // All source chip buttons visible
-    await expect(rp.comingSoonChip()).toBeVisible();
+    await expect(rp.upNextChip()).toBeVisible();
     await expect(rp.popularChip()).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "From My Genres" }),
+      page.getByRole("button", { name: "Recommended" }),
     ).toBeVisible();
     await expect(rp.friendsLovedChip()).toBeVisible();
     await expect(page.getByRole("button", { name: "Movies" })).toBeVisible();
@@ -126,20 +124,27 @@ test.describe("Reels page", () => {
       route.fulfill({ json: BROWSE_POPULAR_RESPONSE }),
     );
     await rp.goto();
-    await rp.waitForVisible(rp.comingSoonChip());
+    await rp.waitForVisible(rp.upNextChip());
 
-    // Dispatch a click event directly — the source picker overlay (z-40) is visually
-    // under the sticky nav (z-50) on desktop, so Playwright's pointer simulation is
-    // blocked. Using dispatchEvent bypasses the hit-testing check.
-    await rp.popularChip().dispatchEvent("click");
+    // A real click: the source picker sits below the desktop top nav.
+    await rp.popularChip().click();
     await page.waitForURL("**/reels?source=popular**");
     await rp.waitForVisible(page.getByText("Popular Movie").first());
 
     expect(page.url()).toContain("source=popular");
     await expect(page.getByText("Popular Movie").first()).toBeVisible();
+    // Titles get a title card: Track instead of Mark as Watched, no S00E00
+    await expect(
+      page.getByRole("button", { name: "Add to watchlist" }),
+    ).toBeVisible();
+    await expect(rp.markWatchedButton()).toHaveCount(0);
+    await expect(page.getByText("S00")).toHaveCount(0);
+    await expect(
+      page.getByRole("link", { name: "Popular Movie" }),
+    ).toHaveAttribute("href", "/title/movie-12345");
   });
 
-  test("TC-04: empty state — no unwatched episodes", async ({ page }) => {
+  test("TC-04: empty state — caught up", async ({ page }) => {
     const rp = new ReelsPage(page);
     await page.route("**/api/**", (route) => route.fulfill({ json: {} }));
     await mockLoggedIn(page);
@@ -149,11 +154,10 @@ test.describe("Reels page", () => {
     await rp.goto();
     await page.waitForTimeout(500);
 
-    await expect(page.getByText("No unwatched episodes")).toBeVisible();
-    await expect(page.getByText("You're all caught up!")).toBeVisible();
+    await expect(page.getByText("You're all caught up")).toBeVisible();
     await expect(
-      page.getByRole("link", { name: "View Upcoming" }),
-    ).toBeVisible();
+      page.getByRole("link", { name: "Open the calendar" }),
+    ).toHaveAttribute("href", "/calendar");
   });
 
   test("TC-05: Friends Loved empty state — no friends yet", async ({
@@ -169,10 +173,9 @@ test.describe("Reels page", () => {
       route.fulfill({ json: { titles: [] } }),
     );
     await rp.goto();
-    await rp.waitForVisible(rp.comingSoonChip());
+    await rp.waitForVisible(rp.upNextChip());
 
-    // dispatchEvent bypasses hit-test block from sticky nav (z-50 over z-40 overlay)
-    await rp.friendsLovedChip().dispatchEvent("click");
+    await rp.friendsLovedChip().click();
     await rp.waitForVisible(page.getByText("Nothing here yet"));
 
     await expect(page.getByText("Nothing here yet")).toBeVisible();
@@ -193,12 +196,12 @@ test.describe("Reels page", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await setupBaseMocks(page);
     await rp.goto();
-    await rp.waitForVisible(rp.comingSoonChip());
+    await rp.waitForVisible(rp.upNextChip());
 
     // On mobile, the nav has hidden class so is not visible
     await expect(rp.mainNav()).not.toBeVisible();
     // But the reels source picker overlay is visible
-    await expect(rp.comingSoonChip()).toBeVisible();
+    await expect(rp.upNextChip()).toBeVisible();
   });
 
   test("TC-07: marking an episode as watched shows undo bar", async ({

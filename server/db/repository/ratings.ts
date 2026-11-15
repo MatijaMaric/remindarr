@@ -57,6 +57,18 @@ export async function getUserRating(
   });
 }
 
+export async function getRatedTitleIds(userId: string): Promise<Set<string>> {
+  return traceDbQuery("getRatedTitleIds", async () => {
+    const db = getDb();
+    const rows = await db
+      .select({ titleId: ratings.titleId })
+      .from(ratings)
+      .where(eq(ratings.userId, userId))
+      .all();
+    return new Set(rows.map((r) => r.titleId));
+  });
+}
+
 export async function getTitleRatings(
   titleId: string,
 ): Promise<Record<RatingValue, number>> {

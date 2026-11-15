@@ -327,20 +327,36 @@ leaderboardApp.get("/", requireAuth, async (c) => {
       LEFT JOIN user_achievements ua ON ua.user_id = u.id AND ua.earned_at IS NOT NULL
       LEFT JOIN achievements a ON a.key = ua.achievement_key
       GROUP BY u.id
-      ORDER BY xp DESC, badge_count DESC
+      ORDER BY xp DESC, badge_count DESC, u.username ASC
       LIMIT 50
     `);
   });
 
-  const leaderboard = entries.map((row, idx) => ({
-    userId: row.id,
-    username: row.username,
-    name: row.name,
-    image: row.image,
-    xp: Number(row.xp),
-    badgeCount: Number(row.badge_count),
-    rank: idx + 1,
-  }));
+  // Competition ranking: equal XP and badge count share a rank (1, 2, 2, 4).
+  const leaderboard: Array<{
+    userId: string;
+    username: string;
+    name: string | null;
+    image: string | null;
+    xp: number;
+    badgeCount: number;
+    rank: number;
+  }> = [];
+  for (const [idx, row] of entries.entries()) {
+    const xp = Number(row.xp);
+    const badgeCount = Number(row.badge_count);
+    const prev = leaderboard[idx - 1];
+    const tied = prev && prev.xp === xp && prev.badgeCount === badgeCount;
+    leaderboard.push({
+      userId: row.id,
+      username: row.username,
+      name: row.name,
+      image: row.image,
+      xp,
+      badgeCount,
+      rank: tied ? prev.rank : idx + 1,
+    });
+  }
 
   return ok(c, { entries: leaderboard });
 });

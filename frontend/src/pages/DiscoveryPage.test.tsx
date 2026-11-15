@@ -43,10 +43,12 @@ mock.module("../context/AuthContext", () => ({
 }));
 
 // Mock IntersectionObserver
+const observers: MockIntersectionObserver[] = [];
 class MockIntersectionObserver {
   callback: IntersectionObserverCallback;
   constructor(callback: IntersectionObserverCallback) {
     this.callback = callback;
+    observers.push(this);
   }
   observe() {}
   unobserve() {}
@@ -152,35 +154,88 @@ function makeAggregate(
 afterEach(() => {
   cleanup();
   resetApiMock();
+  observers.length = 0;
 });
 
 describe("DiscoveryPage", () => {
   it("shows empty state when no recommendations", async () => {
-    apiMock.getRecommendations.mockImplementation(() =>
-      Promise.resolve({ recommendations: [], count: 0 }),
-    );
-    apiMock.getUnreadRecommendationCount.mockImplementation(() =>
-      Promise.resolve({ count: 0 }),
-    );
-
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
     await waitFor(() =>
       expect(screen.getByText(/No recommendations yet/)).toBeDefined(),
     );
+    expect(
+      screen.getByText(
+        "Find and track titles, then rate a few to improve recommendations.",
+      ),
+    ).toBeDefined();
   });
 
-  it("renders recommendations list", async () => {
+  it("has no tab bar: one 'For you' heading and no Activity tab (#1407)", async () => {
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
+      Promise.resolve(makeAggregate({ flat: [makeSearchTitle("movie-1")] })),
+    );
+
+    render(<DiscoveryPage />, { wrapper: Wrapper });
+
+    await screen.findByText("Top pick for you");
+    expect(screen.getAllByText("For you")).toHaveLength(1);
+    expect(screen.queryByText("Activity")).toBeNull();
+    expect(apiMock.getUnreadRecommendationCount).not.toHaveBeenCalled();
+  });
+
+  it("does not show the empty state while suggestions are still loading (#1407)", async () => {
+    let resolveAggregate: (v: SuggestionsAggregateResponse) => void = () => {};
+    apiMock.getSuggestionsAggregate.mockImplementation(
+      () =>
+        new Promise<SuggestionsAggregateResponse>((r) => {
+          resolveAggregate = r;
+        }),
+    );
+
+    render(<DiscoveryPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(apiMock.getRecommendations).toHaveBeenCalled());
+    // Friends feed answered empty; suggestions have not answered yet.
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByText(/No recommendations yet/)).toBeNull();
+
+    resolveAggregate(makeAggregate({ flat: [makeSearchTitle("movie-1")] }));
+    expect(await screen.findByText("Title movie-1")).toBeDefined();
+  });
+
+  it("still shows suggestions when the friends feed fails (#1407)", async () => {
+    apiMock.getRecommendations.mockImplementation(() =>
+      Promise.reject(new Error("boom")),
+    );
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
+      Promise.resolve(makeAggregate({ flat: [makeSearchTitle("movie-1")] })),
+    );
+
+    render(<DiscoveryPage />, { wrapper: Wrapper });
+
+    expect(await screen.findByText("Title movie-1")).toBeDefined();
+    expect(screen.queryByText("Failed to load recommendations")).toBeNull();
+  });
+
+  it("shows the error when nothing loaded and a request failed", async () => {
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
+      Promise.reject(new Error("boom")),
+    );
+
+    render(<DiscoveryPage />, { wrapper: Wrapper });
+
+    expect(
+      await screen.findByText("Failed to load recommendations"),
+    ).toBeDefined();
+  });
+});
+
+describe("Friends are recommending row", () => {
+  it("shows each recommended title with the sender's message", async () => {
     const recs = [
       makeRecommendation("r1"),
       makeRecommendation("r2", {
-        from_user: {
-          id: "sender2",
-          username: "bob",
-          name: "Bob",
-          display_name: "Bob",
-          image: null,
-        },
         title: {
           id: "title-r2",
           title: "Show R2",
@@ -188,190 +243,152 @@ describe("DiscoveryPage", () => {
           poster_url: null,
         },
         message: "You should watch this!",
+        is_targeted: true,
       }),
     ];
     apiMock.getRecommendations.mockImplementation(() =>
       Promise.resolve({ recommendations: recs, count: 2 }),
     );
-    apiMock.getUnreadRecommendationCount.mockImplementation(() =>
-      Promise.resolve({ count: 2 }),
-    );
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
-    // Switch to Activity tab where RecommendationCard feed is rendered
-    await waitFor(() => {
-      expect(screen.getByText("Activity")).toBeDefined();
-    });
-    fireEvent.click(screen.getByText("Activity"));
-
-    await waitFor(() => {
-      expect(screen.getByText("Movie r1")).toBeDefined();
-      expect(screen.getByText("Show R2")).toBeDefined();
-      expect(screen.getByText(/You should watch this!/)).toBeDefined();
-    });
+    await screen.findByText("Friends are recommending");
+    expect(screen.getByText("Movie r1")).toBeDefined();
+    expect(screen.getByText("Show R2")).toBeDefined();
+    expect(screen.getByText(/You should watch this!/)).toBeDefined();
+    expect(screen.getByText(/@alice/)).toBeDefined();
+    expect(screen.getByText("Direct")).toBeDefined();
   });
 
-  it("shows unread count badge", async () => {
+  it("marks a card's unread recommendations read once it is on screen", async () => {
+    const recs = [
+      makeRecommendation("r1"),
+      makeRecommendation("r2", { title: makeRecommendation("r1").title }),
+      makeRecommendation("r3", { read_at: "2026-01-01T00:00:00Z" }),
+    ];
     apiMock.getRecommendations.mockImplementation(() =>
-      Promise.resolve({ recommendations: [], count: 0 }),
+      Promise.resolve({ recommendations: recs, count: 3 }),
     );
-    apiMock.getUnreadRecommendationCount.mockImplementation(() =>
-      Promise.resolve({ count: 5 }),
-    );
-
-    render(<DiscoveryPage />, { wrapper: Wrapper });
-
-    await waitFor(() => {
-      expect(screen.getByText("5")).toBeDefined();
-    });
-  });
-
-  it("track button on Activity tab calls trackTitle and removes the card", async () => {
-    const rec = makeRecommendation("r1");
-    apiMock.getRecommendations.mockImplementation(() =>
-      Promise.resolve({ recommendations: [rec], count: 1 }),
-    );
-    apiMock.getUnreadRecommendationCount.mockImplementation(() =>
-      Promise.resolve({ count: 1 }),
-    );
-    apiMock.trackTitle.mockImplementation(() => Promise.resolve());
     apiMock.markRecommendationRead.mockImplementation(() => Promise.resolve());
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
+    await screen.findByText("Friends are recommending");
 
-    // Switch to Activity tab where removing-on-track behaviour lives
-    await waitFor(() => {
-      expect(screen.getByText("Activity")).toBeDefined();
-    });
-    fireEvent.click(screen.getByText("Activity"));
-
-    await waitFor(() => {
-      expect(screen.getByText("Movie r1")).toBeDefined();
-    });
-
-    const trackButtons = screen.getAllByText("Track");
-    fireEvent.click(trackButtons[0]);
+    for (const io of [...observers]) {
+      io.callback(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        io as unknown as IntersectionObserver,
+      );
+    }
 
     await waitFor(() => {
-      expect(apiMock.trackTitle).toHaveBeenCalledWith("title-r1");
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByText("Movie r1")).toBeNull();
+      const ids = apiMock.markRecommendationRead.mock.calls.map(
+        (c: unknown[]) => c[0],
+      );
+      expect([...new Set(ids)].sort()).toEqual(["r1", "r2"]);
     });
   });
 
-  it("dismiss button calls deleteRecommendation and removes the card", async () => {
-    const rec = makeRecommendation("r1");
+  it("track on a friend card tracks the title", async () => {
     apiMock.getRecommendations.mockImplementation(() =>
-      Promise.resolve({ recommendations: [rec], count: 1 }),
+      Promise.resolve({
+        recommendations: [makeRecommendation("r1")],
+        count: 1,
+      }),
     );
-    apiMock.getUnreadRecommendationCount.mockImplementation(() =>
-      Promise.resolve({ count: 0 }),
-    );
-    apiMock.deleteRecommendation.mockImplementation(() => Promise.resolve());
+    apiMock.trackTitle.mockImplementation(() => Promise.resolve());
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
+    await screen.findByText("Friends are recommending");
 
-    // Switch to Activity tab where RecommendationCard with "Dismiss" button is rendered
-    await waitFor(() => {
-      expect(screen.getByText("Activity")).toBeDefined();
-    });
-    fireEvent.click(screen.getByText("Activity"));
+    fireEvent.click(screen.getByText("Track"));
 
     await waitFor(() => {
-      expect(screen.getByText("Movie r1")).toBeDefined();
+      expect(apiMock.trackTitle.mock.calls[0]?.[0]).toBe("title-r1");
     });
-
-    const dismissButtons = screen.getAllByText("Dismiss");
-    fireEvent.click(dismissButtons[0]);
-
-    await waitFor(() => {
-      expect(apiMock.deleteRecommendation).toHaveBeenCalledWith("r1");
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByText("Movie r1")).toBeNull();
-    });
+    expect(apiMock.deleteRecommendation).not.toHaveBeenCalled();
   });
+});
 
-  it("shows sender name and optional message on Activity tab", async () => {
-    const rec = makeRecommendation("r1", {
-      from_user: {
-        id: "s1",
-        username: "charlie",
-        name: "Charlie D",
-        display_name: "Charlie D",
-        image: null,
+describe("each suggestion shown once (#1407)", () => {
+  function group(
+    id: string,
+    suggestionIds: string[],
+    hiddenCount = 0,
+  ): SuggestionsAggregateResponse["groups"][number] {
+    return {
+      source: {
+        id,
+        title: `Seed ${id}`,
+        posterUrl: null,
+        reason: "loved" as SuggestionSeedReason,
       },
-      message: "Great film!",
-    });
+      suggestions: suggestionIds.map((s) => makeSearchTitle(s)),
+      hiddenCount,
+    };
+  }
+
+  it("drops titles already in the hero, Suggested next, friends row or an earlier row", async () => {
+    const flat = ["a", "b"].map((s) => makeSearchTitle(s));
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
+      Promise.resolve(
+        makeAggregate({
+          flat,
+          groups: [
+            group("seed-1", ["a", "b", "c", "friend"]),
+            group("seed-2", ["c", "d"]),
+            group("seed-3", ["a", "d"]),
+          ],
+        }),
+      ),
+    );
     apiMock.getRecommendations.mockImplementation(() =>
-      Promise.resolve({ recommendations: [rec], count: 1 }),
+      Promise.resolve({
+        recommendations: [
+          makeRecommendation("r1", {
+            title: {
+              id: "friend",
+              title: "Title friend",
+              object_type: "MOVIE",
+              poster_url: null,
+            },
+          }),
+        ],
+        count: 1,
+      }),
     );
-    apiMock.getUnreadRecommendationCount.mockImplementation(() =>
-      Promise.resolve({ count: 0 }),
+
+    const { container } = render(<DiscoveryPage />, { wrapper: Wrapper });
+    await screen.findByText("Top pick for you");
+
+    const cardLinks = [...container.querySelectorAll("h3")].map((h) =>
+      h.closest("a")?.getAttribute("href"),
     );
-
-    render(<DiscoveryPage />, { wrapper: Wrapper });
-
-    // Sender details are shown on the Activity tab RecommendationCard
-    await waitFor(() => {
-      expect(screen.getByText("Activity")).toBeDefined();
-    });
-    fireEvent.click(screen.getByText("Activity"));
-
-    await waitFor(() => {
-      expect(screen.getByText("Charlie D")).toBeDefined();
-      expect(screen.getByText(/Great film!/)).toBeDefined();
-    });
+    // Hero "a" has no card; then Suggested next (b), friends (friend),
+    // seed-1 (c) and seed-2 (d) — each title once.
+    expect(cardLinks.sort()).toEqual(
+      ["/title/b", "/title/c", "/title/d", "/title/friend"].sort(),
+    );
+    expect(screen.getByText("Because you loved Seed seed-1")).toBeDefined();
+    expect(screen.getByText("Because you loved Seed seed-2")).toBeDefined();
+    // Everything in seed-3 is shown above, so the row is not rendered.
+    expect(screen.queryByText("Because you loved Seed seed-3")).toBeNull();
   });
 
-  it("distinguishes movie and TV type labels", async () => {
-    const recs = [
-      makeRecommendation("r1", {
-        title: {
-          id: "t1",
-          title: "A Movie",
-          object_type: "MOVIE",
-          poster_url: null,
-        },
-      }),
-      makeRecommendation("r2", {
-        title: {
-          id: "t2",
-          title: "A Show",
-          object_type: "SHOW",
-          poster_url: null,
-        },
-      }),
-    ];
-    apiMock.getRecommendations.mockImplementation(() =>
-      Promise.resolve({ recommendations: recs, count: 2 }),
-    );
-    apiMock.getUnreadRecommendationCount.mockImplementation(() =>
-      Promise.resolve({ count: 0 }),
+  it("renders the hiddenCount subnote in a Because you group", async () => {
+    apiMock.getSuggestionsAggregate.mockImplementation(() =>
+      Promise.resolve(
+        makeAggregate({ flat: [], groups: [group("seed", ["s1"], 2)] }),
+      ),
     );
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
-    // Switch to Activity tab where RecommendationCard renders type badges via i18n
-    await waitFor(() => {
-      expect(screen.getByText("Activity")).toBeDefined();
-    });
-    fireEvent.click(screen.getByText("Activity"));
-
-    await waitFor(() => {
-      expect(screen.getByText("A Movie")).toBeDefined();
-      expect(screen.getByText("A Show")).toBeDefined();
-    });
-
-    // Check type badges (t("discovery.movie") = "Movie", t("discovery.tv") = "TV Show")
-    const movieBadges = screen.getAllByText("Movie");
-    const tvBadges = screen.getAllByText("TV Show");
-    expect(movieBadges.length).toBeGreaterThanOrEqual(1);
-    expect(tvBadges.length).toBeGreaterThanOrEqual(1);
+    expect(
+      await screen.findByText(
+        /2 hidden — already tracked, watched or dismissed/,
+      ),
+    ).toBeDefined();
   });
 });
 
@@ -390,20 +407,17 @@ describe("For you tab — suggestions", () => {
     expect(screen.getByText("Top pick for you")).toBeDefined();
   });
 
-  it("hero shows 'None of your friends have recommended this yet' when no recs match the hero", async () => {
+  it("hero hides the friends box when no friend recommended it (#1407)", async () => {
     const title1 = makeSearchTitle("movie-1");
     apiMock.getSuggestionsAggregate.mockImplementation(() =>
       Promise.resolve(makeAggregate({ flat: [title1], groups: [] })),
     );
-    // default: no recommendations
 
     render(<DiscoveryPage />, { wrapper: Wrapper });
 
-    await waitFor(() => {
-      expect(
-        screen.getByText(/None of your friends have recommended this yet/),
-      ).toBeDefined();
-    });
+    await screen.findByText("Top pick for you");
+    expect(screen.queryByText("Friends")).toBeNull();
+    expect(screen.queryByText(/0 recs/)).toBeNull();
   });
 
   it("hero shows friend recommendation signal when a rec matches the hero title", async () => {
@@ -437,8 +451,10 @@ describe("For you tab — suggestions", () => {
       // Friend rec count label in hero signal grid
       expect(screen.getByText("1 rec")).toBeDefined();
     });
-    // Message quote shown in hero friends panel
-    expect(screen.getByText(/You should watch this/)).toBeDefined();
+    // Message quote shown in the hero friends panel (and on the friends-row card)
+    expect(
+      screen.getAllByText(/You should watch this/).length,
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it("session counter reflects tracked and dismissed counts after actions", async () => {
@@ -515,34 +531,6 @@ describe("For you tab — suggestions", () => {
 
     await waitFor(() => {
       expect(apiMock.undismissSuggestion).toHaveBeenCalledWith("title-r1");
-    });
-  });
-
-  it("renders the hiddenCount subnote in a Because you group", async () => {
-    const suggestion = makeSearchTitle("movie-s1");
-    const group = {
-      source: {
-        id: "movie-seed",
-        title: "Seed Movie",
-        posterUrl: null,
-        reason: "watched" as SuggestionSeedReason,
-      },
-      suggestions: [suggestion],
-      hiddenCount: 2,
-    };
-    apiMock.getSuggestionsAggregate.mockImplementation(() =>
-      Promise.resolve({
-        flat: [suggestion],
-        groups: [group],
-      }),
-    );
-
-    render(<DiscoveryPage />, { wrapper: Wrapper });
-
-    await waitFor(() => {
-      expect(
-        screen.getByText(/2 hidden — already tracked or dismissed/),
-      ).toBeDefined();
     });
   });
 

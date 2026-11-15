@@ -1,4 +1,4 @@
-import { useParams, useSearchParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import * as api from "../api";
@@ -115,12 +115,22 @@ export default function AchievementsPage() {
         <h1 className="text-xs font-medium mb-3 text-muted-foreground">
           Achievements
         </h1>
-        <span className="text-[11px] text-muted-foreground font-mono">
-          {/* Other users' lists hold only earned badges, so N/N would always be full */}
-          {isOwnProfile
-            ? `${earned.length}/${achievements.length} earned · ${totalXp} XP`
-            : `${earned.length} earned · ${totalXp} XP`}
-        </span>
+        <div className="flex items-baseline gap-3">
+          <span className="text-[11px] text-muted-foreground font-mono">
+            {/* Other users' lists hold only earned badges, so N/N would always be full */}
+            {isOwnProfile
+              ? `${earned.length}/${achievements.length} earned · ${totalXp} XP`
+              : `${earned.length} earned · ${totalXp} XP`}
+          </span>
+          {isOwnProfile && (
+            <Link
+              to="/leaderboard"
+              className="text-[11px] font-medium text-primary-text hover:underline"
+            >
+              Leaderboard
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Next up (self only) */}

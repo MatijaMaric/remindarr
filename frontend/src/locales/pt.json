@@ -283,9 +283,6 @@
     "title": "Explorar",
     "kicker": {
       "search": "Busca",
-      "searchResults_one": "Busca · {{count}} resultado",
-      "searchResults_many": "Busca · {{count}} resultados",
-      "searchResults_other": "Busca · {{count}} resultados",
       "catalog": "Catálogo · descubra títulos",
       "catalogCount_one": "Catálogo · {{formatted}} título",
       "catalogCount_many": "Catálogo · {{formatted}} títulos",
@@ -293,11 +290,7 @@
     },
     "hideFilters": "Ocultar filtros",
     "showFilters": "Mostrar filtros",
-    "clearAllFilters": "Limpar todos os filtros",
-    "removeFilter": "Remover o filtro {{name}}",
-    "removeLanguageFilter": "Remover o filtro de idioma {{name}}",
-    "removeYearFilter": "Remover o filtro de anos",
-    "removeRatingFilter": "Remover o filtro de nota mínima"
+    "clearAllFilters": "Limpar todos os filtros"
   },
   "signup": {
     "title": "Criar uma conta",
@@ -392,11 +385,8 @@
     "movies": "Filmes",
     "shows": "Séries",
     "people": "Pessoas",
-    "allGenres": "Todos os gêneros",
-    "allPlatforms": "Todas as plataformas",
     "allLanguages": "Todos os idiomas",
     "hideTracked": "Ocultar acompanhados",
-    "clearFilters": "Limpar filtros",
     "search": "Buscar...",
     "yearFrom": "A partir do ano",
     "yearTo": "Até o ano",
@@ -430,7 +420,8 @@
   },
   "releases": {
     "loading": "Carregando...",
-    "empty": "Nenhum lançamento encontrado."
+    "empty": "Nenhum lançamento encontrado.",
+    "loadMore": "Carregar mais"
   },
   "track": {
     "track": "Adicionar à minha lista",
@@ -546,13 +537,9 @@
     "hideWatched": "Ocultar assistidos",
     "showWatched": "Mostrar assistidos",
     "gridView": "Visualização em grade",
-    "weekView": "Visualização semanal",
     "agendaView": "Visualização de agenda",
     "close": "Fechar",
     "goToDay": "Ir para {{date}}",
-    "densityCompact": "Compacta",
-    "densityComfortable": "Confortável",
-    "densitySpacious": "Espaçosa",
     "loadError": "Não foi possível carregar o calendário. Tente novamente.",
     "stats": {
       "episodes_one": "{{count}} episódio",
@@ -560,29 +547,16 @@
       "episodes_other": "{{count}} episódios",
       "titles_one": "{{count}} título",
       "titles_many": "{{count}} títulos",
-      "titles_other": "{{count}} títulos",
-      "total_one": "{{count}} no total",
-      "total_many": "{{count}} no total",
-      "total_other": "{{count}} no total"
+      "titles_other": "{{count}} títulos"
     },
     "episodes": "Episódios",
     "releases": "Lançamentos",
     "noReleasesOnDay": "Nenhum lançamento acompanhado neste dia",
     "previousMonth": "Mês anterior",
     "nextMonth": "Próximo mês",
-    "month": "Mês",
-    "agenda": "Agenda",
-    "legend": {
-      "tracked": "Acompanhado · no ar",
-      "followed": "Seguido · episódio novo",
-      "premiere": "Estreia"
-    },
-    "episodesThisMonth_one": "{{count}} episódio este mês",
-    "episodesThisMonth_many": "{{count}} episódios este mês",
-    "episodesThisMonth_other": "{{count}} episódios este mês",
-    "previousWeek": "Semana anterior",
-    "nextWeek": "Próxima semana",
-    "thisWeek": "Esta semana"
+    "loadMonth": "Mostrar {{month}}",
+    "movie": "Filme",
+    "show": "Série"
   },
   "landing": {
     "tagline": "Acompanhe os filmes e séries que você ama",
@@ -630,7 +604,6 @@
       "watchTimeShows": "Tempo em séries",
       "topGenres": "Gêneros favoritos",
       "friendsCount": "Amigos · {{count}}",
-      "seeAll": "Ver tudo",
       "followedPeople": "Pessoas seguidas",
       "followedSince": "seguindo desde {{date}}",
       "activity12m": "Atividade de 12 meses",
@@ -649,7 +622,9 @@
         "completed": "Concluída",
         "onHold": "Pausada",
         "planToWatch": "Quero assistir",
-        "dropped": "Abandonada"
+        "dropped": "Abandonada",
+        "notStarted": "Não iniciado",
+        "unreleased": "Não lançado"
       },
       "activity": {
         "title": "Atividade recente",
@@ -930,11 +905,10 @@
   "discovery": {
     "title": "Descobrir",
     "empty": "Ainda não há recomendações. Siga outras pessoas para ver as recomendações delas!",
+    "emptyCta": "Encontre e acompanhe títulos e avalie alguns para melhorar as recomendações.",
     "movie": "Filme",
-    "tv": "Série",
     "track": "Acompanhar",
     "dismiss": "Descartar",
-    "tracked": "\"{{title}}\" foi adicionado à sua lista",
     "trackFailed": "Não foi possível acompanhar o título",
     "dismissFailed": "Não foi possível descartar a recomendação",
     "loadFailed": "Não foi possível carregar as recomendações",
@@ -951,10 +925,8 @@
     "friendCount_many": "{{count}} amigos",
     "friendCount_other": "{{count}} amigos",
     "direct": "Direta",
-    "noPoster": "N/D",
     "kicker": "Com base no que você assiste e em quem você segue",
     "forYou": "Para você",
-    "activity": "Atividade",
     "sessionCounts": "{{tracked}} acompanhados · {{dismissed}} descartados",
     "moreForYou": {
       "kicker": "Mais para você",
@@ -965,10 +937,9 @@
       "kicker": "Das pessoas que você segue",
       "title": "Seus amigos recomendam"
     },
-    "hiddenCount_one": "{{count}} oculto: já acompanhado ou descartado",
-    "hiddenCount_many": "{{count}} ocultos: já acompanhados ou descartados",
-    "hiddenCount_other": "{{count}} ocultos: já acompanhados ou descartados",
-    "allHandled": "Todas as sugestões foram acompanhadas ou descartadas.",
+    "hiddenCount_one": "{{count}} oculto: já acompanhado, assistido ou descartado",
+    "hiddenCount_many": "{{count}} ocultos: já acompanhados, assistidos ou descartados",
+    "hiddenCount_other": "{{count}} ocultos: já acompanhados, assistidos ou descartados",
     "hero": {
       "kicker": "Nossa melhor escolha para você",
       "tvSeries": "Série",
@@ -979,9 +950,7 @@
       "recCount_one": "{{count}} recomendação",
       "recCount_many": "{{count}} recomendações",
       "recCount_other": "{{count}} recomendações",
-      "noFriendRecs": "Nenhum amigo seu recomendou isto ainda.",
       "viewDetails": "Ver detalhes",
-      "undoDismiss": "Desfazer descarte",
       "notInterested": "Não tenho interesse"
     }
   },
