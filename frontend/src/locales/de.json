@@ -277,19 +277,13 @@
     "title": "Entdecken",
     "kicker": {
       "search": "Suche",
-      "searchResults_one": "Suche · {{count}} Ergebnis",
-      "searchResults_other": "Suche · {{count}} Ergebnisse",
       "catalog": "Katalog · Titel entdecken",
       "catalogCount_one": "Katalog · {{formatted}} Titel",
       "catalogCount_other": "Katalog · {{formatted}} Titel"
     },
     "hideFilters": "Filter ausblenden",
     "showFilters": "Filter anzeigen",
-    "clearAllFilters": "Alle Filter zurücksetzen",
-    "removeFilter": "Filter {{name}} entfernen",
-    "removeLanguageFilter": "Sprachfilter {{name}} entfernen",
-    "removeYearFilter": "Jahresfilter entfernen",
-    "removeRatingFilter": "Mindestbewertungs-Filter entfernen"
+    "clearAllFilters": "Alle Filter zurücksetzen"
   },
   "signup": {
     "title": "Konto erstellen",
@@ -384,11 +378,8 @@
     "movies": "Filme",
     "shows": "Serien",
     "people": "Personen",
-    "allGenres": "Alle Genres",
-    "allPlatforms": "Alle Plattformen",
     "allLanguages": "Alle Sprachen",
     "hideTracked": "Gemerkte ausblenden",
-    "clearFilters": "Filter zurücksetzen",
     "search": "Suchen...",
     "yearFrom": "Ab Jahr",
     "yearTo": "Bis Jahr",
@@ -422,7 +413,8 @@
   },
   "releases": {
     "loading": "Wird geladen...",
-    "empty": "Keine Veröffentlichungen gefunden."
+    "empty": "Keine Veröffentlichungen gefunden.",
+    "loadMore": "Mehr laden"
   },
   "track": {
     "track": "Zur Merkliste hinzufügen",

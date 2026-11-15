@@ -277,19 +277,13 @@
     "title": "Browse",
     "kicker": {
       "search": "Search",
-      "searchResults_one": "Search · {{count}} result",
-      "searchResults_other": "Search · {{count}} results",
       "catalog": "Catalog · discover titles",
       "catalogCount_one": "Catalog · {{formatted}} title",
       "catalogCount_other": "Catalog · {{formatted}} titles"
     },
     "hideFilters": "Hide filters",
     "showFilters": "Show filters",
-    "clearAllFilters": "Clear all filters",
-    "removeFilter": "Remove {{name}} filter",
-    "removeLanguageFilter": "Remove {{name}} language filter",
-    "removeYearFilter": "Remove year range filter",
-    "removeRatingFilter": "Remove minimum rating filter"
+    "clearAllFilters": "Clear all filters"
   },
   "signup": {
     "title": "Create an account",
@@ -384,11 +378,8 @@
     "movies": "Movies",
     "shows": "Shows",
     "people": "People",
-    "allGenres": "All Genres",
-    "allPlatforms": "All Platforms",
     "allLanguages": "All Languages",
     "hideTracked": "Hide Tracked",
-    "clearFilters": "Clear filters",
     "search": "Search...",
     "yearFrom": "From year",
     "yearTo": "To year",
@@ -422,7 +413,8 @@
   },
   "releases": {
     "loading": "Loading...",
-    "empty": "No releases found."
+    "empty": "No releases found.",
+    "loadMore": "Load more"
   },
   "track": {
     "track": "Add to watchlist",
