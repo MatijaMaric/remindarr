@@ -18,9 +18,14 @@ const statusParamSchema = z.object({
   season: z.coerce.number().int().min(0),
 });
 
+// Reels asks for a few episodes per show; other callers get the default cap.
+const upcomingQuerySchema = z.object({
+  per_title: z.coerce.number().int().min(1).max(100).optional(),
+});
+
 const app = new Hono<AppEnv>();
 
-app.get("/upcoming", async (c) => {
+app.get("/upcoming", zValidator("query", upcomingQuerySchema), async (c) => {
   const user = c.get("user");
   if (!user) {
     return c.json({ today: [], upcoming: [] });
@@ -42,7 +47,12 @@ app.get("/upcoming", async (c) => {
     user.id,
   );
 
-  const unwatchedEpisodes = await getUnwatchedEpisodes(user.id, timezone);
+  const { per_title } = c.req.valid("query");
+  const unwatchedEpisodes = await getUnwatchedEpisodes(
+    user.id,
+    timezone,
+    per_title,
+  );
 
   return ok(c, {
     today: todayEpisodes,

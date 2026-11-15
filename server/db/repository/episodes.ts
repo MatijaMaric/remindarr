@@ -229,6 +229,7 @@ type UnwatchedEpisodeQueryRow = {
 export async function getUnwatchedEpisodesWithMeta(
   userId: string,
   timezone = "UTC",
+  perTitleLimit = MAX_UNWATCHED_PER_TITLE,
 ) {
   return traceDbQuery("getUnwatchedEpisodesWithMeta", async () => {
     const db = getDb();
@@ -305,7 +306,7 @@ export async function getUnwatchedEpisodesWithMeta(
         backdrop_url, age_certification, total_episodes, watched_episodes_count,
         unwatched_count
       FROM ranked
-      WHERE rn <= ${MAX_UNWATCHED_PER_TITLE}
+      WHERE rn <= ${perTitleLimit}
       ORDER BY
         CASE WHEN last_watched_at IS NULL THEN 1 ELSE 0 END ASC,
         last_watched_at DESC,
@@ -370,10 +371,15 @@ export async function getUnwatchedEpisodesWithMeta(
 }
 
 /** Convenience wrapper that preserves the original public signature. */
-export async function getUnwatchedEpisodes(userId: string, timezone = "UTC") {
+export async function getUnwatchedEpisodes(
+  userId: string,
+  timezone = "UTC",
+  perTitleLimit = MAX_UNWATCHED_PER_TITLE,
+) {
   const { episodes: episodeRows } = await getUnwatchedEpisodesWithMeta(
     userId,
     timezone,
+    perTitleLimit,
   );
   return episodeRows.map(({ unwatched_count: _unwatchedCount, ...row }) => row);
 }
@@ -639,13 +645,23 @@ export async function getSeasonEpisodeStatus(
   titleId: string,
   seasonNumber: number,
   userId: string,
-): Promise<Array<{ episode_number: number; id: number; is_watched: boolean }>> {
+): Promise<
+  Array<{
+    episode_number: number;
+    id: number;
+    name: string | null;
+    air_date: string | null;
+    is_watched: boolean;
+  }>
+> {
   return traceDbQuery("getSeasonEpisodeStatus", async () => {
     const db = getDb();
     const rows = await db
       .select({
         id: episodes.id,
         episode_number: episodes.episodeNumber,
+        name: episodes.name,
+        air_date: episodes.airDate,
         is_watched: sql<boolean>`EXISTS(
           SELECT 1 FROM watched_episodes we
           WHERE we.episode_id = ${episodes.id} AND we.user_id = ${userId}
