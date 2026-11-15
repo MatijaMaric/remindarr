@@ -224,11 +224,7 @@ test("sign-in recovery and export scope remain visible with large text", async (
 }) => {
   const app = new CoreJourneyPage(page);
   await page.goto("/login");
-  const local = page.getByRole("button", { name: /username instead/i });
-  await expect(
-    page.getByLabel("Username", { exact: true }).or(local),
-  ).toBeVisible();
-  if (await local.isVisible()) await local.click();
+  await expect(page.getByLabel("Username", { exact: true })).toBeVisible();
   await page.getByText("Forgot your password?", { exact: true }).click();
   await expect(
     page.getByText(/Contact your instance administrator/),

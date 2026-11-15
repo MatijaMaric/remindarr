@@ -67,13 +67,13 @@ test("real Better Auth signup IDs support social and admin contracts", async () 
     });
     expect(res.status).toBe(200);
   }
-  const denied = await app.request(`/admin/users/${bob.id}`, {
+  const denied = await app.request(`/admin/users/${bob.id}/unban`, {
+    method: "PUT",
     headers: { Cookie: alice.cookie },
   });
   expect(denied.status).toBe(403);
   await updateUserAdmin(alice.id, true);
   for (const [path, method, body] of [
-    [`/admin/users/${bob.id}`, "GET", undefined],
     [`/admin/users/${bob.id}/role`, "PUT", JSON.stringify({ role: "admin" })],
     [
       `/admin/users/${bob.id}/ban`,

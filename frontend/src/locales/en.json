@@ -24,10 +24,10 @@
       "ban": "Ban user",
       "unban": "Unban user",
       "delete": "Delete user",
-      "banTitle": "Ban User",
+      "banTitle": "Ban {{username}}",
       "banReasonPlaceholder": "Reason (optional)",
       "banConfirm": "Ban User",
-      "deleteTitle": "Delete User",
+      "deleteTitle": "Delete {{username}}",
       "deleteConfirm": "This action is permanent and cannot be undone.",
       "deleteConfirmButton": "Delete permanently",
       "prevPage": "Previous page",
@@ -51,7 +51,21 @@
       "newPassword": "New password (at least 8 characters)",
       "resetPasswordConfirm": "Set password",
       "resetPasswordDone": "Password reset. The user has been signed out everywhere.",
-      "resetPasswordFailed": "Failed to reset password"
+      "resetPasswordFailed": "Failed to reset password",
+      "roleAdmin": "Admin",
+      "roleUser": "User",
+      "banned": "Banned",
+      "banReason": "Reason: {{reason}}",
+      "promoteTitle": "Make {{username}} an admin?",
+      "promoteHelp": "Admins can manage users and server settings.",
+      "demoteTitle": "Remove admin rights from {{username}}?",
+      "demoteHelp": "They keep their account and data but lose access to admin settings.",
+      "promoted": "{{username}} is now an admin",
+      "demoted": "{{username}} is no longer an admin",
+      "roleFailed": "Failed to update role",
+      "banFailed": "Failed to ban user",
+      "unbanFailed": "Failed to unban user",
+      "deleteFailed": "Failed to delete user"
     }
   },
   "legal": {
@@ -154,7 +168,6 @@
     }
   },
   "tracked": {
-    "title": "Tracked Titles ({{count}})",
     "empty": "No tracked titles yet. Search for titles and click 'Add to watchlist' to add them here.",
     "sortBy": "Sort titles by",
     "filterTabs": "Filter by status",
@@ -172,19 +185,8 @@
     "heading": "Tracked",
     "kicker_one": "Your library · {{count}} title",
     "kicker_other": "Your library · {{count}} titles",
-    "stats": {
-      "watching": "Currently watching",
-      "watchingSub": "of {{count}} tracked",
-      "completedSub": "shows & movies",
-      "avgScore": "Avg score",
-      "avgScoreSub": "across {{count}} rated",
-      "noRatings": "no ratings yet",
-      "total": "Total tracked",
-      "totalSub": "titles in library"
-    },
     "tabs": {
-      "all": "All",
-      "planning": "Planning"
+      "all": "All"
     },
     "view": {
       "select": "Select",
@@ -202,7 +204,6 @@
       "show": "Show",
       "status": "Status",
       "progress": "Progress",
-      "next": "Next",
       "rating": "Rating",
       "actions": "Actions"
     },
@@ -213,9 +214,9 @@
       "selectAll": "Select all titles",
       "select": "Select {{title}}",
       "eta": "ETA: {{eta}}",
+      "nextAir": "Next: {{date}}",
       "show": "Show",
-      "movie": "Movie",
-      "open": "Open"
+      "movie": "Movie"
     },
     "bulk": {
       "updated_one": "Updated {{count}} title",
@@ -288,6 +289,7 @@
   "signup": {
     "title": "Create an account",
     "username": "Username",
+    "usernameHint": "Letters, numbers, dots, dashes and underscores",
     "email": "Email",
     "displayName": "Display Name",
     "password": "Password",
@@ -297,7 +299,7 @@
     "creating": "Creating account...",
     "signUp": "Sign Up",
     "alreadyHaveAccount": "Already have an account?",
-    "signIn": "Sign in"
+    "signIn": "Sign In"
   },
   "login": {
     "title": "Sign in to Remindarr",
@@ -309,8 +311,8 @@
     "signingIn": "Signing in...",
     "signIn": "Sign In",
     "noAccount": "Don't have an account?",
-    "signUp": "Sign up",
-    "loginFailed": "Login failed: {{error}}",
+    "signUp": "Sign Up",
+    "loginFailed": "Sign-in failed. Please try again.",
     "signInWithPasskey": "Sign in with Passkey",
     "passkeyFailed": "Passkey sign-in failed",
     "recoveryTitle": "Forgot your password?",
@@ -549,8 +551,7 @@
     "tagline": "Track movies & TV shows you love",
     "subtitle": "Get notified about new episodes, track what you've watched, and discover what's streaming.",
     "signIn": "Sign In",
-    "signUp": "Create Account",
-    "popularNow": "Popular Right Now",
+    "signUp": "Sign Up",
     "discoverMore": "Discover More"
   },
   "userProfile": {
@@ -817,7 +818,7 @@
       "visibilityUpdateFailed": "Failed to update visibility",
       "perTitleOverrides": "Per-title overrides",
       "socialTitle": "Social",
-      "socialSubtitle": "Invite friends to your Remindarr instance. They'll get a limited signup link.",
+      "socialSubtitle": "Invite friends to your Remindarr instance. When they open your link, you follow each other.",
       "socialHint": "Manage invite codes on the Invite page",
       "passkeyNameLabel": "Passkey name",
       "data": {
@@ -950,14 +951,18 @@
     "redeeming": "Redeeming invitation...",
     "redeemSuccess": "You and @{{name}} are now following each other!",
     "statusPending": "Pending",
-    "statusUsed": "Used by @{{username}}",
+    "statusUsed": "Used by <profile>@{{username}}</profile>",
     "statusExpired": "Expired",
     "created_at": "Created",
     "expires_at": "Expires",
-    "usedBy": "Used by",
     "shareTitle": "Join me on Remindarr",
     "shareText": "Use my invite link to join Remindarr!",
-    "settingsLink": "Invite Friends"
+    "settingsLink": "Invite Friends",
+    "statusUsedDeleted": "Used by a deleted account",
+    "used_at": "Used",
+    "remove": "Remove",
+    "removing": "Removing...",
+    "removed": "Invitation removed"
   },
   "common": {
     "scrollLeft": "Scroll left",
@@ -979,7 +984,10 @@
       "hoursAgo_other": "{{count}}h ago",
       "daysAgo_one": "{{count}}d ago",
       "daysAgo_other": "{{count}}d ago"
-    }
+    },
+    "share": "Share",
+    "linkCopied": "Link copied to clipboard",
+    "linkCopyFailed": "Failed to copy link"
   },
   "feed": {
     "title": "Calendar Feed",
@@ -1099,22 +1107,15 @@
     "snoozed": "Snoozed"
   },
   "stats": {
-    "title": "Stats",
     "loadError": "Failed to load stats. Please try again.",
     "moviesWatched": "Movies Watched",
     "episodesWatched": "Episodes Watched",
     "showsTracked": "Shows Tracked",
     "moviesTracked": "Movies Tracked",
     "watchTime": "Watch Time",
-    "total": "total",
+    "watchTimeSplit": "TV {{shows}} · Movies {{movies}}",
     "watchlistEta": "Watchlist ETA",
     "atCurrentPace": "at your current pace",
-    "tvWatchTime": "TV Watch Time",
-    "movieWatchTime": "Movie Watch Time",
-    "episodeCount_one": "{{count}} episode",
-    "episodeCount_other": "{{count}} episodes",
-    "movieCount_one": "{{count}} movie",
-    "movieCount_other": "{{count}} movies",
     "monthlyActivity": "Monthly Activity",
     "episodes": "Episodes",
     "movies": "Movies",

@@ -15,7 +15,6 @@ import type {
   AdminSettings,
   AdminSettingsUpdateRequest,
   AdminSettingsUpdateResponse,
-  AdminUser,
   AdminUsersResponse,
   UserProfileResponse,
   ActivityFeedResponse,
@@ -1480,13 +1479,6 @@ export async function getAdminUsers(
   if (opts.page) params.set("page", String(opts.page));
   const qs = params.toString();
   return fetchJson(`/admin/users${qs ? `?${qs}` : ""}`, { signal });
-}
-
-export async function getAdminUser(
-  userId: string,
-  signal?: AbortSignal,
-): Promise<{ user: AdminUser }> {
-  return fetchJson(`/admin/users/${encodeURIComponent(userId)}`, { signal });
 }
 
 export async function setAdminUserRole(

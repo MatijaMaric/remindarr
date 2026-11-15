@@ -79,6 +79,38 @@ describe("GET /stats", () => {
     expect(body.pace.watchlistEtaDays).toBeNull();
   });
 
+  it("computes watchlist ETA from the remaining aired runtime and recent pace", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "tv-eta", objectType: "SHOW", runtimeMinutes: 60 }),
+      makeParsedTitle({ id: "movie-eta", objectType: "MOVIE" }),
+    ]);
+    await trackTitle("tv-eta", userId);
+    await trackTitle("movie-eta", userId);
+    await upsertEpisodes(
+      [1, 2, 3].map((n) => ({
+        title_id: "tv-eta",
+        season_number: 1,
+        episode_number: n,
+        name: null,
+        overview: null,
+        air_date: n === 3 ? "2999-01-01" : "2024-01-01",
+        still_path: null,
+      })),
+    );
+    const first = getRawDb()
+      .prepare(
+        "SELECT id FROM episodes WHERE title_id = 'tv-eta' AND episode_number = 1",
+      )
+      .get() as { id: number };
+    await watchEpisode(first.id, userId);
+
+    const body = await (await makeAuthedApp().request("/stats")).json();
+    // 60 min watched in the last 30 days = 2 min/day; one aired episode
+    // (60 min) left, the unaired one and the movie add nothing: 30 days.
+    expect(body.pace.minutesPerDay).toBeCloseTo(2);
+    expect(body.pace.watchlistEtaDays).toBe(30);
+  });
+
   it("returns zeros with no watch history", async () => {
     const app = makeAuthedApp();
     const res = await app.request("/stats");

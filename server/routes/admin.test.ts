@@ -273,24 +273,11 @@ describe("GET /admin/users", () => {
 });
 
 describe("GET /admin/users/:id", () => {
-  it("returns user details with tracked count", async () => {
+  it("is not an endpoint (removed as unused)", async () => {
     const userId = await createUser("detailuser", "hash");
     const res = await app.request(`/admin/users/${userId}`, {
       headers: { Cookie: adminCookie },
     });
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body.user.username).toBe("detailuser");
-    expect(typeof body.user.tracked_count).toBe("number");
-  });
-
-  it("returns 404 for non-existent user", async () => {
-    const res = await app.request(
-      "/admin/users/00000000-0000-4000-8000-000000000000",
-      {
-        headers: { Cookie: adminCookie },
-      },
-    );
     expect(res.status).toBe(404);
   });
 });
@@ -369,16 +356,14 @@ describe("validation", () => {
 
   it("rejects a malformed :id on the user routes", async () => {
     for (const path of [
-      "/admin/users/invalid%20id",
       "/admin/users/invalid%20id/role",
       "/admin/users/invalid%20id/ban",
       "/admin/users/invalid%20id/unban",
     ]) {
       const res = await app.request(path, {
-        method: path === "/admin/users/invalid%20id" ? "GET" : "PUT",
+        method: "PUT",
         headers: { Cookie: adminCookie, "Content-Type": "application/json" },
-        body:
-          path === "/admin/users/invalid%20id" ? undefined : JSON.stringify({}),
+        body: JSON.stringify({}),
       });
       expect(res.status).toBe(400);
       const body = await res.json();

@@ -24,10 +24,10 @@
       "ban": "Benutzer sperren",
       "unban": "Sperre aufheben",
       "delete": "Benutzer löschen",
-      "banTitle": "Benutzer sperren",
+      "banTitle": "{{username}} sperren",
       "banReasonPlaceholder": "Grund (optional)",
       "banConfirm": "Benutzer sperren",
-      "deleteTitle": "Benutzer löschen",
+      "deleteTitle": "{{username}} löschen",
       "deleteConfirm": "Diese Aktion ist endgültig und kann nicht rückgängig gemacht werden.",
       "deleteConfirmButton": "Endgültig löschen",
       "prevPage": "Vorherige Seite",
@@ -51,7 +51,21 @@
       "newPassword": "Neues Passwort (mindestens 8 Zeichen)",
       "resetPasswordConfirm": "Passwort festlegen",
       "resetPasswordDone": "Passwort zurückgesetzt. Der Nutzer wurde überall abgemeldet.",
-      "resetPasswordFailed": "Passwort konnte nicht zurückgesetzt werden"
+      "resetPasswordFailed": "Passwort konnte nicht zurückgesetzt werden",
+      "roleAdmin": "Admin",
+      "roleUser": "Benutzer",
+      "banned": "Gesperrt",
+      "banReason": "Grund: {{reason}}",
+      "promoteTitle": "{{username}} zum Admin machen?",
+      "promoteHelp": "Admins können Benutzer und Servereinstellungen verwalten.",
+      "demoteTitle": "{{username}} die Admin-Rechte entziehen?",
+      "demoteHelp": "Konto und Daten bleiben erhalten, nur der Zugriff auf die Admin-Einstellungen entfällt.",
+      "promoted": "{{username}} ist jetzt Admin",
+      "demoted": "{{username}} ist kein Admin mehr",
+      "roleFailed": "Rolle konnte nicht geändert werden",
+      "banFailed": "Benutzer konnte nicht gesperrt werden",
+      "unbanFailed": "Sperre konnte nicht aufgehoben werden",
+      "deleteFailed": "Benutzer konnte nicht gelöscht werden"
     }
   },
   "legal": {
@@ -154,7 +168,6 @@
     }
   },
   "tracked": {
-    "title": "Gemerkte Titel ({{count}})",
     "empty": "Noch keine Titel gemerkt. Suche nach Titeln und klicke auf „Zur Merkliste hinzufügen“, um sie hier zu sehen.",
     "sortBy": "Titel sortieren nach",
     "filterTabs": "Nach Status filtern",
@@ -172,19 +185,8 @@
     "heading": "Merkliste",
     "kicker_one": "Deine Bibliothek · {{count}} Titel",
     "kicker_other": "Deine Bibliothek · {{count}} Titel",
-    "stats": {
-      "watching": "Schaue ich gerade",
-      "watchingSub": "von {{count}} gemerkt",
-      "completedSub": "Serien & Filme",
-      "avgScore": "Ø Bewertung",
-      "avgScoreSub": "aus {{count}} bewerteten",
-      "noRatings": "noch keine Bewertungen",
-      "total": "Insgesamt gemerkt",
-      "totalSub": "Titel in der Bibliothek"
-    },
     "tabs": {
-      "all": "Alle",
-      "planning": "Geplant"
+      "all": "Alle"
     },
     "view": {
       "select": "Auswählen",
@@ -202,7 +204,6 @@
       "show": "Serie",
       "status": "Status",
       "progress": "Fortschritt",
-      "next": "Nächste",
       "rating": "Bewertung",
       "actions": "Aktionen"
     },
@@ -213,9 +214,9 @@
       "selectAll": "Alle Titel auswählen",
       "select": "{{title}} auswählen",
       "eta": "ETA: {{eta}}",
+      "nextAir": "Nächste: {{date}}",
       "show": "Serie",
-      "movie": "Film",
-      "open": "Öffnen"
+      "movie": "Film"
     },
     "bulk": {
       "updated_one": "{{count}} Titel aktualisiert",
@@ -288,6 +289,7 @@
   "signup": {
     "title": "Konto erstellen",
     "username": "Benutzername",
+    "usernameHint": "Buchstaben, Ziffern, Punkte, Bindestriche und Unterstriche",
     "email": "E-Mail",
     "displayName": "Anzeigename",
     "password": "Passwort",
@@ -310,7 +312,7 @@
     "signIn": "Anmelden",
     "noAccount": "Noch kein Konto?",
     "signUp": "Registrieren",
-    "loginFailed": "Anmeldung fehlgeschlagen: {{error}}",
+    "loginFailed": "Anmeldung fehlgeschlagen. Bitte versuche es erneut.",
     "signInWithPasskey": "Mit Passkey anmelden",
     "passkeyFailed": "Anmeldung mit Passkey fehlgeschlagen",
     "recoveryTitle": "Passwort vergessen?",
@@ -550,7 +552,6 @@
     "subtitle": "Werde über neue Episoden benachrichtigt, halte fest, was du gesehen hast, und entdecke, was gerade streamt.",
     "signIn": "Anmelden",
     "signUp": "Konto erstellen",
-    "popularNow": "Gerade beliebt",
     "discoverMore": "Mehr entdecken"
   },
   "userProfile": {
@@ -817,7 +818,7 @@
       "visibilityUpdateFailed": "Sichtbarkeit konnte nicht aktualisiert werden",
       "perTitleOverrides": "Ausnahmen pro Titel",
       "socialTitle": "Soziales",
-      "socialSubtitle": "Lade Freunde zu deiner Remindarr-Instanz ein. Sie erhalten einen eingeschränkten Registrierungslink.",
+      "socialSubtitle": "Lade Freunde zu deiner Remindarr-Instanz ein. Wenn sie deinen Link öffnen, folgt ihr euch gegenseitig.",
       "socialHint": "Einladungscodes auf der Einladungsseite verwalten",
       "passkeyNameLabel": "Passkey-Name",
       "data": {
@@ -950,14 +951,18 @@
     "redeeming": "Einladung wird eingelöst...",
     "redeemSuccess": "Du und @{{name}} folgt euch jetzt gegenseitig!",
     "statusPending": "Ausstehend",
-    "statusUsed": "Verwendet von @{{username}}",
+    "statusUsed": "Verwendet von <profile>@{{username}}</profile>",
     "statusExpired": "Abgelaufen",
     "created_at": "Erstellt",
     "expires_at": "Läuft ab",
-    "usedBy": "Verwendet von",
     "shareTitle": "Komm zu Remindarr",
     "shareText": "Nutze meinen Einladungslink, um Remindarr beizutreten!",
-    "settingsLink": "Freunde einladen"
+    "settingsLink": "Freunde einladen",
+    "statusUsedDeleted": "Von einem gelöschten Konto verwendet",
+    "used_at": "Verwendet",
+    "remove": "Entfernen",
+    "removing": "Wird entfernt...",
+    "removed": "Einladung entfernt"
   },
   "common": {
     "scrollLeft": "Nach links scrollen",
@@ -979,7 +984,10 @@
       "hoursAgo_other": "vor {{count}} Std.",
       "daysAgo_one": "vor {{count}} Tag",
       "daysAgo_other": "vor {{count}} Tagen"
-    }
+    },
+    "share": "Teilen",
+    "linkCopied": "Link in die Zwischenablage kopiert",
+    "linkCopyFailed": "Link konnte nicht kopiert werden"
   },
   "feed": {
     "title": "Kalender-Feed",
@@ -1099,22 +1107,15 @@
     "snoozed": "Pausiert"
   },
   "stats": {
-    "title": "Statistiken",
     "loadError": "Statistiken konnten nicht geladen werden. Bitte versuche es erneut.",
     "moviesWatched": "Gesehene Filme",
     "episodesWatched": "Gesehene Episoden",
     "showsTracked": "Gemerkte Serien",
     "moviesTracked": "Gemerkte Filme",
     "watchTime": "Sehzeit",
-    "total": "gesamt",
+    "watchTimeSplit": "Serien {{shows}} · Filme {{movies}}",
     "watchlistEta": "Merkliste fertig in",
     "atCurrentPace": "bei deinem aktuellen Tempo",
-    "tvWatchTime": "Serienzeit",
-    "movieWatchTime": "Filmzeit",
-    "episodeCount_one": "{{count}} Episode",
-    "episodeCount_other": "{{count}} Episoden",
-    "movieCount_one": "{{count}} Film",
-    "movieCount_other": "{{count}} Filme",
     "monthlyActivity": "Monatliche Aktivität",
     "episodes": "Episoden",
     "movies": "Filme",

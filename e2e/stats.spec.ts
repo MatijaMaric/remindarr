@@ -55,9 +55,9 @@ test.describe("Stats", () => {
     await expect(page.getByText("Top Languages")).toBeVisible();
     await expect(page.getByText("Shows by Status")).toBeVisible();
 
-    // Watch time breakdown cards
-    await expect(page.getByText("TV Watch Time")).toBeVisible();
-    await expect(page.getByText("Movie Watch Time")).toBeVisible();
+    // TV / movie split is a sub-line of the Watch Time card, not extra cards
+    await expect(page.getByText(/^TV .* · Movies /)).toBeVisible();
+    await expect(page.getByText("TV Watch Time")).toHaveCount(0);
   });
 
   // ── TC-02: Stats show correct counts from mock data ─────────────────────────
@@ -87,11 +87,8 @@ test.describe("Stats", () => {
     await expect(page.getByText("62h")).toBeVisible(); // 3720 min = 62h
     await expect(page.getByText("~2w")).toBeVisible(); // 14 days ≈ 2 weeks
 
-    // Watch-time breakdown
-    await expect(page.getByText("21h")).toBeVisible(); // 1260 min = 21h
-    await expect(page.getByText("84 episodes")).toBeVisible();
-    await expect(page.getByText("41h")).toBeVisible(); // 2460 min = 41h
-    await expect(page.getByText("12 movies")).toBeVisible();
+    // Watch-time split: 1260 min TV = 21h, 2460 min movies = 41h
+    await expect(page.getByText("TV 21h · Movies 41h")).toBeVisible();
 
     // Top Genres
     await expect(page.getByText("Drama")).toBeVisible();
@@ -102,9 +99,7 @@ test.describe("Stats", () => {
     await expect(page.getByText("Japanese")).toBeVisible();
 
     // Shows by Status — only non-zero entries rendered.
-    // "Watching" also appears in TrackedStatsBand as "Currently watching" but exact:true
-    // avoids that. "Completed" appears in both TrackedStatsBand and ShowStatusGrid;
-    // scope to the Shows by Status section heading's sibling grid.
+    // Scope "Completed" to the Shows by Status section heading's sibling grid.
     await expect(page.getByText("Watching", { exact: true })).toBeVisible();
     await expect(page.getByText("Caught Up", { exact: true })).toBeVisible();
     await expect(

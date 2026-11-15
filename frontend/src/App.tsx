@@ -236,7 +236,7 @@ export default function App() {
                 </button>
               </>
             ) : (
-              location.pathname !== "/login" && (
+              !["/login", "/signup"].includes(location.pathname) && (
                 <NavLink
                   to="/login"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"

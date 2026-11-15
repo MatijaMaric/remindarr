@@ -143,7 +143,6 @@ export {
   setHomepageLayout,
   getAllUsers,
   getAdminUserCount,
-  getUserTrackedCount,
   banUser,
   unbanUser,
   deleteUser,
