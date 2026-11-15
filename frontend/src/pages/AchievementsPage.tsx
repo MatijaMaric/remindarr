@@ -8,28 +8,10 @@ import { NextUpStrip } from "../components/achievements/NextUpStrip";
 import { RecentlyEarnedStrip } from "../components/achievements/RecentlyEarnedStrip";
 import { CategoryFilter } from "../components/achievements/CategoryFilter";
 import { BadgeGrid } from "../components/achievements/BadgeGrid";
-
-const DISPLAY_ORDER: Category[] = [
-  "watching",
-  "streaks",
-  "genres",
-  "social",
-  "special",
-  "explorer",
-  "habit",
-  "long-haul",
-];
-
-const CATEGORY_LABELS: Record<Category, string> = {
-  watching: "Watching",
-  streaks: "Streaks",
-  genres: "Genres",
-  social: "Social",
-  special: "Special",
-  explorer: "Explorer",
-  habit: "Habit",
-  "long-haul": "Long Haul",
-};
+import {
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+} from "../components/achievements/categories";
 
 export default function AchievementsPage() {
   const { user } = useAuth();
@@ -53,9 +35,8 @@ export default function AchievementsPage() {
       isOwnProfile
         ? api.getMyAchievements(signal)
         : api.getUserAchievements(username!, signal),
-    // Own profile (/achievements) sits behind RequireAuth so user is always set.
-    // Public profile (/u/:username/achievements) should fire for guests too.
-    enabled: isOwnProfile ? !!user : true,
+    // Both routes sit behind RequireAuth: the API needs a session for either.
+    enabled: !!user,
   });
 
   if (loading) {
@@ -98,7 +79,7 @@ export default function AchievementsPage() {
 
   // Collect unique categories present in the data, in display order
   const presentCategorySet = new Set(achievements.map((a) => a.category));
-  const presentCategories = DISPLAY_ORDER.filter((cat) =>
+  const presentCategories = CATEGORY_ORDER.filter((cat) =>
     presentCategorySet.has(cat),
   );
 
@@ -107,6 +88,15 @@ export default function AchievementsPage() {
     activeCategory !== null
       ? presentCategories.filter((cat) => cat === activeCategory)
       : presentCategories;
+
+  // The strips follow the category filter so they never show badges the
+  // grids below have filtered out.
+  const stripAchievements =
+    activeCategory !== null
+      ? achievements.filter((a) => a.category === activeCategory)
+      : achievements;
+  const hasNextUp = stripAchievements.some((a) => !a.earned && a.progress > 0);
+  const hasRecent = stripAchievements.some((a) => a.earned);
 
   // Group achievements by category
   const byCategory = achievements.reduce<Record<string, UserAchievement[]>>(
@@ -126,16 +116,19 @@ export default function AchievementsPage() {
           Achievements
         </h1>
         <span className="text-[11px] text-muted-foreground font-mono">
-          {earned.length}/{achievements.length} earned · {totalXp} XP
+          {/* Other users' lists hold only earned badges, so N/N would always be full */}
+          {isOwnProfile
+            ? `${earned.length}/${achievements.length} earned · ${totalXp} XP`
+            : `${earned.length} earned · ${totalXp} XP`}
         </span>
       </div>
 
       {/* Next up (self only) */}
-      {isOwnProfile && (
+      {isOwnProfile && hasNextUp && (
         <section>
           <Kicker className="mb-2">Next up</Kicker>
           <NextUpStrip
-            achievements={achievements}
+            achievements={stripAchievements}
             mode="self"
             baseHref={baseHref}
           />
@@ -143,11 +136,11 @@ export default function AchievementsPage() {
       )}
 
       {/* Recently earned */}
-      {earned.length > 0 && (
+      {hasRecent && (
         <section>
           <Kicker className="mb-2">Recently earned</Kicker>
           <RecentlyEarnedStrip
-            achievements={achievements}
+            achievements={stripAchievements}
             mode={mode}
             baseHref={baseHref}
           />
@@ -158,7 +151,7 @@ export default function AchievementsPage() {
       <CategoryFilter categories={presentCategories} />
 
       {/* Category-grouped grids */}
-      {DISPLAY_ORDER.filter((cat) => visibleCategories.includes(cat)).map(
+      {CATEGORY_ORDER.filter((cat) => visibleCategories.includes(cat)).map(
         (cat) => {
           const catAchievements = byCategory[cat];
           if (!catAchievements || catAchievements.length === 0) return null;

@@ -25,8 +25,6 @@ function makeAchievement(
     earnedAt: null,
     earnedCount: 0,
     lastEarnedAt: null,
-    nextRung: null,
-    rarity: null,
     ...overrides,
   };
 }

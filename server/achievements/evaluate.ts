@@ -449,9 +449,14 @@ export async function evaluateDeepShowCompleted(
 }
 
 export type RepeatEvalResult = {
+  /** Best single period so far (episodes in the best month / weekend). */
   progress: number;
   newEarns: Array<{ earnedAt: string; context?: Record<string, unknown> }>;
 };
+
+function bestPeriod(rows: Array<{ cnt: number }>): number {
+  return rows.reduce((max, r) => Math.max(max, Number(r.cnt)), 0);
+}
 
 /**
  * monthly_count_repeatable: count episodes watched in each calendar month.
@@ -473,10 +478,11 @@ export async function evaluateMonthlyCountRepeatable(
       WHERE we.user_id = ${userId}
         AND we.watched_at IS NOT NULL
       GROUP BY month
-      HAVING cnt >= ${threshold}
     `);
 
-    if (monthRows.length === 0) return { progress: 0, newEarns: [] };
+    const progress = bestPeriod(monthRows);
+    const qualifying = monthRows.filter((r) => r.cnt >= threshold);
+    if (qualifying.length === 0) return { progress, newEarns: [] };
 
     // Get already-stamped months for this achievement
     const existingRows = await db.all<{ earned_at: string }>(sql`
@@ -487,21 +493,21 @@ export async function evaluateMonthlyCountRepeatable(
       existingRows.map((r) => r.earned_at.slice(0, 7)), // 'YYYY-MM'
     );
 
-    const newEarns = monthRows
+    const newEarns = qualifying
       .filter((r) => !stampedMonths.has(r.month))
       .map((r) => ({
         earnedAt: `${r.month}-01T00:00:00.000Z`,
         context: { month: r.month, count: r.cnt },
       }));
 
-    return { progress: monthRows.length, newEarns };
+    return { progress, newEarns };
   });
 }
 
 /**
  * weekend_warrior_repeatable: count episodes watched on Sat+Sun within the same
- * calendar weekend (ISO week). Returns all weekends that hit the threshold that
- * don't already have an audit row.
+ * week (SQLite %W, Monday-start, so Sat and Sun share a key). Returns all
+ * weekends that hit the threshold that don't already have an audit row.
  */
 export async function evaluateWeekendWarriorRepeatable(
   userId: string,
@@ -511,7 +517,6 @@ export async function evaluateWeekendWarriorRepeatable(
   return traceDbQuery("evaluateWeekendWarriorRepeatable", async () => {
     const db = getDb();
 
-    // Group episodes by ISO year-week, only counting Sat (6) and Sun (0)
     const weekRows = await db.all<{ week: string; cnt: number }>(sql`
       SELECT strftime('%Y-W%W', we.watched_at) AS week, COUNT(*) AS cnt
       FROM watched_episodes we
@@ -519,29 +524,35 @@ export async function evaluateWeekendWarriorRepeatable(
         AND we.watched_at IS NOT NULL
         AND CAST(strftime('%w', we.watched_at) AS INTEGER) IN (0, 6)
       GROUP BY week
-      HAVING cnt >= ${threshold}
     `);
 
-    if (weekRows.length === 0) return { progress: 0, newEarns: [] };
+    const progress = bestPeriod(weekRows);
+    const qualifying = weekRows.filter((r) => r.cnt >= threshold);
+    if (qualifying.length === 0) return { progress, newEarns: [] };
 
-    const existingRows = await db.all<{ earned_at: string }>(sql`
-      SELECT earned_at FROM user_achievement_earns
+    // Earn rows are stamped with the evaluation time, not the weekend, so the
+    // week key stored in context is the only reliable dedup key.
+    const existingRows = await db.all<{ context: string | null }>(sql`
+      SELECT context FROM user_achievement_earns
       WHERE user_id = ${userId} AND achievement_key = ${key}
     `);
-    const stampedWeeks = new Set(
-      existingRows.map((r) => {
-        const d = new Date(r.earned_at);
-        return `${d.getUTCFullYear()}-W${String(Math.ceil(d.getUTCDate() / 7)).padStart(2, "0")}`;
-      }),
-    );
+    const stampedWeeks = new Set<string>();
+    for (const r of existingRows) {
+      try {
+        const week = r.context ? JSON.parse(r.context)?.week : null;
+        if (typeof week === "string") stampedWeeks.add(week);
+      } catch {
+        // malformed context: cannot dedup against it
+      }
+    }
 
-    const newEarns = weekRows
+    const newEarns = qualifying
       .filter((r) => !stampedWeeks.has(r.week))
       .map((r) => ({
         earnedAt: new Date().toISOString(),
         context: { week: r.week, count: r.cnt },
       }));
 
-    return { progress: weekRows.length, newEarns };
+    return { progress, newEarns };
   });
 }

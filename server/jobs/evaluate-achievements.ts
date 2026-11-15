@@ -74,19 +74,22 @@ export async function runEvaluateAchievements(
                   a.key,
                 );
 
-          if (repeatResult.newEarns.length > 0) {
-            const firstEarnedAt = repeatResult.newEarns.reduce(
-              (min, e) => (e.earnedAt < min ? e.earnedAt : min),
-              repeatResult.newEarns[0].earnedAt,
-            );
-            pending.push({
-              key: a.key,
-              kind,
-              progress: repeatResult.progress,
-              earnedAt: firstEarnedAt,
-              newEarns: repeatResult.newEarns,
-            });
-          }
+          // Always persist progress so unearned repeatables show how close
+          // the best period got; earnedAt stays null until the first earn.
+          const firstEarnedAt =
+            repeatResult.newEarns.length > 0
+              ? repeatResult.newEarns.reduce(
+                  (min, e) => (e.earnedAt < min ? e.earnedAt : min),
+                  repeatResult.newEarns[0].earnedAt,
+                )
+              : null;
+          pending.push({
+            key: a.key,
+            kind,
+            progress: repeatResult.progress,
+            earnedAt: firstEarnedAt,
+            newEarns: repeatResult.newEarns,
+          });
           continue;
         }
 

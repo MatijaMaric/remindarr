@@ -58,3 +58,21 @@ export const TIER_COLORS: Record<Tier, TierStyle> = {
     icon: "text-cyan-300",
   },
 };
+
+const ONE_SHOT_STYLE: TierStyle = {
+  ring: "ring-2 ring-primary-border",
+  bg: "bg-primary-soft",
+  text: "text-primary-text",
+  icon: "text-primary-text",
+};
+
+/** Colours for an earned badge: ladder rungs by tier, one-shots by accent. */
+export function earnedStyle(a: {
+  tier: "ladder" | "one-shot";
+  rungIndex: number | null;
+}): TierStyle {
+  if (a.tier === "ladder" && a.rungIndex !== null) {
+    return TIER_COLORS[tierFromRung(a.rungIndex).tier];
+  }
+  return ONE_SHOT_STYLE;
+}

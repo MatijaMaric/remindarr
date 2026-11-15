@@ -85,6 +85,26 @@ describe("App nav Sign In link", () => {
   });
 });
 
+describe("App achievement routes", () => {
+  it.each(["/u/alice/achievements", "/u/alice/achievements/movies_10"])(
+    "sends a signed-out visitor on %s to the sign-in page",
+    async (path) => {
+      renderApp(path);
+      // Navigation runs in a transition, so the URL only changes once the
+      // lazy login page has loaded.
+      expect(
+        await screen.findByText(
+          /Sign in to Remindarr/i,
+          {},
+          { timeout: 15000 },
+        ),
+      ).toBeDefined();
+      expect(apiMock.getUserAchievements).not.toHaveBeenCalled();
+    },
+    20000,
+  );
+});
+
 describe("App search trigger", () => {
   it("advertises title search and the supported cross-platform shortcut", () => {
     renderApp("/login");

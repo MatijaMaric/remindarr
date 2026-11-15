@@ -1,22 +1,12 @@
 import { useSearchParams } from "react-router";
 import { cn } from "@/lib/utils";
 import type { Category } from "../../types";
+import { CATEGORY_LABELS } from "./categories";
 
 export interface CategoryFilterProps {
   categories: Category[];
   className?: string;
 }
-
-const CATEGORY_LABELS: Record<Category, string> = {
-  watching: "Watching",
-  streaks: "Streaks",
-  genres: "Genres",
-  social: "Social",
-  special: "Special",
-  explorer: "Explorer",
-  habit: "Habit",
-  "long-haul": "Long Haul",
-};
 
 export function CategoryFilter({ categories, className }: CategoryFilterProps) {
   const [searchParams, setSearchParams] = useSearchParams();
