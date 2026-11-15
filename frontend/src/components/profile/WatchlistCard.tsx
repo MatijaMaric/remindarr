@@ -53,6 +53,18 @@ function deriveStatus(t: Title): StatusMeta {
         color: "#fff",
         background: "oklch(0.55 0.18 25)",
       };
+    case "not_started":
+      return {
+        labelKey: "userProfile.dossier.status.notStarted",
+        color: "#000",
+        background: "oklch(0.8 0.02 260)",
+      };
+    case "unreleased":
+      return {
+        labelKey: "userProfile.dossier.status.unreleased",
+        color: "#000",
+        background: "oklch(0.7 0.02 260)",
+      };
     default:
       return {
         labelKey: "userProfile.dossier.status.watching",

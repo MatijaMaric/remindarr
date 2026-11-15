@@ -4,113 +4,48 @@ import * as api from "../api";
 import type { Title } from "../types";
 import { normalizeSearchTitle } from "../types";
 import TitleList from "./TitleList";
-import FilterBar from "./FilterBar";
 import type { BrowseCategory } from "./CategoryBar";
 
-export function filterBrowseTitles(
-  titles: Title[],
-  filters: { genre: string[]; provider: string[]; language: string[] },
-): Title[] {
-  return titles.filter((t) => {
-    if (
-      filters.genre.length > 0 &&
-      !filters.genre.some((g) => t.genres.includes(g))
-    )
-      return false;
-    if (
-      filters.provider.length > 0 &&
-      !t.offers.some((o) =>
-        filters.provider.includes(o.provider_technical_name),
-      )
-    )
-      return false;
-    if (
-      filters.language.length > 0 &&
-      !filters.language.includes(t.original_language ?? "")
-    )
-      return false;
-    return true;
-  });
-}
-
-export function extractBrowseGenres(titles: Title[]): string[] {
-  const set = new Set<string>();
-  titles.forEach((t) => t.genres.forEach((g) => set.add(g)));
-  return Array.from(set).sort();
-}
-
-interface Provider {
-  id: number;
-  name: string;
-  technical_name: string;
-  icon_url: string;
-}
-
-export function extractBrowseProviders(titles: Title[]): Provider[] {
-  const map = new Map<string, Provider>();
-  titles.forEach((t) =>
-    t.offers.forEach((o) => {
-      if (!map.has(o.provider_technical_name)) {
-        map.set(o.provider_technical_name, {
-          id: o.provider_id,
-          name: o.provider_name,
-          technical_name: o.provider_technical_name,
-          icon_url: o.provider_icon_url,
-        });
-      }
-    }),
-  );
-  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-}
-
-export function extractBrowseLanguages(titles: Title[]): string[] {
-  const set = new Set<string>();
-  titles.forEach((t) => {
-    if (t.original_language) set.add(t.original_language);
-  });
-  return Array.from(set).sort();
+/** Flatten pages, keeping the first copy of a title TMDB repeats on a later page. */
+export function uniqueTitles(pages: { titles: Title[] }[]): Title[] {
+  const seen = new Set<string>();
+  const out: Title[] = [];
+  for (const page of pages) {
+    for (const title of page.titles) {
+      if (seen.has(title.id)) continue;
+      seen.add(title.id);
+      out.push(title);
+    }
+  }
+  return out;
 }
 
 interface Props {
   category: Exclude<BrowseCategory, "new_releases">;
   type: string[];
-  onTypeChange: (type: string[]) => void;
   genre: string[];
-  onGenreChange: (genre: string[]) => void;
   provider: string[];
-  onProviderChange: (provider: string[]) => void;
   language: string[];
-  onLanguageChange: (language: string[]) => void;
   yearMin?: string;
   yearMax?: string;
   minRating?: string;
-  onClearFilters?: () => void;
   hideTracked?: boolean;
-  onHideTrackedChange?: (value: boolean) => void;
-  hideFilterBar?: boolean;
   showProviderBadge?: boolean;
   showRating?: boolean;
-  onResultsCount?: (count: number) => void;
+  onResultsCount?: (count: number | null) => void;
   onlyMine?: boolean;
 }
 
 export default function CategoryBrowse({
   category,
   type,
-  onTypeChange,
   genre,
-  onGenreChange,
   provider,
-  onProviderChange,
   language,
-  onLanguageChange,
   yearMin,
   yearMax,
   minRating,
-  onClearFilters,
   hideTracked,
-  onHideTrackedChange,
-  hideFilterBar,
   showProviderBadge,
   showRating,
   onResultsCount,
@@ -122,6 +57,7 @@ export default function CategoryBrowse({
     isError,
     error,
     fetchNextPage,
+    refetch,
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
@@ -160,7 +96,12 @@ export default function CategoryBrowse({
   });
 
   const titles = useMemo(
-    () => data?.pages.flatMap((p) => p.titles.map(normalizeSearchTitle)) ?? [],
+    () =>
+      uniqueTitles(
+        data?.pages.map((p) => ({
+          titles: p.titles.map(normalizeSearchTitle),
+        })) ?? [],
+      ),
     [data],
   );
 
@@ -222,74 +163,49 @@ export default function CategoryBrowse({
         ? "Failed to load titles"
         : null;
 
+  if (isLoading && titles.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">Loading...</div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      {!hideFilterBar && (
-        <FilterBar
-          type={type}
-          onTypeChange={onTypeChange}
-          showDaysFilter={false}
-          genre={genre}
-          onGenreChange={onGenreChange}
-          genres={[]}
-          provider={provider}
-          onProviderChange={onProviderChange}
-          providers={[]}
-          regionProviderIds={[]}
-          language={language}
-          onLanguageChange={onLanguageChange}
-          languages={[]}
-          priorityLanguageCodes={[]}
-          onClearFilters={onClearFilters}
-          hideTracked={hideTracked}
-          onHideTrackedChange={onHideTrackedChange}
+      {/* A failed first page has nothing to list: show the error alone. */}
+      {!(errorMessage && titles.length === 0) && (
+        <TitleList
+          titles={visibleTitles}
+          showProviderBadge={showProviderBadge}
+          showRating={showRating}
+          applyContentAdvisory
         />
       )}
-
       {errorMessage && (
-        <div className="bg-destructive-soft border border-destructive/40 text-destructive px-4 py-2 rounded-md text-sm">
-          {errorMessage}
+        <div role="alert" className="text-center py-4 text-destructive">
+          <p>{errorMessage}</p>
+          <button
+            onClick={() =>
+              void (titles.length > 0 ? fetchNextPage() : refetch())
+            }
+            className="mt-2 text-sm underline hover:text-destructive"
+          >
+            Retry
+          </button>
         </div>
       )}
-
-      {isLoading && titles.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          Loading...
+      {!errorMessage && page < totalPages && (
+        <div ref={sentinelRef} className="text-center py-4">
+          {isFetchingNextPage ? (
+            <div className="text-muted-foreground text-sm">Loading...</div>
+          ) : (
+            <button
+              onClick={() => void fetchNextPage()}
+              className="bg-fill-subtle border border-border text-foreground-secondary px-6 py-2.5 rounded-lg text-[13px] font-semibold sm:hidden"
+            >
+              Load more
+            </button>
+          )}
         </div>
-      ) : (
-        <>
-          <TitleList
-            titles={visibleTitles}
-            showProviderBadge={showProviderBadge}
-            showRating={showRating}
-            applyContentAdvisory
-          />
-          {errorMessage && (
-            <div className="text-center py-4 text-destructive">
-              <p>{errorMessage}</p>
-              <button
-                onClick={() => void fetchNextPage()}
-                className="mt-2 text-sm underline hover:text-destructive"
-              >
-                Retry
-              </button>
-            </div>
-          )}
-          {!errorMessage && page < totalPages && (
-            <div ref={sentinelRef} className="text-center py-4">
-              {isFetchingNextPage ? (
-                <div className="text-muted-foreground text-sm">Loading...</div>
-              ) : (
-                <button
-                  onClick={() => void fetchNextPage()}
-                  className="bg-fill-subtle border border-border text-foreground-secondary px-6 py-2.5 rounded-lg text-[13px] font-semibold sm:hidden"
-                >
-                  Load more
-                </button>
-              )}
-            </div>
-          )}
-        </>
       )}
     </div>
   );

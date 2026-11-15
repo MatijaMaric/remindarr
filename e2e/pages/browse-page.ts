@@ -12,7 +12,7 @@ import { BasePage } from "./base-page";
  * - Filter dropdowns (Genre, Provider) are FilterField components: clicking the
  *   summary button toggles an absolutely-positioned checklist panel.
  *   Each option is a label wrapping an input[type=checkbox].
- * - Active filter chips are button elements with text like "Action x".
+ * - Active filters show in each field's summary button (there is no chip row).
  * - Category tabs use the Pill component which renders as a button.
  * - Title cards render as article[aria-label={title.title}].
  * - The BrowseFilterCard type group uses role="group" aria-label="Content type".
@@ -90,12 +90,9 @@ export class BrowsePage extends BasePage {
     return this.page.getByRole("article", { name });
   }
 
-  /**
-   * Active filter chips have aria-label="Remove X filter" but display text "X x".
-   * Use getByText for the visible label (the "x" is the Unicode multiplication sign).
-   */
-  activeFilterChip(displayText: string) {
-    return this.page.getByText(displayText, { exact: true });
+  /** A filter field's summary button, e.g. "Action" once that genre is picked. */
+  filterSummary(text: string) {
+    return this.page.getByRole("button", { name: text, exact: true });
   }
 }
 

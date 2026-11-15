@@ -11,6 +11,11 @@
 - The shell hides the top navigation bar, bottom tab bar, install prompt, and footer when
   `location.pathname.startsWith("/kiosk/")`.
 - The page polls automatically (every 5 min for `rich`/`lite`, every 30 min for `epaper`).
+  Only a 400/401/404 shows the "Kiosk unavailable" screen; other failures keep the last
+  good data on screen.
+- Air dates are date-only. The hero is picked client-side (today's first unwatched episode,
+  else today's first, else the top of the queue) and is never repeated in a panel; a panel
+  with no remaining rows is not rendered.
 - All test cases use `page.route()` mocks unless explicitly marked **Real**.
 - No session mock is needed (the kiosk endpoint is fully public), but apply
   `GET **/api/auth/get-session` → `null` to prevent shell auth requests from erroring.
@@ -24,18 +29,6 @@
     "fidelity": "rich",
     "refresh_interval_seconds": 300
   },
-  "airing_now": {
-    "id": 101,
-    "title_id": "tt9876543",
-    "show_title": "Test Show",
-    "poster_url": null,
-    "backdrop_url": null,
-    "season_number": 1,
-    "episode_number": 2,
-    "ep_title": "Second Episode",
-    "air_date": "2026-05-23T20:00:00Z",
-    "provider": "Netflix"
-  },
   "releasing_today": [
     {
       "id": 101,
@@ -46,9 +39,10 @@
       "season_number": 1,
       "episode_number": 2,
       "ep_title": "Second Episode",
-      "air_date": "2026-05-23T20:00:00Z",
+      "air_date": "2026-05-23",
       "provider": "Netflix",
-      "kind": "episode"
+      "kind": "episode",
+      "is_watched": false
     }
   ],
   "unwatched_queue": [
@@ -60,25 +54,26 @@
       "season_number": 2,
       "episode_number": 3,
       "ep_title": "The One",
-      "air_date": "2026-04-01T00:00:00Z",
+      "air_date": "2026-04-01",
       "provider": "HBO Max",
       "left": 5
     }
-  ]
+  ],
+  "queue_total": 1
 }
 ```
 
 ---
 
-## TC-01: Page renders the full kiosk layout with header, hero, and two panels
+## TC-01: Page renders header, hero, the queue panel and footer, each show once
 
 **Priority**: P0
 **Backend**: Mock
 
 **Why mock**: Verifies the complete initial render of the kiosk dashboard — branded header
-with household name, clock and date, a hero card for the currently-airing episode, the
-"Releasing today" panel, and the "Up next in your queue" panel — without a real kiosk token
-in the database.
+with household name, clock and date, a hero card for today's episode, and the "Up next in
+your queue" panel — without a real kiosk token in the database. Today's only episode is in
+the hero, so the "New today" panel is not rendered.
 
 **Preconditions**:
 
@@ -97,21 +92,19 @@ in the database.
 - The bottom tab bar is hidden.
 - The header contains:
   - The `"Remindarr"` wordmark.
-  - A monospace badge containing `"KIOSK · RICH"` (fidelity label, uppercased).
   - The household name `"alice"`.
   - The current date (e.g. `"Friday, May 23"`) in monospace text.
   - The current time (e.g. `"08:00"`) displayed in a large amber monospace block.
 - The hero card (360 px tall panel) is visible and shows:
-  - The kicker text `"AIRING NOW · NETFLIX"` (uppercase monospace).
+  - The kicker text `"NEW TODAY · NETFLIX"` (uppercase monospace).
   - The large show title `"Test Show"`.
   - The episode info `"S1·E2"` and episode title `"Second Episode"`.
-  - A decorative (non-interactive) `"Cast to TV"` button (aria-hidden).
-- The left panel header reads `"RELEASING TODAY"` with `"1 drops"`.
-  - A row for `"Test Show"` with episode code `"S1·E2"` and provider `"Netflix"` is present.
-- The right panel header reads `"UP NEXT IN YOUR QUEUE"` with `"1 unwatched"`.
+- `"Test Show"` appears once (no "New today" panel row repeats it); there is no
+  `"Cast to TV"` button.
+- The panel header reads `"UP NEXT IN YOUR QUEUE"` with `"1 show"`.
   - A row for `"Old Show"` with `"5 left"` is present.
-- The footer contains an auto-refresh label `"Auto-refreshes every 5 min"` and a partial
-  token display `"token test"`.
+- The footer contains only the auto-refresh label `"Auto-refreshes every 5 min"`; no part
+  of the token is shown.
 
 ---
 
@@ -178,7 +171,7 @@ one."`.
 
 **Why mock**: Tests the `?display=epaper` query-string variant. The epaper palette uses a
 light cream background (`#f6f3e8`), dark ink text (`#1a1916`), and square corners (no border
-radius). The fidelity badge should read `"KIOSK · EPAPER"`.
+radius).
 
 **Preconditions**:
 
@@ -194,7 +187,6 @@ radius). The fidelity badge should read `"KIOSK · EPAPER"`.
 
 **Expected**:
 
-- The fidelity badge reads `"KIOSK · EPAPER"`.
 - The footer auto-refresh label reads `"Auto-refreshes every 30 min"`.
 - The page `background` is `#f6f3e8` (cream) — verify via
   `page.evaluate(() => getComputedStyle(document.body).background)` or by checking the
@@ -203,14 +195,13 @@ radius). The fidelity badge should read `"KIOSK · EPAPER"`.
 
 ---
 
-## TC-05: Hero falls back to "Releasing today" when nothing is airing now
+## TC-05: A premiere today leads the screen with a "New today" kicker
 
 **Priority**: P1
 **Backend**: Mock
 
-**Why mock**: Tests the `heroFallbackItem` path: when `airing_now` is `null` but
-`releasing_today` is non-empty, the hero shows the first releasing-today item with the kicker
-`"RELEASING TODAY"` instead of `"AIRING NOW"`.
+**Why mock**: Tests the hero pick: when `releasing_today` is non-empty the hero shows its
+first unwatched item with the kicker `"NEW TODAY"`.
 
 **Preconditions**:
 
@@ -223,7 +214,6 @@ radius). The fidelity badge should read `"KIOSK · EPAPER"`.
       "fidelity": "rich",
       "refresh_interval_seconds": 300
     },
-    "airing_now": null,
     "releasing_today": [
       {
         "id": 200,
@@ -234,12 +224,14 @@ radius). The fidelity badge should read `"KIOSK · EPAPER"`.
         "season_number": 1,
         "episode_number": 1,
         "ep_title": "Pilot",
-        "air_date": "2026-05-23T00:00:00Z",
+        "air_date": "2026-05-23",
         "provider": "Disney+",
-        "kind": "series"
+        "kind": "premiere",
+        "is_watched": false
       }
     ],
-    "unwatched_queue": []
+    "unwatched_queue": [],
+    "queue_total": 0
   }
   ```
 
@@ -251,7 +243,7 @@ radius). The fidelity badge should read `"KIOSK · EPAPER"`.
 
 **Expected**:
 
-- The hero card kicker text reads `"RELEASING TODAY · DISNEY+"` (uppercase).
+- The hero card kicker text reads `"NEW TODAY · DISNEY+"` (uppercase).
 - The large title text reads `"New Release"`.
 - The episode info reads `"S1·E1"` and `"Pilot"`.
 
@@ -262,9 +254,8 @@ radius). The fidelity badge should read `"KIOSK · EPAPER"`.
 **Priority**: P1
 **Backend**: Mock
 
-**Why mock**: Tests the `HeroEmpty` branch: when `airing_now` is `null` and
-`releasing_today` is empty (but `data` has loaded), the hero placeholder renders a monospace
-empty-state message.
+**Why mock**: Tests the `HeroEmpty` branch: when both lists are empty (but `data` has
+loaded), the hero placeholder renders a monospace empty-state message.
 
 **Preconditions**:
 
@@ -277,9 +268,9 @@ empty-state message.
       "fidelity": "rich",
       "refresh_interval_seconds": 300
     },
-    "airing_now": null,
     "releasing_today": [],
-    "unwatched_queue": []
+    "unwatched_queue": [],
+    "queue_total": 0
   }
   ```
 
@@ -292,5 +283,4 @@ empty-state message.
 **Expected**:
 
 - The hero area shows the text `"Nothing on the slate today"` (uppercase monospace).
-- The "Releasing today" panel shows the sub-message `"No releases today."`.
-- The "Up next in your queue" panel shows the sub-message `"All caught up!"`.
+- Neither panel is rendered (no "New today" or "Up next in your queue" header).

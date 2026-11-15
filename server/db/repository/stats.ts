@@ -255,6 +255,33 @@ export async function getUserPace(userId: string): Promise<UserPace> {
   });
 }
 
+/**
+ * Runtime of every aired, unwatched episode across the user's watchlist, in
+ * minutes. Null when any of those episodes has no known duration, so the ETA
+ * is shown as unknown instead of being understated.
+ */
+export async function getWatchlistRemainingMinutes(
+  userId: string,
+): Promise<number | null> {
+  return traceDbQuery("getWatchlistRemainingMinutes", async () => {
+    const db = getDb();
+    const rows = await db.all<{ remaining: number | null }>(sql`
+      SELECT CASE WHEN COUNT(*) = COUNT(${runtime})
+        THEN COALESCE(SUM(${runtime}), 0) END AS remaining
+      FROM tracked t
+      JOIN episodes e ON e.title_id = t.title_id
+      JOIN titles ti ON ti.id = e.title_id
+      WHERE t.user_id = ${userId}
+        AND e.air_date <= date('now')
+        AND NOT EXISTS (
+          SELECT 1 FROM watched_episodes we
+          WHERE we.episode_id = e.id AND we.user_id = ${userId}
+        )
+    `);
+    return rows[0]?.remaining ?? null;
+  });
+}
+
 export function computeEta(
   remainingMinutes: number | null,
   minutesPerDay: number | null,

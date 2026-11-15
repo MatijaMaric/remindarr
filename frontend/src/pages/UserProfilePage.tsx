@@ -15,8 +15,8 @@ import FriendsCard from "../components/profile/FriendsCard";
 import FollowedPeopleCard from "../components/profile/FollowedPeopleCard";
 import MonthlyActivityCard from "../components/profile/MonthlyActivityCard";
 import RecentActivityCard from "../components/profile/RecentActivityCard";
-import StatusBreakdown from "../components/profile/StatusBreakdown";
 import WatchlistTabs, {
+  resolveWatchlistTab,
   useWatchlistFilters,
   type WatchlistTab,
 } from "../components/profile/WatchlistTabs";
@@ -48,12 +48,16 @@ export default function UserProfilePage() {
 
   const isOwnProfileQuery = currentUser?.username === username;
   const { data: achievementsData } = useQuery({
-    queryKey: ["achievements", username ?? "me"],
+    // Own profile shares the /achievements page's cache entry.
+    queryKey: ["achievements", isOwnProfileQuery ? "me" : username],
     queryFn: ({ signal }) =>
       isOwnProfileQuery
         ? api.getMyAchievements(signal)
         : api.getUserAchievements(username!, signal),
-    enabled: !!username,
+    // The card only renders when the watchlist is visible; a hidden profile 404s.
+    enabled: !!username && data?.show_watchlist === true,
+    retry: (failureCount, err) =>
+      !(err instanceof ApiError && err.status === 404) && failureCount < 1,
   });
 
   const { data: streakData } = useQuery({
@@ -120,7 +124,6 @@ export default function UserProfilePage() {
     overview,
     genres,
     monthly,
-    shows_by_status,
     friends,
     is_own_profile,
     show_watchlist,
@@ -137,9 +140,20 @@ export default function UserProfilePage() {
   const bio = localBio === undefined ? user.bio : localBio;
   const pinnedDisplay = localPinned ?? pinned;
   const displayedFollowerCount = follower_count + followerAdjust;
-  const activeList = lists[activeTab];
+  const visibleTab = resolveWatchlistTab(activeTab, counts);
+  const activeList = lists[visibleTab];
 
-  const showWatchTogether = !!currentUser && !is_own_profile;
+  // Overlap returns 403 whenever the watchlist is hidden from this viewer.
+  const showWatchTogether = !!currentUser && !is_own_profile && show_watchlist;
+  const watchTogetherLink = (className: string) =>
+    showWatchTogether && (
+      <Link
+        to={`/u/${currentUser.username}/overlap/${user.username}`}
+        className={`${className} items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm transition-colors`}
+      >
+        {t("userProfile.watchTogether", "Watch together")}
+      </Link>
+    );
 
   return (
     <div className="space-y-8">
@@ -155,16 +169,9 @@ export default function UserProfilePage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-10">
-          {/* Sidebar */}
-          <aside className="flex flex-col gap-4 min-w-0">
-            {showWatchTogether && (
-              <Link
-                to={`/u/${currentUser.username}/overlap/${user.username}`}
-                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm transition-colors"
-              >
-                {t("userProfile.watchTogether", "Watch together")}
-              </Link>
-            )}
+          {/* Sidebar — below the watchlist on phones and tablets */}
+          <aside className="order-last lg:order-none flex flex-col gap-4 min-w-0">
+            {watchTogetherLink("hidden lg:flex")}
             <BioCard
               bio={bio}
               isOwnProfile={is_own_profile}
@@ -203,11 +210,7 @@ export default function UserProfilePage() {
               <TopGenresCard genres={genres} limit={6} />
             )}
             {show_watchlist && friends.length > 0 && (
-              <FriendsCard
-                friends={friends}
-                profileUsername={user.username}
-                totalFriends={friends.length}
-              />
+              <FriendsCard friends={friends} totalFriends={friends.length} />
             )}
             {show_watchlist && (
               <FollowedPeopleCard
@@ -219,24 +222,30 @@ export default function UserProfilePage() {
 
           {/* Main column */}
           <section className="flex flex-col gap-4 min-w-0">
+            {watchTogetherLink("flex lg:hidden order-first")}
             {show_watchlist ? (
               <>
                 {monthly.length > 0 && (
                   <MonthlyActivityCard monthly={monthly} />
                 )}
-                <StatusBreakdown byStatus={shows_by_status} />
                 {(is_own_profile || activity_stream_enabled) && (
                   <RecentActivityCard
                     username={user.username}
                     isOwnProfile={is_own_profile}
                   />
                 )}
-                <WatchlistTabs
-                  active={activeTab}
-                  onChange={setActiveTab}
-                  counts={counts}
-                />
-                <WatchlistGrid titles={activeList} />
+                {/* Watchlist first on phones and tablets */}
+                <div
+                  className="order-first lg:order-none flex flex-col gap-4"
+                  data-testid="watchlist-section"
+                >
+                  <WatchlistTabs
+                    active={visibleTab}
+                    onChange={setActiveTab}
+                    counts={counts}
+                  />
+                  <WatchlistGrid titles={activeList} />
+                </div>
               </>
             ) : (
               <Card padding="xl" className="text-center">

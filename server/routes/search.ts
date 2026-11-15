@@ -25,6 +25,7 @@ import { ok, err } from "./response";
 import { zValidator } from "../lib/validator";
 
 import type { AppEnv } from "../types";
+import type { TmdbSearchMultiResult } from "../tmdb/types";
 
 const searchQuerySchema = z.object({
   q: z.string().min(1),
@@ -47,26 +48,31 @@ app.get("/", zValidator("query", searchQuerySchema), async (c) => {
     language: languageParam,
   } = c.req.valid("query");
 
-  try {
-    if (typeParam === "PERSON") {
-      // People ride on the same /search/multi call; title filters don't apply.
-      // ponytail: multi returns 20 mixed results — switch to /search/person if recall matters.
-      const { results } = await searchMulti(query);
-      const persons = results.filter((r) => r.media_type === "person");
-      const user = c.get("user");
-      const followed = user
+  // People ride on the same /search/multi call; title filters don't apply.
+  // ponytail: multi returns 20 mixed results — switch to /search/person if recall matters.
+  async function peopleFrom(results: TmdbSearchMultiResult[]) {
+    const persons = results.filter((r) => r.media_type === "person");
+    const user = c.get("user");
+    const followed =
+      user && persons.length > 0
         ? await getFollowedPersonIdsAmong(
             user.id,
             persons.map((p) => p.id),
           )
         : new Set<number>();
-      const people = persons.map((p) => ({
-        id: p.id,
-        name: p.name ?? "",
-        profilePath: p.profile_path ?? null,
-        department: p.known_for_department ?? null,
-        isFollowing: followed.has(p.id),
-      }));
+    return persons.map((p) => ({
+      id: p.id,
+      name: p.name ?? "",
+      profilePath: p.profile_path ?? null,
+      department: p.known_for_department ?? null,
+      isFollowing: followed.has(p.id),
+    }));
+  }
+
+  try {
+    if (typeParam === "PERSON") {
+      const { results } = await searchMulti(query);
+      const people = await peopleFrom(results);
       return ok(c, { titles: [], people, count: people.length });
     }
 
@@ -161,6 +167,15 @@ app.get("/", zValidator("query", searchQuerySchema), async (c) => {
       isTracked: trackedIds.has(t.id),
     }));
 
+    // "All" also lists matching people; Movies/Shows stay title-only.
+    if (typeParam === undefined) {
+      const people = await peopleFrom(searchResult.results);
+      return ok(c, {
+        titles: titlesWithTracked,
+        people,
+        count: titlesWithTracked.length + people.length,
+      });
+    }
     return ok(c, {
       titles: titlesWithTracked,
       count: titlesWithTracked.length,

@@ -40,7 +40,7 @@ const baseStats: StatsResponse = {
 
 apiMock.getStats.mockImplementation(() => Promise.resolve(baseStats));
 
-const { default: StatsPage, formatEta } = await import("./StatsPage");
+const { StatsView, formatEta } = await import("./StatsPage");
 
 function Wrapper({ children }: { children: ReactNode }) {
   return (
@@ -56,7 +56,28 @@ afterEach(() => {
   apiMock.getStats.mockImplementation(() => Promise.resolve(baseStats));
 });
 
-describe("StatsPage", () => {
+describe("StatsView", () => {
+  it("shows six overview cards with the TV/movie split under Watch Time", async () => {
+    render(<StatsView />, { wrapper: Wrapper });
+    await screen.findByText("Watch Time");
+    for (const label of [
+      "Movies Watched",
+      "Episodes Watched",
+      "Shows Tracked",
+      "Movies Tracked",
+      "Watch Time",
+      "Watchlist ETA",
+    ])
+      expect(screen.getByText(label)).toBeDefined();
+    // 3000 min total = 2640 TV + 360 movies.
+    expect(screen.getByText("50h")).toBeDefined();
+    expect(screen.getByText("TV 44h · Movies 6h")).toBeDefined();
+    // The separate TV/movie watch-time cards repeated these numbers.
+    expect(screen.queryByText("TV Watch Time")).toBeNull();
+    expect(screen.queryByText("Movie Watch Time")).toBeNull();
+    expect(screen.getAllByText("50")).toHaveLength(1);
+  });
+
   it("explains omitted unknown episode durations", async () => {
     apiMock.getStats.mockImplementation(() =>
       Promise.resolve({
@@ -64,7 +85,7 @@ describe("StatsPage", () => {
         overview: { ...baseStats.overview, watch_time_unknown_episodes: 2 },
       }),
     );
-    render(<StatsPage />, { wrapper: Wrapper });
+    render(<StatsView />, { wrapper: Wrapper });
     await waitFor(() =>
       expect(
         screen.getByText(
@@ -78,7 +99,7 @@ describe("StatsPage", () => {
     apiMock.getStats.mockImplementation(() =>
       Promise.reject(new Error("Server error")),
     );
-    render(<StatsPage />, { wrapper: Wrapper });
+    render(<StatsView />, { wrapper: Wrapper });
     await waitFor(() =>
       expect(
         screen.getByText("Failed to load stats. Please try again."),
@@ -87,7 +108,7 @@ describe("StatsPage", () => {
   });
 
   it("renders the Watchlist ETA tile with dash when pace is undefined", async () => {
-    render(<StatsPage />, { wrapper: Wrapper });
+    render(<StatsView />, { wrapper: Wrapper });
     await waitFor(() => {
       expect(screen.getByText("Watchlist ETA")).toBeDefined();
     });
@@ -101,7 +122,7 @@ describe("StatsPage", () => {
         pace: { minutesPerDay: null, watchlistEtaDays: null },
       }),
     );
-    render(<StatsPage />, { wrapper: Wrapper });
+    render(<StatsView />, { wrapper: Wrapper });
     await waitFor(() => {
       expect(screen.getByText("Watchlist ETA")).toBeDefined();
     });
@@ -115,7 +136,7 @@ describe("StatsPage", () => {
         pace: { minutesPerDay: 60, watchlistEtaDays: 5 },
       }),
     );
-    render(<StatsPage />, { wrapper: Wrapper });
+    render(<StatsView />, { wrapper: Wrapper });
     await waitFor(() => {
       expect(screen.getByText("Watchlist ETA")).toBeDefined();
     });

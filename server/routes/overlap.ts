@@ -9,6 +9,7 @@ import {
   areMutualFollowers,
   getUserRating,
 } from "../db/repository";
+import { getGenresForTitles } from "../db/repository/titles";
 import { getDb } from "../db/schema";
 import { titles, scores, users } from "../db/schema";
 import type { AppEnv } from "../types";
@@ -173,8 +174,11 @@ app.get(
       .where(inArray(titles.id, intersectionIds))
       .all();
 
-    // 6. Load offers for the intersection
-    const offersByTitle = await getOffersForTitles(intersectionIds);
+    // 6. Load offers and genres for the intersection
+    const [offersByTitle, genresByTitle] = await Promise.all([
+      getOffersForTitles(intersectionIds),
+      getGenresForTitles(intersectionIds),
+    ]);
 
     // 7. Compute shared providers — flatrate offers across each user's FULL tracked set
     //    so we derive "you're both on Netflix" even for non-intersection titles.
@@ -186,7 +190,7 @@ app.get(
     const viewerFlatrateProviderIds = new Set<number>();
     for (const offerList of viewerAllOffers.values()) {
       for (const o of offerList) {
-        if (o.monetization_type === "flatrate" && o.provider_id !== null) {
+        if (o.monetization_type === "FLATRATE" && o.provider_id !== null) {
           viewerFlatrateProviderIds.add(o.provider_id);
         }
       }
@@ -195,7 +199,7 @@ app.get(
     const friendFlatrateProviderIds = new Set<number>();
     for (const offerList of friendAllOffers.values()) {
       for (const o of offerList) {
-        if (o.monetization_type === "flatrate" && o.provider_id !== null) {
+        if (o.monetization_type === "FLATRATE" && o.provider_id !== null) {
           friendFlatrateProviderIds.add(o.provider_id);
         }
       }
@@ -277,7 +281,7 @@ app.get(
         imdb_score: row.imdb_score,
         imdb_votes: row.imdb_votes,
         is_tracked: true as const,
-        genres: [] as string[],
+        genres: genresByTitle.get(row.id) ?? [],
         offers: titleOffers,
         viewer_rating: viewerRatingMap.get(row.id) ?? null,
         friend_rating: friendRatingMap.get(row.id) ?? null,

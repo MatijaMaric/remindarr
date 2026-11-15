@@ -1,15 +1,17 @@
 import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, act } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 
 import "../i18n";
 
-import type {
-  KioskData,
-  KioskAiringSlot,
-  KioskRelease,
-  KioskQueueItem,
-} from "../api";
+import type { KioskData, KioskRelease, KioskQueueItem } from "../api";
+
+function localDate(daysAgo = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 
 function makeData(overrides: Partial<KioskData> = {}): KioskData {
   return {
@@ -19,25 +21,9 @@ function makeData(overrides: Partial<KioskData> = {}): KioskData {
       refresh_interval_seconds: 300,
       generated_at: new Date().toISOString(),
     },
-    airing_now: null,
     releasing_today: [],
     unwatched_queue: [],
-    ...overrides,
-  };
-}
-
-function makeSlot(overrides: Partial<KioskAiringSlot> = {}): KioskAiringSlot {
-  return {
-    id: 1,
-    title_id: "show-1",
-    show_title: "Airing Show",
-    poster_url: null,
-    backdrop_url: null,
-    season_number: 2,
-    episode_number: 5,
-    ep_title: "The Episode",
-    air_date: new Date().toISOString().slice(0, 10),
-    provider: "Netflix",
+    queue_total: overrides.unwatched_queue?.length ?? 0,
     ...overrides,
   };
 }
@@ -47,14 +33,17 @@ function makeRelease(overrides: Partial<KioskRelease> = {}): KioskRelease {
     id: 10,
     title_id: "show-2",
     show_title: "Releasing Show",
-    poster_url: null,
+    // A real path renders an <img>; null renders a stripe poster that repeats
+    // the title as text and would double every getAllByText count.
+    poster_url: "/release.jpg",
     backdrop_url: null,
     season_number: 1,
     episode_number: 3,
     ep_title: "Third Episode",
-    air_date: new Date().toISOString().slice(0, 10),
+    air_date: localDate(),
     provider: "Max",
     kind: "episode",
+    is_watched: false,
     ...overrides,
   };
 }
@@ -66,23 +55,32 @@ function makeQueueItem(
     id: 20,
     title_id: "show-3",
     show_title: "Queued Show",
-    poster_url: null,
+    poster_url: "/queue.jpg",
     season_number: 1,
     episode_number: 4,
     ep_title: "Backlogged",
-    air_date: new Date().toISOString().slice(0, 10),
+    air_date: localDate(3),
     provider: "Plex",
     left: 3,
     ...overrides,
   };
 }
 
+function respond(data: KioskData | null, status = 200) {
+  return Promise.resolve({
+    ok: status >= 200 && status < 300,
+    status,
+    json: () => Promise.resolve(data ?? {}),
+  } as Response);
+}
+
 const mockFetch = mock((_url: string, _init?: RequestInit) =>
-  Promise.resolve({
-    ok: true,
-    json: () => Promise.resolve(makeData()),
-  } as Response),
+  respond(makeData()),
 );
+
+function serve(data: KioskData) {
+  mockFetch.mockImplementation(() => respond(data));
+}
 
 const { default: KioskPage } = await import("./KioskPage");
 
@@ -106,12 +104,7 @@ const originalFetch = globalThis.fetch;
 
 beforeEach(() => {
   globalThis.fetch = mockFetch as any;
-  mockFetch.mockImplementation((_url: string) =>
-    Promise.resolve({
-      ok: true,
-      json: () => Promise.resolve(makeData()),
-    } as Response),
-  );
+  serve(makeData());
 });
 
 afterEach(() => {
@@ -129,21 +122,15 @@ describe("KioskPage", () => {
   });
 
   it("shows the household name from meta", async () => {
-    mockFetch.mockImplementation((_url: string) =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve(
-            makeData({
-              meta: {
-                household: "The Test Manor",
-                fidelity: "rich",
-                refresh_interval_seconds: 300,
-                generated_at: new Date().toISOString(),
-              },
-            }),
-          ),
-      } as Response),
+    serve(
+      makeData({
+        meta: {
+          household: "The Test Manor",
+          fidelity: "rich",
+          refresh_interval_seconds: 300,
+          generated_at: new Date().toISOString(),
+        },
+      }),
     );
     render(<Wrapper />);
     await waitFor(() => {
@@ -151,145 +138,134 @@ describe("KioskPage", () => {
     });
   });
 
-  it("shows airing_now show title in hero when present", async () => {
-    mockFetch.mockImplementation((_url: string) =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(makeData({ airing_now: makeSlot() })),
-      } as Response),
-    );
-    render(<Wrapper />);
-    await waitFor(() => {
-      expect(screen.getByText("Airing Show")).toBeTruthy();
-    });
-  });
-
-  it("shows empty hero when airing_now is null and no releases or queue", async () => {
+  it("shows the empty hero and no panels when there is nothing", async () => {
     render(<Wrapper />);
     await waitFor(() => {
       expect(screen.getByText("Nothing on the slate today")).toBeTruthy();
     });
+    expect(screen.queryByText("New today")).toBeNull();
+    expect(screen.queryByText("Up next in your queue")).toBeNull();
   });
 
-  it("renders releasing_today show in the list", async () => {
-    mockFetch.mockImplementation((_url: string) =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve(makeData({ releasing_today: [makeRelease()] })),
-      } as Response),
+  it("leads with today's first unwatched episode and does not repeat it", async () => {
+    serve(
+      makeData({
+        releasing_today: [
+          makeRelease({ id: 1, show_title: "Seen Show", is_watched: true }),
+          makeRelease({ id: 2, show_title: "Fresh Show" }),
+        ],
+      }),
     );
     render(<Wrapper />);
     await waitFor(() => {
-      expect(screen.getAllByText("Releasing Show").length).toBeGreaterThan(0);
+      expect(screen.getByText(/new today · max/i)).toBeTruthy();
     });
+    // Hero + one panel row, each show exactly once
+    expect(screen.getAllByText("Fresh Show")).toHaveLength(1);
+    expect(screen.getAllByText("Seen Show")).toHaveLength(1);
+    // Total counts every episode today, including the hero
+    expect(screen.getByText("2 episodes")).toBeTruthy();
   });
 
-  it("renders unwatched queue show in the list", async () => {
-    mockFetch.mockImplementation((_url: string) =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve(makeData({ unwatched_queue: [makeQueueItem()] })),
-      } as Response),
+  it("hides the releases panel when the hero is the only episode today", async () => {
+    serve(
+      makeData({
+        releasing_today: [makeRelease()],
+        unwatched_queue: [makeQueueItem()],
+      }),
     );
     render(<Wrapper />);
     await waitFor(() => {
-      expect(screen.getAllByText("Queued Show").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Releasing Show")).toHaveLength(1);
     });
+    expect(screen.queryByText("1 episode")).toBeNull();
+    expect(screen.getByText("Up next in your queue")).toBeTruthy();
+    expect(screen.getByText("1 show")).toBeTruthy();
   });
 
-  it("shows 'cold' badge for queue item aired >= 10 days ago", async () => {
-    const oldDate = new Date(Date.now() - 11 * 86_400_000)
-      .toISOString()
-      .slice(0, 10);
-    mockFetch.mockImplementation((_url: string) =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve(
-            makeData({
-              unwatched_queue: [makeQueueItem({ air_date: oldDate })],
-            }),
-          ),
-      } as Response),
+  it("falls back to the top of the queue and does not repeat it", async () => {
+    serve(
+      makeData({
+        unwatched_queue: [
+          makeQueueItem({ id: 1, show_title: "First Up" }),
+          makeQueueItem({ id: 2, show_title: "Second Up" }),
+        ],
+        queue_total: 5,
+      }),
     );
     render(<Wrapper />);
     await waitFor(() => {
-      expect(screen.getByText("cold")).toBeTruthy();
+      expect(screen.getByText(/^up next · plex$/i)).toBeTruthy();
     });
+    expect(screen.getAllByText("First Up")).toHaveLength(1);
+    expect(screen.getAllByText("Second Up")).toHaveLength(1);
+    expect(screen.getByText("5 shows")).toBeTruthy();
+    expect(screen.queryByText("New today")).toBeNull();
   });
 
-  it("does NOT show 'cold' badge for queue item aired < 10 days ago", async () => {
-    const recentDate = new Date(Date.now() - 5 * 86_400_000)
-      .toISOString()
-      .slice(0, 10);
-    mockFetch.mockImplementation((_url: string) =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve(
-            makeData({
-              unwatched_queue: [makeQueueItem({ air_date: recentDate })],
-            }),
-          ),
-      } as Response),
+  it("tags only premieres", async () => {
+    serve(
+      makeData({
+        releasing_today: [
+          makeRelease({ id: 1, show_title: "Hero Show" }),
+          makeRelease({ id: 2, show_title: "Pilot Show", kind: "premiere" }),
+          makeRelease({ id: 3, show_title: "Plain Show" }),
+        ],
+      }),
     );
     render(<Wrapper />);
     await waitFor(() => {
-      expect(screen.queryByText("cold")).toBeNull();
+      expect(screen.getByText("premiere")).toBeTruthy();
     });
+    expect(screen.getAllByText("premiere")).toHaveLength(1);
+    expect(screen.queryByText("episode")).toBeNull();
   });
 
-  it("applies e-paper style marker (font-smoothing none) when display=epaper", async () => {
-    mockFetch.mockImplementation((_url: string) =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve(
-            makeData({
-              meta: {
-                household: "House",
-                fidelity: "epaper",
-                refresh_interval_seconds: 1800,
-                generated_at: new Date().toISOString(),
-              },
-            }),
-          ),
-      } as Response),
-    );
-    render(<Wrapper search="?display=epaper" />);
-    await waitFor(() => {
-      expect(screen.getByText(/kiosk · epaper/i)).toBeTruthy();
-    });
-  });
-
-  it("the Cast to TV element is decorative — no interactive button", async () => {
-    mockFetch.mockImplementation((_url: string) =>
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve(makeData({ airing_now: makeSlot() })),
-      } as Response),
+  it("labels the air date in calendar days, not '1d ago' for today", async () => {
+    serve(
+      makeData({
+        unwatched_queue: [
+          makeQueueItem({ id: 1, show_title: "Hero" }),
+          makeQueueItem({ id: 2, show_title: "Today", air_date: localDate(0) }),
+          makeQueueItem({ id: 3, show_title: "Yday", air_date: localDate(1) }),
+          makeQueueItem({ id: 4, show_title: "Old", air_date: localDate(11) }),
+        ],
+      }),
     );
     render(<Wrapper />);
     await waitFor(() => {
-      expect(screen.getByText(/cast to tv/i)).toBeTruthy();
+      expect(screen.getByText(/aired today/)).toBeTruthy();
     });
-    // Cast to TV is a disabled button with aria-label (a11y fix: interactive controls must be buttons)
-    const castButton = document.querySelector(
-      "button[aria-label*='Cast to TV']",
-    );
-    expect(castButton).not.toBeNull();
-    expect(castButton?.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText(/aired yesterday/)).toBeTruthy();
+    expect(screen.getByText(/aired 11d ago/)).toBeTruthy();
+    // Only the 11-day-old row is cold
+    expect(screen.getAllByText("cold")).toHaveLength(1);
   });
 
-  it("shows error state when fetch fails", async () => {
-    mockFetch.mockImplementation(() =>
-      Promise.resolve({
-        ok: false,
-        json: () => Promise.resolve({}),
-      } as Response),
-    );
+  it("applies the e-paper style when display=epaper", async () => {
+    const { container } = render(<Wrapper search="?display=epaper" />);
+    await waitFor(() => {
+      expect(screen.getByText(/auto-refreshes every 30 min/i)).toBeTruthy();
+    });
+    // happy-dom drops -webkit-font-smoothing; the cream e-paper background is
+    // the other marker of this palette.
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.getAttribute("style")).toMatch(/f6f3e8|246, 243, 232/i);
+  });
+
+  it("has no Cast button, fidelity chip or token in the footer", async () => {
+    serve(makeData({ releasing_today: [makeRelease()] }));
+    render(<Wrapper token="secret-token" />);
+    await waitFor(() => {
+      expect(screen.getByText(/auto-refreshes every 5 min/i)).toBeTruthy();
+    });
+    expect(screen.queryByText(/cast to tv/i)).toBeNull();
+    expect(screen.queryByText(/kiosk ·/i)).toBeNull();
+    expect(document.body.textContent).not.toContain("secr");
+  });
+
+  it("shows 'link no longer valid' on a 401", async () => {
+    mockFetch.mockImplementation(() => respond(null, 401));
     render(<Wrapper token="bad-token" />);
     await waitFor(() => {
       expect(screen.getByText("Kiosk unavailable")).toBeTruthy();
@@ -297,71 +273,44 @@ describe("KioskPage", () => {
     });
   });
 
-  it("includes the fidelity chip in the header", async () => {
+  it("does not call a link invalid on a server error", async () => {
+    mockFetch.mockImplementation(() => respond(null, 503));
     render(<Wrapper />);
     await waitFor(() => {
-      expect(screen.getByText(/kiosk · rich/i)).toBeTruthy();
+      expect(mockFetch).toHaveBeenCalled();
     });
+    expect(screen.queryByText("Kiosk unavailable")).toBeNull();
+    expect(screen.getByText("Remindarr")).toBeTruthy();
   });
 
-  it("shows panel kicker labels", async () => {
+  it("keeps the last good data when a later refresh fails", async () => {
+    serve(makeData({ releasing_today: [makeRelease()] }));
     render(<Wrapper />);
     await waitFor(() => {
-      expect(screen.getByText(/releasing today/i)).toBeTruthy();
-      expect(screen.getByText(/up next in your queue/i)).toBeTruthy();
+      expect(screen.getByText("Releasing Show")).toBeTruthy();
     });
+
+    mockFetch.mockImplementation(() => Promise.reject(new Error("offline")));
+    const calls = mockFetch.mock.calls.length;
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await waitFor(() => {
+      expect(mockFetch.mock.calls.length).toBeGreaterThan(calls);
+    });
+    expect(screen.getByText("Releasing Show")).toBeTruthy();
+    expect(screen.queryByText("Kiosk unavailable")).toBeNull();
   });
 
   it("sends X-Timezone header on fetch", async () => {
-    mockFetch.mockClear();
     render(<Wrapper />);
     await waitFor(() => {
-      expect(screen.getByText("Remindarr")).toBeTruthy();
+      expect(mockFetch).toHaveBeenCalled();
     });
     const calls = mockFetch.mock.calls as [string, RequestInit?][];
-    const init = calls[0]?.[1];
-    const headers = init?.headers as Record<string, string> | undefined;
+    const headers = calls[0]?.[1]?.headers as
+      | Record<string, string>
+      | undefined;
     expect(headers?.["X-Timezone"]).toBeTruthy();
-  });
-
-  it("shows fallback hero from releasing_today when airing_now is null", async () => {
-    mockFetch.mockImplementation((_url: string, _init?: RequestInit) =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve(
-            makeData({ airing_now: null, releasing_today: [makeRelease()] }),
-          ),
-      } as Response),
-    );
-    render(<Wrapper />);
-    await waitFor(() => {
-      expect(screen.getAllByText("Releasing Show").length).toBeGreaterThan(0);
-    });
-    // The hero kicker for a releasing_today fallback
-    expect(screen.getAllByText(/releasing today/i).length).toBeGreaterThan(0);
-  });
-
-  it("shows fallback hero from unwatched_queue when airing_now and releasing_today are empty", async () => {
-    mockFetch.mockImplementation((_url: string, _init?: RequestInit) =>
-      Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve(
-            makeData({
-              airing_now: null,
-              releasing_today: [],
-              unwatched_queue: [makeQueueItem()],
-            }),
-          ),
-      } as Response),
-    );
-    render(<Wrapper />);
-    await waitFor(() => {
-      expect(screen.getAllByText("Queued Show").length).toBeGreaterThan(0);
-    });
-    expect(
-      screen.getAllByText(/up next in your queue/i).length,
-    ).toBeGreaterThan(0);
   });
 });

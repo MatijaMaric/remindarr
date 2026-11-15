@@ -1,4 +1,14 @@
-import { eq, and, sql, desc, count, inArray, isNull, or } from "drizzle-orm";
+import {
+  eq,
+  and,
+  sql,
+  desc,
+  count,
+  inArray,
+  notInArray,
+  isNull,
+  or,
+} from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { getDb } from "../schema";
 import {
@@ -7,6 +17,8 @@ import {
   users,
   titles,
   follows,
+  tracked,
+  dismissedSuggestions,
 } from "../schema";
 import { traceDbQuery } from "../../tracing";
 
@@ -16,6 +28,8 @@ import { traceDbQuery } from "../../tracing";
  * A recommendation is visible if:
  *   a) it is directly targeted at this user, OR
  *   b) it is a broadcast (no target) from someone the user follows
+ * AND the user has not already tracked or dismissed its title — otherwise a
+ * friend's pick would keep coming back after the user acted on it (#1407).
  */
 async function buildVisibilityCondition(userId: string): Promise<SQL> {
   const db = getDb();
@@ -28,15 +42,34 @@ async function buildVisibilityCondition(userId: string): Promise<SQL> {
 
   const followedIds = followedUsers.map((u) => u.id);
 
-  return followedIds.length === 0
-    ? eq(recommendations.targetUserId, userId)
-    : or(
-        eq(recommendations.targetUserId, userId),
-        and(
-          isNull(recommendations.targetUserId),
-          inArray(recommendations.fromUserId, followedIds),
-        ),
-      )!;
+  const audience =
+    followedIds.length === 0
+      ? eq(recommendations.targetUserId, userId)
+      : or(
+          eq(recommendations.targetUserId, userId),
+          and(
+            isNull(recommendations.targetUserId),
+            inArray(recommendations.fromUserId, followedIds),
+          ),
+        )!;
+
+  return and(
+    audience,
+    notInArray(
+      recommendations.titleId,
+      db
+        .select({ id: tracked.titleId })
+        .from(tracked)
+        .where(eq(tracked.userId, userId)),
+    ),
+    notInArray(
+      recommendations.titleId,
+      db
+        .select({ id: dismissedSuggestions.titleId })
+        .from(dismissedSuggestions)
+        .where(eq(dismissedSuggestions.userId, userId)),
+    ),
+  )!;
 }
 
 export async function createRecommendation(

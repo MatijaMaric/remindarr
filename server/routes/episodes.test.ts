@@ -133,6 +133,65 @@ describe("GET /episodes/upcoming", () => {
     expect(body.upcoming).toBeDefined();
     expect(body.unwatched).toBeDefined();
   });
+
+  async function appWithTrackedShow(username: string, titleId: string) {
+    const { createUser, upsertTitles, upsertEpisodes, trackTitle } =
+      await import("../db/repository");
+    const userId = await createUser(username, "hash");
+    await upsertTitles([
+      makeParsedTitle({ id: titleId, objectType: "SHOW", title: "Long Show" }),
+    ]);
+    await upsertEpisodes(
+      [1, 2, 3, 4].map((n) => ({
+        title_id: titleId,
+        season_number: 1,
+        episode_number: n,
+        name: `Ep ${n}`,
+        overview: null,
+        air_date: `2024-01-0${n}`,
+        still_path: null,
+      })),
+    );
+    await trackTitle(titleId, userId);
+    const authedApp = new Hono<AppEnv>();
+    authedApp.use("/episodes/*", async (c, next) => {
+      c.set("user", {
+        id: userId,
+        username,
+        name: null,
+        role: null,
+        is_admin: false,
+      });
+      await next();
+    });
+    authedApp.route("/episodes", (await import("./episodes")).default);
+    return authedApp;
+  }
+
+  it("per_title caps unwatched episodes per show and keeps full counts", async () => {
+    const authedApp = await appWithTrackedShow("pertitle", "tv-300");
+    const res = await authedApp.request("/episodes/upcoming?per_title=2");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.unwatched.map((e: any) => e.episode_number)).toEqual([1, 2]);
+    expect(body.unwatched[0].total_episodes).toBe(4);
+  });
+
+  it("without per_title returns every unwatched episode", async () => {
+    const authedApp = await appWithTrackedShow("nopertitle", "tv-301");
+    const res = await authedApp.request("/episodes/upcoming");
+    const body = await res.json();
+    expect(body.unwatched).toHaveLength(4);
+  });
+
+  describe("validation", () => {
+    it("rejects per_title below 1", async () => {
+      const res = await app.request("/episodes/upcoming?per_title=0");
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.issues).toBeInstanceOf(Array);
+    });
+  });
 });
 
 describe("GET /episodes/status/:titleId/:season", () => {
@@ -225,6 +284,8 @@ describe("GET /episodes/status/:titleId/:season", () => {
     const body = await res.json();
     expect(body.episodes).toHaveLength(2);
     expect(body.episodes[0].episode_number).toBe(1);
+    expect(body.episodes[0].name).toBe("Ep 1");
+    expect(body.episodes[0].air_date).toBe("2024-01-01");
     expect(body.episodes[0].is_watched).toBe(false);
     expect(body.episodes[1].episode_number).toBe(2);
     expect(body.episodes[1].is_watched).toBe(false);

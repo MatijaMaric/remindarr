@@ -17,7 +17,7 @@ import type {
   Recommendation,
 } from "../types";
 import ReelsCard from "../components/ReelsCard";
-import type { UndoInfo } from "../components/ReelsCard";
+import type { UndoInfo, ReelsCardKind } from "../components/ReelsCard";
 import ReelsSeasonPanel from "../components/ReelsSeasonPanel";
 import { ReelsSkeleton } from "../components/SkeletonComponents";
 import { useContentAdvisory } from "../hooks/useContentAdvisory";
@@ -25,6 +25,7 @@ import { HOME_DASHBOARD_STATE } from "../lib/homeView";
 
 // ─── Source types ──────────────────────────────────────────────────────────────
 
+// Keys stay as they were so existing ?source= links keep working.
 export type ReelsSource =
   | "coming-soon"
   | "popular"
@@ -33,9 +34,9 @@ export type ReelsSource =
   | "movies";
 
 const SOURCE_LABELS: Record<ReelsSource, string> = {
-  "coming-soon": "Coming Soon",
+  "coming-soon": "Up Next",
   popular: "Popular",
-  "from-your-genres": "From My Genres",
+  "from-your-genres": "Recommended",
   "friends-loved": "Friends Loved",
   movies: "Movies",
 };
@@ -48,7 +49,87 @@ const ALL_SOURCES: ReelsSource[] = [
   "movies",
 ];
 
-// ─── Normalizer ───────────────────────────────────────────────────────────────
+const EMPTY_STATES: Record<
+  ReelsSource,
+  { title: string; body: string; to: string; cta: string }
+> = {
+  "coming-soon": {
+    title: "You're all caught up",
+    body: "No aired episodes left to watch.",
+    to: "/calendar",
+    cta: "Open the calendar",
+  },
+  popular: {
+    title: "Nothing popular right now",
+    body: "Try again later, or browse everything.",
+    to: "/browse",
+    cta: "Browse titles",
+  },
+  "from-your-genres": {
+    title: "No recommendations yet",
+    body: "When people you follow recommend something, it shows up here.",
+    to: "/discovery",
+    cta: "Find people to follow",
+  },
+  "friends-loved": {
+    title: "Nothing here yet",
+    body: "Follow some friends to see what they love this week",
+    to: "/discovery",
+    cta: "Find people to follow",
+  },
+  movies: {
+    title: "No movies to watch",
+    body: "Released movies you track show up here.",
+    to: "/browse",
+    cta: "Browse movies",
+  },
+};
+
+/**
+ * Episodes loaded per show. Every mark refetches the feed, so a few is enough;
+ * the season panel loads its own season.
+ */
+const REELS_EPISODES_PER_SHOW = 5;
+
+const TYPE_LABELS: Record<string, string> = { MOVIE: "Movie", SHOW: "Show" };
+
+// ─── ShowCard / helpers ───────────────────────────────────────────────────────
+
+export interface ShowCard {
+  titleId: string;
+  showTitle: string;
+  posterUrl: string | null;
+  episodes: Episode[];
+  currentIndex: number;
+  caughtUp: boolean;
+  kind: ReelsCardKind;
+  kicker?: string;
+  typeLabel?: string;
+  isTracked?: boolean;
+}
+
+interface UndoAction {
+  titleId: string;
+  /** The episode as it was before marking, to restore it on undo. */
+  episode: Episode;
+  episodeCode: string;
+  isMovie: boolean;
+}
+
+function singleCard(
+  ep: Episode,
+  extra: Pick<ShowCard, "kind"> & Partial<ShowCard>,
+): ShowCard {
+  return {
+    titleId: ep.title_id,
+    showTitle: ep.show_title,
+    posterUrl: ep.poster_url,
+    episodes: [ep],
+    currentIndex: 0,
+    caughtUp: false,
+    ...extra,
+  };
+}
 
 /** Convert a MovieTrackItem into a synthetic Episode shape for ReelsCard. */
 export function normalizeMovieToReelItem(movie: {
@@ -77,65 +158,58 @@ export function normalizeMovieToReelItem(movie: {
 }
 
 /**
- * Convert a Title (from browse/recommendations) into a synthetic Episode shape
- * that ReelsCard can render. This lets non-episode sources plug into the same UI.
+ * Card for a title to discover (browse, recommendations, friends loved).
+ * The Episode fields only carry display data; title cards offer Track,
+ * never an episode action.
  */
-export function normalizeToReelItem(
-  input: SearchTitle | Recommendation,
-): Episode {
+export function titleToCard(input: SearchTitle | Recommendation): ShowCard {
   if ("from_user" in input) {
-    // Recommendation shape
-    const rec = input as Recommendation;
-    return {
+    const rec = input;
+    const from = rec.from_user.display_name ?? rec.from_user.username;
+    return singleCard(
+      {
+        id: 0,
+        title_id: rec.title.id,
+        season_number: 0,
+        episode_number: 0,
+        name: rec.title.title,
+        overview: rec.message ?? null,
+        air_date: null,
+        still_path: null,
+        show_title: rec.title.title,
+        poster_url: rec.title.poster_url,
+        age_certification: null,
+      },
+      {
+        kind: "title",
+        kicker: `Recommended by ${from}`,
+        typeLabel: TYPE_LABELS[rec.title.object_type],
+        isTracked: false,
+      },
+    );
+  }
+  const t = normalizeSearchTitle(input);
+  return singleCard(
+    {
       id: 0,
-      title_id: rec.title.id,
+      title_id: t.id,
       season_number: 0,
       episode_number: 0,
-      name: rec.title.title,
-      overview: rec.message ?? null,
-      air_date: null,
+      name: t.title,
+      overview: t.short_description ?? null,
+      air_date: t.release_date ?? null,
       still_path: null,
-      show_title: rec.title.title,
-      poster_url: rec.title.poster_url,
-      age_certification: null,
-    };
-  }
-  // SearchTitle shape
-  const t = normalizeSearchTitle(input as SearchTitle);
-  return {
-    id: 0,
-    title_id: t.id,
-    season_number: 0,
-    episode_number: 0,
-    name: t.title,
-    overview: t.short_description ?? null,
-    air_date: t.release_date ?? null,
-    still_path: null,
-    show_title: t.title,
-    poster_url: t.poster_url,
-    age_certification: t.age_certification,
-    offers: t.offers,
-  };
-}
-
-// ─── ShowCard / helpers ───────────────────────────────────────────────────────
-
-interface ShowCard {
-  titleId: string;
-  showTitle: string;
-  posterUrl: string | null;
-  episodes: Episode[];
-  currentIndex: number;
-  caughtUp: boolean;
-  isMovie?: boolean;
-}
-
-interface UndoAction {
-  titleId: string;
-  previousIndex: number;
-  episodeId: number;
-  wasCaughtUp: boolean;
-  isMovie?: boolean;
+      show_title: t.title,
+      poster_url: t.poster_url,
+      age_certification: t.age_certification,
+      offers: t.offers,
+    },
+    {
+      kind: "title",
+      typeLabel: TYPE_LABELS[t.object_type],
+      isTracked: t.is_tracked,
+    },
+  );
 }
 
 function adjustWatchedCount(episodes: Episode[], delta: number): Episode[] {
@@ -145,6 +219,10 @@ function adjustWatchedCount(episodes: Episode[], delta: number): Episode[] {
     const next = Math.max(0, Math.min(max, ep.watched_episodes_count + delta));
     return { ...ep, watched_episodes_count: next };
   });
+}
+
+function episodeCode(ep: Episode): string {
+  return `S${String(ep.season_number).padStart(2, "0")}E${String(ep.episode_number).padStart(2, "0")}`;
 }
 
 export function getFirstUnwatchedPerShow(episodes: Episode[]): ShowCard[] {
@@ -168,22 +246,33 @@ export function getFirstUnwatchedPerShow(episodes: Episode[]): ShowCard[] {
       episodes: sorted,
       currentIndex: 0,
       caughtUp: false,
+      kind: "episode",
     });
   }
 
   return cards;
 }
 
-/** Build ShowCard list from a pre-normalized Episode array (one card per item). */
-function episodesToCards(episodes: Episode[]): ShowCard[] {
-  return episodes.map((ep) => ({
-    titleId: ep.title_id,
-    showTitle: ep.show_title,
-    posterUrl: ep.poster_url,
-    episodes: [ep],
-    currentIndex: 0,
-    caughtUp: false,
-  }));
+/**
+ * Fresh query data replaces the cards, but keeps the order the user is
+ * scrolling through (the server re-sorts by last watched) and keeps the card
+ * whose undo window is still open even when the server no longer returns it.
+ */
+export function mergeCards(
+  prev: ShowCard[],
+  next: ShowCard[],
+  heldTitleId: string | null,
+): ShowCard[] {
+  const pos = new Map(prev.map((c, i) => [c.titleId, i]));
+  const rank = (c: ShowCard) => pos.get(c.titleId) ?? prev.length;
+  const merged = [...next].sort((a, b) => rank(a) - rank(b));
+  const held = heldTitleId
+    ? prev.find((c) => c.titleId === heldTitleId)
+    : undefined;
+  if (held && !merged.some((c) => c.titleId === held.titleId)) {
+    merged.splice(Math.min(rank(held), merged.length), 0, held);
+  }
+  return merged;
 }
 
 // ─── Fetch helpers ────────────────────────────────────────────────────────────
@@ -191,48 +280,39 @@ function episodesToCards(episodes: Episode[]): ShowCard[] {
 async function fetchCardsForSource(
   source: ReelsSource,
   signal?: AbortSignal,
-): Promise<{ cards: ShowCard[]; friendsLovedEmpty: boolean }> {
+): Promise<ShowCard[]> {
   switch (source) {
     case "coming-soon": {
-      const data = await api.getUpcomingEpisodes(signal);
-      return {
-        cards: getFirstUnwatchedPerShow(data.unwatched),
-        friendsLovedEmpty: false,
-      };
+      const data = await api.getUpcomingEpisodes(
+        signal,
+        REELS_EPISODES_PER_SHOW,
+      );
+      return getFirstUnwatchedPerShow(data.unwatched);
     }
     case "popular": {
       const data = await api.browseTitles({ category: "popular" }, signal);
-      const episodes = data.titles.map((t) => normalizeToReelItem(t));
-      return { cards: episodesToCards(episodes), friendsLovedEmpty: false };
+      return data.titles.map(titleToCard);
     }
     case "from-your-genres": {
       const data = await api.getRecommendations(20, undefined, signal);
-      const episodes = data.recommendations.map((r) => normalizeToReelItem(r));
-      return { cards: episodesToCards(episodes), friendsLovedEmpty: false };
+      return data.recommendations.map(titleToCard);
     }
     case "friends-loved": {
       try {
         const data = await api.fetchFriendsLoved(signal);
-        const episodes = (data.titles ?? []).map((t: SearchTitle) =>
-          normalizeToReelItem(t),
-        );
-        return {
-          cards: episodesToCards(episodes),
-          friendsLovedEmpty: episodes.length === 0,
-        };
+        return (data.titles ?? []).map(titleToCard);
       } catch {
-        // Endpoint not yet shipped — treat as empty
-        return { cards: [], friendsLovedEmpty: true };
+        return [];
       }
     }
     case "movies": {
       const data = await api.getMovieTracking(signal);
-      const episodes = data.to_watch.map((m) => normalizeMovieToReelItem(m));
-      const cards = episodesToCards(episodes).map((c) => ({
-        ...c,
-        isMovie: true as const,
-      }));
-      return { cards, friendsLovedEmpty: false };
+      return data.to_watch.map((m) =>
+        singleCard(normalizeMovieToReelItem(m), {
+          kind: "movie",
+          typeLabel: "Movie",
+        }),
+      );
     }
   }
 }
@@ -258,19 +338,22 @@ export default function ReelsPage() {
   useLayoutEffect(() => {
     cardsRef.current = cards;
   });
-  const [friendsLovedEmpty, setFriendsLovedEmpty] = useState(false);
+  const cardsSourceRef = useRef<ReelsSource | null>(null);
   const [actionError, setActionError] = useState("");
   const actionErrorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
 
-  // Undo state
+  // Undo state. heldTitleRef keeps the marked card in the feed until the
+  // undo window closes, even after a refetch drops it.
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const heldTitleRef = useRef<string | null>(null);
 
   // Season panel state
   const [seasonPanel, setSeasonPanel] = useState<{
-    card: ShowCard;
+    titleId: string;
+    showTitle: string;
     seasonNumber: number;
   } | null>(null);
 
@@ -294,22 +377,20 @@ export default function ReelsPage() {
     staleTime: 0, // always refetch on mount since user may have watched things elsewhere
   });
 
-  // Initialize cards from query data.
-  // setState calls here are intentional — they sync local UI state from the query result
-  // so that swipe mutations can update cards independently without re-fetching.
-  /* eslint-disable react-hooks/set-state-in-effect */
+  // Sync local cards from query data, so marks can update cards optimistically
+  // without waiting for a refetch.
   useEffect(() => {
-    if (reelsData) {
-      setCards(
-        reelsData.cards.filter((c) => {
-          const cert = c.episodes[0]?.age_certification;
-          return actionFor(cert, c.titleId) !== "hide";
-        }),
-      );
-      setFriendsLovedEmpty(reelsData.friendsLovedEmpty);
-    }
-  }, [reelsData, actionFor]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+    if (!reelsData) return;
+    const visible = reelsData.filter((c) => {
+      const cert = c.episodes[0]?.age_certification;
+      return actionFor(cert, c.titleId) !== "hide";
+    });
+    const sameSource = cardsSourceRef.current === source;
+    cardsSourceRef.current = source;
+    setCards((prev) =>
+      sameSource ? mergeCards(prev, visible, heldTitleRef.current) : visible,
+    );
+  }, [reelsData, actionFor, source]);
 
   // Track visible card via scroll position
   useEffect(() => {
@@ -381,6 +462,17 @@ export default function ReelsPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  const openSeason = useCallback((card: ShowCard) => {
+    if (card.kind !== "episode" || card.caughtUp) return;
+    const currentEp = card.episodes[card.currentIndex];
+    if (!currentEp) return;
+    setSeasonPanel({
+      titleId: card.titleId,
+      showTitle: card.showTitle,
+      seasonNumber: currentEp.season_number,
+    });
+  }, []);
+
   // Swipe detection for season panel
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartRef.current = {
@@ -389,36 +481,42 @@ export default function ReelsPage() {
     };
   }, []);
 
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (!touchStartRef.current) return;
-    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
-    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
-    touchStartRef.current = null;
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (!touchStartRef.current) return;
+      const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+      const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+      touchStartRef.current = null;
 
-    // Only trigger on horizontal swipe (dx > 80px, and more horizontal than vertical)
-    if (dx < -80 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      // Compute visible card index synchronously from current scroll position
-      // instead of relying on the async scroll-event-updated ref, which can be
-      // stale when the user swipes before CSS snap animation settles.
-      const container = scrollRef.current;
-      if (!container) return;
-      const cardHeight = container.clientHeight;
-      if (cardHeight === 0) return;
-      const rawIndex = Math.round(container.scrollTop / cardHeight);
-      // Handle clone card at the end (maps back to first card)
-      const index = rawIndex >= cardsRef.current.length ? 0 : rawIndex;
-      const card = cardsRef.current[index];
-      if (card && !card.caughtUp && !card.isMovie) {
-        const currentEp = card.episodes[card.currentIndex];
-        setSeasonPanel({ card, seasonNumber: currentEp.season_number });
+      // Only trigger on horizontal swipe (dx > 80px, and more horizontal than vertical)
+      if (dx < -80 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        // Compute visible card index synchronously from current scroll position
+        // instead of relying on the async scroll-event-updated ref, which can be
+        // stale when the user swipes before CSS snap animation settles.
+        const container = scrollRef.current;
+        if (!container) return;
+        const cardHeight = container.clientHeight;
+        if (cardHeight === 0) return;
+        const rawIndex = Math.round(container.scrollTop / cardHeight);
+        // Handle clone card at the end (maps back to first card)
+        const index = rawIndex >= cardsRef.current.length ? 0 : rawIndex;
+        const card = cardsRef.current[index];
+        if (card) openSeason(card);
       }
-    }
-  }, []);
+    },
+    [openSeason],
+  );
 
   function showActionError(msg: string) {
     if (actionErrorTimerRef.current) clearTimeout(actionErrorTimerRef.current);
     setActionError(msg);
     actionErrorTimerRef.current = setTimeout(() => setActionError(""), 5000);
+  }
+
+  function clearUndo() {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    heldTitleRef.current = null;
+    setUndoAction(null);
   }
 
   const watchMutation = useMutation({
@@ -429,7 +527,7 @@ export default function ReelsPage() {
     }: {
       titleId: string;
       episodeId: number;
-      isMovie?: boolean;
+      isMovie: boolean;
     }) => (isMovie ? api.watchMovie(titleId) : api.watchEpisode(episodeId)),
     onError: (err: unknown, { titleId }) => {
       setCards((prev) =>
@@ -451,7 +549,7 @@ export default function ReelsPage() {
           };
         }),
       );
-      setUndoAction(null);
+      clearUndo();
       showActionError(
         err instanceof Error ? err.message : "Failed to mark as watched",
       );
@@ -469,7 +567,7 @@ export default function ReelsPage() {
     }: {
       titleId: string;
       episodeId: number;
-      isMovie?: boolean;
+      isMovie: boolean;
     }) => (isMovie ? api.unwatchMovie(titleId) : api.unwatchEpisode(episodeId)),
     onError: () => {
       showActionError("Failed to undo");
@@ -535,18 +633,10 @@ export default function ReelsPage() {
   const markWatched = useCallback(
     (titleId: string) => {
       const card = cardsRef.current.find((c) => c.titleId === titleId);
-      if (!card || card.caughtUp) return;
+      if (!card || card.caughtUp || card.kind === "title") return;
       const episode = card.episodes[card.currentIndex];
       if (!episode) return;
-
-      // Store undo action
-      const action: UndoAction = {
-        titleId,
-        previousIndex: card.currentIndex,
-        episodeId: episode.id,
-        wasCaughtUp: false,
-        isMovie: card.isMovie,
-      };
+      const isMovie = card.kind === "movie";
 
       // Optimistic update
       setCards((prev) => {
@@ -557,6 +647,8 @@ export default function ReelsPage() {
 
           const bumpedEpisodes = adjustWatchedCount(c.episodes, 1);
           const nextIndex = c.currentIndex + 1;
+          // ponytail: out of loaded episodes reads as caught up; the refetch
+          // after this mark brings the next ones back if there are any.
           if (nextIndex >= c.episodes.length) {
             return { ...c, episodes: bumpedEpisodes, caughtUp: true };
           }
@@ -566,20 +658,23 @@ export default function ReelsPage() {
 
       // Show undo toast + rating prompt
       if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-      setUndoAction(action);
+      heldTitleRef.current = titleId;
+      setUndoAction({
+        titleId,
+        episode,
+        episodeCode: isMovie ? "Movie" : episodeCode(episode),
+        isMovie,
+      });
       setReelsRating(null);
       undoTimerRef.current = setTimeout(() => {
+        heldTitleRef.current = null;
         setUndoAction(null);
         setCards((prev) =>
           prev.filter((c) => !(c.titleId === titleId && c.caughtUp)),
         );
       }, 5000);
 
-      watchMutation.mutate({
-        titleId,
-        episodeId: episode.id,
-        isMovie: card.isMovie,
-      });
+      watchMutation.mutate({ titleId, episodeId: episode.id, isMovie });
     },
     [watchMutation],
   );
@@ -589,7 +684,7 @@ export default function ReelsPage() {
       if (!undoAction) return;
       const isActive = reelsRating === value;
       rateReelsMutation.mutate({
-        episodeId: undoAction.episodeId,
+        episodeId: undoAction.episode.id,
         value,
         isActive,
       });
@@ -600,16 +695,21 @@ export default function ReelsPage() {
   const handleUndo = useCallback(() => {
     if (!undoAction) return;
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    heldTitleRef.current = null;
     setUndoAction(null);
 
-    // Revert the card state
+    // Put the marked episode back in front, even if a refetch already
+    // replaced this card's episodes.
+    const marked = undoAction.episode;
     setCards((prev) =>
       prev.map((c) => {
         if (c.titleId !== undoAction.titleId) return c;
+        const restored = adjustWatchedCount(c.episodes, -1);
+        const idx = c.episodes.findIndex((e) => e.id === marked.id);
         return {
           ...c,
-          episodes: adjustWatchedCount(c.episodes, -1),
-          currentIndex: undoAction.previousIndex,
+          episodes: idx >= 0 ? restored : [marked, ...restored],
+          currentIndex: Math.max(idx, 0),
           caughtUp: false,
         };
       }),
@@ -617,7 +717,7 @@ export default function ReelsPage() {
 
     undoMutation.mutate({
       titleId: undoAction.titleId,
-      episodeId: undoAction.episodeId,
+      episodeId: marked.id,
       isMovie: undoAction.isMovie,
     });
   }, [undoAction, undoMutation]);
@@ -640,19 +740,8 @@ export default function ReelsPage() {
 
   const getUndoInfo = (titleId: string): UndoInfo | undefined => {
     if (!undoAction || undoAction.titleId !== titleId) return undefined;
-    const card = cards.find((c) => c.titleId === titleId);
-    if (!card) return undefined;
-    let episodeCode: string;
-    if (undoAction.isMovie) {
-      episodeCode = "Movie";
-    } else {
-      const ep = card.episodes.find((e) => e.id === undoAction.episodeId);
-      episodeCode = ep
-        ? `S${String(ep.season_number).padStart(2, "0")}E${String(ep.episode_number).padStart(2, "0")}`
-        : "episode";
-    }
     return {
-      episodeCode,
+      episodeCode: undoAction.episodeCode,
       currentRating: reelsRating,
       onRate: handleReelsRate,
       onUndo: handleUndo,
@@ -660,6 +749,7 @@ export default function ReelsPage() {
   };
 
   function handleSourceChange(s: ReelsSource) {
+    clearUndo();
     setSearchParams({ source: s }, { replace: true });
   }
 
@@ -689,89 +779,49 @@ export default function ReelsPage() {
     );
   }
 
-  // Friends-loved empty state — shown inside full Reels chrome
-  const showFriendsLovedEmpty = source === "friends-loved" && friendsLovedEmpty;
+  const empty = EMPTY_STATES[source];
 
-  // Generic empty state (not friends-loved)
-  if (cards.length === 0 && !showFriendsLovedEmpty) {
-    return (
-      <>
-        {/* Source picker overlay — always visible */}
-        <div
-          className="fixed z-40"
-          style={{
-            top: "calc(8px + env(safe-area-inset-top, 0px))",
-            left: 20,
-            right: 20,
-          }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <Link
-              to="/"
-              state={HOME_DASHBOARD_STATE}
-              className="px-3 py-1.5 rounded-full text-[12px] font-bold text-foreground/55 border border-transparent"
-            >
-              Home
-            </Link>
-            <span className="px-3 py-1.5 rounded-full bg-accent backdrop-blur border border-border text-[12px] font-bold text-foreground">
-              Reels
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {ALL_SOURCES.map((s) => (
-              <button
-                key={s}
-                onClick={() => handleSourceChange(s)}
-                className={[
-                  "px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors cursor-pointer",
-                  s === source
-                    ? "bg-primary text-primary-foreground border border-primary"
-                    : "bg-accent backdrop-blur-sm border border-border text-foreground/80 hover:bg-white/[0.25]",
-                ].join(" ")}
-              >
-                {SOURCE_LABELS[s]}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div
-          className="flex items-center justify-center p-6"
-          style={{
-            minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))",
-            paddingTop: "calc(96px + env(safe-area-inset-top, 0px))",
-          }}
-        >
-          <div className="text-center">
-            <p className="text-muted-foreground text-lg mb-2">
-              No unwatched episodes
-            </p>
-            <p className="text-muted-foreground text-sm mb-6">
-              You're all caught up!
-            </p>
-            <Link
-              to="/upcoming"
-              className="text-primary-text hover:text-primary-text"
-            >
-              View Upcoming
-            </Link>
-          </div>
-        </div>
-      </>
-    );
-  }
+  const renderCard = (card: ShowCard, index: number, key: string) => (
+    <ReelsCard
+      key={key}
+      episode={
+        card.episodes[
+          card.caughtUp ? card.episodes.length - 1 : card.currentIndex
+        ]
+      }
+      kind={card.kind}
+      caughtUp={card.caughtUp}
+      onMarkWatched={() => markWatched(card.titleId)}
+      index={index}
+      total={cards.length}
+      undoInfo={getUndoInfo(card.titleId)}
+      kicker={card.kicker}
+      typeLabel={card.typeLabel}
+      tracked={card.isTracked}
+      onOpenSeason={
+        card.kind === "episode" ? () => openSeason(card) : undefined
+      }
+      blurred={
+        actionFor(
+          card.episodes[card.currentIndex]?.age_certification,
+          card.titleId,
+        ) === "blur"
+      }
+    />
+  );
 
   return (
-    <>
-      {/* Home / Reels mode switcher + source picker — fixed overlay, edge-to-edge with scrim */}
+    // --reels-h is one card's height: the full screen on phones, the screen
+    // minus the top nav (h-14 + 1px border) from md up, where that nav shows.
+    <div className="[--reels-h:calc(100dvh_-_env(safe-area-inset-top,0px))] md:[--reels-h:calc(100dvh_-_57px)]">
+      {/* Home link + source picker — fixed overlay, edge-to-edge with scrim */}
       <div
-        className="fixed z-40 left-0 right-0 bg-gradient-to-b from-scrim to-transparent"
+        className="fixed z-40 left-0 right-0 top-0 md:top-[57px] bg-gradient-to-b from-scrim to-transparent"
         style={{
-          top: 0,
           paddingTop: "calc(8px + env(safe-area-inset-top, 0px))",
           paddingBottom: 12,
         }}
       >
-        {/* Single horizontally-scrolling row: Home/Reels toggle + source chips */}
         <div
           className="flex items-center gap-1.5 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           style={{ paddingLeft: 20, paddingRight: 20 }}
@@ -783,9 +833,6 @@ export default function ReelsPage() {
           >
             Home
           </Link>
-          <span className="flex-shrink-0 px-3 py-1.5 rounded-full bg-accent backdrop-blur border border-border text-[11px] font-bold text-foreground">
-            Reels
-          </span>
           <span
             className="flex-shrink-0 w-px h-4 bg-accent mx-1"
             aria-hidden="true"
@@ -794,6 +841,7 @@ export default function ReelsPage() {
             <button
               key={s}
               onClick={() => handleSourceChange(s)}
+              aria-pressed={s === source}
               className={[
                 "flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] font-bold transition-colors cursor-pointer",
                 s === source
@@ -807,27 +855,24 @@ export default function ReelsPage() {
         </div>
       </div>
 
-      {showFriendsLovedEmpty ? (
-        /* Friends-loved empty state — Reels chrome stays visible */
+      {cards.length === 0 ? (
         <div
           className="flex items-center justify-center p-6"
           style={{
-            minHeight: "calc(100dvh - env(safe-area-inset-top, 0px))",
+            minHeight: "var(--reels-h)",
             paddingTop: "calc(96px + env(safe-area-inset-top, 0px))",
           }}
         >
           <div className="text-center max-w-xs">
             <p className="text-foreground-secondary text-lg font-semibold mb-2">
-              Nothing here yet
+              {empty.title}
             </p>
-            <p className="text-muted-foreground text-sm mb-6">
-              Follow some friends to see what they love this week
-            </p>
+            <p className="text-muted-foreground text-sm mb-6">{empty.body}</p>
             <Link
-              to="/discover"
+              to={empty.to}
               className="inline-block px-5 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold transition-colors"
             >
-              Find people to follow
+              {empty.cta}
             </Link>
           </div>
         </div>
@@ -836,61 +881,15 @@ export default function ReelsPage() {
           ref={scrollRef}
           className="select-none overflow-y-scroll snap-y snap-mandatory overscroll-y-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           style={{
-            height: "calc(100dvh - env(safe-area-inset-top, 0px))",
+            height: "var(--reels-h)",
             marginTop: "env(safe-area-inset-top, 0px)",
           }}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Cards */}
-          {cards.map((card, i) => (
-            <ReelsCard
-              key={card.titleId}
-              episode={
-                card.episodes[
-                  card.caughtUp ? card.episodes.length - 1 : card.currentIndex
-                ]
-              }
-              caughtUp={card.caughtUp}
-              onMarkWatched={() => markWatched(card.titleId)}
-              index={i}
-              total={cards.length}
-              undoInfo={getUndoInfo(card.titleId)}
-              isMovie={card.isMovie}
-              blurred={
-                actionFor(
-                  card.episodes[card.currentIndex]?.age_certification,
-                  card.titleId,
-                ) === "blur"
-              }
-            />
-          ))}
-
+          {cards.map((card, i) => renderCard(card, i, card.titleId))}
           {/* Clone of first card for seamless loop */}
-          {cards.length > 1 && (
-            <ReelsCard
-              key="clone-first"
-              episode={
-                cards[0].episodes[
-                  cards[0].caughtUp
-                    ? cards[0].episodes.length - 1
-                    : cards[0].currentIndex
-                ]
-              }
-              caughtUp={cards[0].caughtUp}
-              onMarkWatched={() => markWatched(cards[0].titleId)}
-              index={0}
-              total={cards.length}
-              undoInfo={getUndoInfo(cards[0].titleId)}
-              isMovie={cards[0].isMovie}
-              blurred={
-                actionFor(
-                  cards[0].episodes[cards[0].currentIndex]?.age_certification,
-                  cards[0].titleId,
-                ) === "blur"
-              }
-            />
-          )}
+          {cards.length > 1 && renderCard(cards[0], 0, "clone-first")}
         </div>
       )}
 
@@ -909,16 +908,14 @@ export default function ReelsPage() {
       {/* Season panel */}
       {seasonPanel && (
         <ReelsSeasonPanel
-          showTitle={seasonPanel.card.showTitle}
-          episodes={seasonPanel.card.episodes.filter(
-            (ep) => ep.season_number === seasonPanel.seasonNumber,
-          )}
+          titleId={seasonPanel.titleId}
+          showTitle={seasonPanel.showTitle}
           seasonNumber={seasonPanel.seasonNumber}
           onClose={() => setSeasonPanel(null)}
           onBulkWatch={handleBulkWatch}
           onToggleWatched={handleSeasonToggleWatched}
         />
       )}
-    </>
+    </div>
   );
 }

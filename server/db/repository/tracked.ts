@@ -208,6 +208,31 @@ export async function getTrackedTitles(
   });
 }
 
+/**
+ * Public share-link view of a user's tracked titles: only the fields the
+ * shared watchlist page renders. Never return notes, tags, watch state or
+ * notification settings here — the endpoint is anonymous (#1412).
+ */
+export async function getSharedWatchlistTitles(userId: string) {
+  return traceDbQuery("getSharedWatchlistTitles", async () => {
+    const db = getDb();
+    return db
+      .select({
+        id: titles.id,
+        object_type: titles.objectType,
+        title: titles.title,
+        release_year: titles.releaseYear,
+        poster_url: titles.posterUrl,
+      })
+      .from(tracked)
+      .innerJoin(titles, eq(titles.id, tracked.titleId))
+      .where(eq(tracked.userId, userId))
+      .orderBy(desc(tracked.trackedAt))
+      .limit(MAX_TRACKED_LOAD)
+      .all();
+  });
+}
+
 export async function getPublicTrackedTitles(
   userId: string,
   opts: { limit?: number } = {},

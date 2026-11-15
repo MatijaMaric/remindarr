@@ -78,7 +78,7 @@ response guarantees a stable title list for assertion.
   `"Catalog · 1 titles"`).
 - A search bar with placeholder `"Search titles or paste IMDB link..."` is present.
 - The category bar shows four buttons: `"Popular"`, `"Upcoming"`, `"Top Rated"`,
-  `"Now Playing"`. The `"Popular"` button is active by default.
+  `"New Releases"`. The `"Popular"` button is active by default.
 - The filter card shows four dropdown buttons: `"All genres"`, `"All providers"`,
   `"Any year"`, `"Any rating"`.
 - The content-type group (role `group`, `aria-label="Content type"`) shows three
@@ -118,7 +118,7 @@ the exact URL sent to the backend.
 
 - The `GET /api/browse` request includes `genre=Action` in the query string.
 - The Genre dropdown button now shows `"Action"` as its summary (not `"All genres"`).
-- An active filter chip with the text `"Action ×"` appears in the active-filters row.
+- The Genre field summary button now reads `"Action"`.
 - `getByRole("article", { name: "Action Movie" })` is visible in the title grid.
 - `getByRole("article", { name: "Test Movie" })` is no longer visible (replaced by the
   genre-filtered result).
@@ -155,7 +155,7 @@ the API and the results re-render.
 - The `GET /api/browse` request includes `provider=8` (or `provider=netflix`) in the query
   string.
 - The Provider dropdown button summary changes from `"All providers"` to `"Netflix"`.
-- An active filter chip with the text `"Netflix ×"` appears.
+- The Provider field summary button now reads `"Netflix"`.
 - `getByRole("article", { name: "Netflix Movie" })` is visible.
 
 ---

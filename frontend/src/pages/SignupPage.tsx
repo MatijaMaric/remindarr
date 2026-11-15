@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router";
+import { useNavigate, useLocation, Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { returnTo } from "../lib/returnTo";
 
 export default function SignupPage() {
   const { user, signup } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const destination = returnTo(location.state);
   const { t } = useTranslation();
 
   const [username, setUsername] = useState("");
@@ -17,9 +20,12 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // The only redirect after sign-in: login/signup/refresh set `user`, and this
+  // effect sends the user on. A second navigate would re-run the destination's
+  // effects (e.g. redeem an invite code twice).
   useEffect(() => {
-    if (user) navigate("/", { replace: true });
-  }, [user, navigate]);
+    if (user) navigate(destination, { replace: true });
+  }, [user, navigate, destination]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,7 +33,6 @@ export default function SignupPage() {
     setLoading(true);
     try {
       await signup(username, email, password, name || username);
-      navigate("/", { replace: true });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -63,8 +68,16 @@ export default function SignupPage() {
               onChange={(e) => setUsername(e.target.value)}
               className="w-full px-3 py-2 bg-muted border border-border rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border focus-visible:border-transparent"
               autoComplete="username"
+              pattern="[a-zA-Z0-9_.\-]+"
+              aria-describedby="username-hint"
               required
             />
+            <p
+              id="username-hint"
+              className="mt-1 text-xs text-muted-foreground"
+            >
+              {t("signup.usernameHint")}
+            </p>
           </div>
 
           <div>
@@ -120,6 +133,8 @@ export default function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3 py-2 pr-10 bg-muted border border-border rounded-md text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border focus-visible:border-transparent"
                 autoComplete="new-password"
+                minLength={8}
+                aria-describedby="password-hint"
                 required
               />
               <button
@@ -135,7 +150,10 @@ export default function SignupPage() {
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p
+              id="password-hint"
+              className="mt-1 text-xs text-muted-foreground"
+            >
               {t("signup.passwordHint")}
             </p>
           </div>
@@ -153,13 +171,15 @@ export default function SignupPage() {
           {t("signup.alreadyHaveAccount")}{" "}
           <Link
             to="/login"
+            state={location.state}
             className="text-primary-text hover:text-primary-text transition-colors underline underline-offset-2"
           >
             {t("signup.signIn")}
           </Link>
         </p>
 
-        <p className="mt-6 text-center text-xs text-muted-foreground">
+        {/* Phones only: on wider screens the site footer has these links. */}
+        <p className="mt-6 text-center text-xs text-muted-foreground md:hidden">
           <Link
             to="/privacy"
             className="hover:text-foreground-secondary transition-colors"

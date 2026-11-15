@@ -6,30 +6,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "../i18n";
 import { apiMock, resetApiMock } from "../test-utils/apiMock";
 
-import type { Title } from "../types";
+import type { SharedWatchlistTitle } from "../api";
+import { ApiError } from "../lib/api-error";
 
-function makeTitle(overrides: Partial<Title> = {}): Title {
+function makeTitle(
+  overrides: Partial<SharedWatchlistTitle> = {},
+): SharedWatchlistTitle {
   return {
     id: "title-1",
     object_type: "MOVIE",
     title: "Test Movie",
-    original_title: null,
     release_year: 2023,
-    release_date: "2023-06-01",
-    runtime_minutes: 120,
-    short_description: "A test movie",
-    genres: ["Action"],
-    imdb_id: null,
-    tmdb_id: "12345",
     poster_url: "/poster.jpg",
-    age_certification: null,
-    original_language: "en",
-    tmdb_url: null,
-    imdb_score: null,
-    imdb_votes: null,
-    tmdb_score: null,
-    is_tracked: true,
-    offers: [],
     ...overrides,
   };
 }
@@ -94,14 +82,29 @@ describe("SharedWatchlistPage", () => {
     });
   });
 
-  it("shows error state when fetch throws", async () => {
+  it("shows error state when fetch throws (after one retry)", async () => {
     apiMock.getSharedWatchlist.mockImplementation(() =>
-      Promise.reject(new Error("Not found")),
+      Promise.reject(new Error("Network down")),
+    );
+    render(<Wrapper />);
+    await waitFor(
+      () => {
+        expect(screen.getByText(/invalid or has been revoked/i)).toBeTruthy();
+      },
+      { timeout: 5000 },
+    );
+    expect(apiMock.getSharedWatchlist).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry a revoked link (404)", async () => {
+    apiMock.getSharedWatchlist.mockImplementation(() =>
+      Promise.reject(new ApiError("Not found", 404)),
     );
     render(<Wrapper />);
     await waitFor(() => {
       expect(screen.getByText(/invalid or has been revoked/i)).toBeTruthy();
     });
+    expect(apiMock.getSharedWatchlist).toHaveBeenCalledTimes(1);
   });
 
   it("shows plural titles count correctly", async () => {

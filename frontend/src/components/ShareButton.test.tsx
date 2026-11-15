@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import ShareButton from "./ShareButton";
 import * as sonner from "sonner";
+import { setLanguage } from "../i18n";
 
 let spies: ReturnType<typeof spyOn>[] = [];
 
@@ -147,6 +148,17 @@ describe("ShareButton", () => {
         url: "https://example.com/movie/1",
       });
     });
+  });
+
+  it("translates its label", async () => {
+    await setLanguage("de");
+    try {
+      render(<ShareButton />);
+      expect(screen.getByRole("button").textContent).toContain("Teilen");
+    } finally {
+      await setLanguage("en");
+      localStorage.clear();
+    }
   });
 
   it("silently handles user cancelling the share dialog", async () => {

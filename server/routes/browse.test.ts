@@ -193,6 +193,56 @@ describe("GET /browse", () => {
     expect(tmdbClient.discoverTv).toHaveBeenCalled();
   });
 
+  it("interleaves movies and shows instead of returning them in blocks", async () => {
+    const movies = [1, 2].map((id) => makeTmdbDiscoverMovie({ id }));
+    const shows = [101, 102].map((id) => makeTmdbDiscoverTv({ id }));
+    (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
+      results: movies,
+      total_pages: 1,
+      total_results: 2,
+      page: 1,
+    });
+    (tmdbClient.discoverTv as any).mockResolvedValueOnce({
+      results: shows,
+      total_pages: 1,
+      total_results: 2,
+      page: 1,
+    });
+    (tmdbClient.cachedFetchMovieDetails as any).mockImplementation(
+      async (id: number) => makeTmdbMovieDetails({ id }),
+    );
+    (tmdbClient.cachedFetchTvDetails as any).mockImplementation(
+      async (id: number) => makeTmdbTvDetails({ id }),
+    );
+
+    const body = await (await app.request("/browse?category=popular")).json();
+    expect(body.titles.map((t: any) => t.objectType)).toEqual([
+      "MOVIE",
+      "SHOW",
+      "MOVIE",
+      "SHOW",
+    ]);
+  });
+
+  it("reports only the results paging can reach (500 pages of 20 per type)", async () => {
+    (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
+      results: [],
+      total_pages: 1200,
+      total_results: 24000,
+      page: 1,
+    });
+    (tmdbClient.discoverTv as any).mockResolvedValueOnce({
+      results: [],
+      total_pages: 100,
+      total_results: 2000,
+      page: 1,
+    });
+
+    const body = await (await app.request("/browse?category=popular")).json();
+    expect(body.totalPages).toBe(500);
+    expect(body.totalResults).toBe(10000 + 2000);
+  });
+
   it("uses discover endpoint for upcoming movies with date range", async () => {
     (tmdbClient.discoverMovies as any).mockResolvedValueOnce({
       results: [],

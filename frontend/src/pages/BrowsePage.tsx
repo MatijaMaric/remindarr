@@ -1,4 +1,3 @@
-import StreamingRegion from "../components/StreamingRegion";
 import { useCallback, useState, useMemo } from "react";
 import { useLocation, useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -7,7 +6,6 @@ import SearchBar from "../components/SearchBar";
 import NewReleases from "../components/NewReleases";
 import CategoryBar, { type BrowseCategory } from "../components/CategoryBar";
 import CategoryBrowse from "../components/CategoryBrowse";
-import FilterBar from "../components/FilterBar";
 import BrowseFilterCard from "../components/BrowseFilterCard";
 import TitleList from "../components/TitleList";
 import PersonCard from "../components/PersonCard";
@@ -19,9 +17,9 @@ import { useGridNavigation } from "../hooks/useGridNavigation";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { PageHeader } from "../components/design";
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
-import { Card } from "../components/ui/card";
 import { useAuth } from "../context/AuthContext";
 import { languageName } from "../lib/languageName";
+import type { SearchPerson } from "../types";
 
 const VALID_CATEGORIES: BrowseCategory[] = [
   "new_releases",
@@ -120,7 +118,80 @@ export function buildCategoryParams(
   } else {
     next.set("category", cat);
   }
+  if (cat === "new_releases") {
+    // New Releases (/api/titles) has no year or rating filter.
+    for (const key of ["yearMin", "yearMax", "minRating"]) next.delete(key);
+  } else {
+    // TMDB discover takes one language; keep the first so the UI matches.
+    const first = next.get("language")?.split(",")[0];
+    if (first) next.set("language", first);
+  }
   return next;
+}
+
+function FilterToggle({
+  open,
+  onToggle,
+  count,
+  controls,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  count: number;
+  controls: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls={controls}
+      aria-label={open ? t("browse.hideFilters") : t("browse.showFilters")}
+      className="relative inline-flex items-center justify-center w-9 h-9 rounded-full border bg-accent text-foreground-secondary border-border hover:border-input transition-colors"
+    >
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M3 6h18M6 12h12M10 18h4" />
+      </svg>
+      {count > 0 && (
+        <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-primary text-primary-foreground text-[11px] font-bold leading-none">
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function PeopleList({ people }: { people: SearchPerson[] }) {
+  return (
+    <ul className="flex flex-wrap gap-4">
+      {people.map((p) => (
+        <li key={p.id} className="flex flex-col items-center gap-2">
+          <PersonCard
+            id={p.id}
+            name={p.name}
+            role={p.department ?? ""}
+            profilePath={p.profilePath}
+          />
+          <FollowButton
+            key={`${p.id}-${p.isFollowing}`}
+            personId={p.id}
+            initialIsFollowing={p.isFollowing}
+          />
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export default function BrowsePage() {
@@ -234,7 +305,12 @@ export default function BrowsePage() {
   const searchPeople = searchData?.people;
   const searchCount = isPeopleSearch
     ? searchPeople?.length
-    : searchResults?.length;
+    : searchResults && searchResults.length + (searchPeople?.length ?? 0);
+  const searchFilterCount =
+    (searchType !== "" ? 1 : 0) +
+    (yearMin !== "" || yearMax !== "" ? 1 : 0) +
+    (minRating !== "" ? 1 : 0) +
+    (searchLanguage !== "" ? 1 : 0);
   useScrollRestoration(
     `browse:${location.key}`,
     isSearch && !searchLoading,
@@ -294,10 +370,16 @@ export default function BrowsePage() {
     setSearchParams,
     "provider",
   );
-  const [language, setLanguage] = useQueryParamArray(
+  const [rawLanguage, setLanguage] = useQueryParamArray(
     searchParams,
     setSearchParams,
     "language",
+  );
+  const isNewReleases = category === "new_releases";
+  // Discover takes one language; only New Releases filters by several.
+  const language = useMemo(
+    () => (isNewReleases ? rawLanguage : rawLanguage.slice(0, 1)),
+    [isNewReleases, rawLanguage],
   );
   const [browseYearMin, setBrowseYearMin] = useQueryParam(
     searchParams,
@@ -364,9 +446,16 @@ export default function BrowsePage() {
     genre.length +
     provider.length +
     language.length +
-    (browseYearMin !== "" || browseYearMax !== "" ? 1 : 0) +
-    (browseMinRating !== "" ? 1 : 0) +
+    (isNewReleases
+      ? daysBack !== 30
+        ? 1
+        : 0
+      : (browseYearMin !== "" || browseYearMax !== "" ? 1 : 0) +
+        (browseMinRating !== "" ? 1 : 0)) +
     (onlyMine ? 1 : 0);
+  const regionLabel = filters?.country
+    ? t("streamingRegion.label", { country: filters.country })
+    : null;
 
   function handleSearch(query: string) {
     setSearchParams((prev) => {
@@ -410,23 +499,22 @@ export default function BrowsePage() {
   return (
     <div className="space-y-6 min-w-0 overflow-x-hidden">
       <PageHeader
-        kicker={
+        kicker={[
+          // The search count lives in the results heading, not here.
           isSearch
-            ? searchCount !== undefined
-              ? t("browse.kicker.searchResults", {
-                  count: searchCount,
-                })
-              : t("browse.kicker.search")
+            ? t("browse.kicker.search")
             : resultsCount !== null
               ? t("browse.kicker.catalogCount", {
                   count: resultsCount,
                   formatted: resultsCount.toLocaleString(),
                 })
-              : t("browse.kicker.catalog")
-        }
+              : t("browse.kicker.catalog"),
+          regionLabel,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
         title={t("browse.title")}
       />
-      <StreamingRegion country={filters?.country} />
       <SearchBar
         key={lastQuery}
         initialQuery={lastQuery}
@@ -435,9 +523,20 @@ export default function BrowsePage() {
         loading={searchLoading}
       />
 
-      {/* Advanced search filters shown only while search results are displayed */}
-      {isSearch && !isImdb && (
-        <div className="space-y-3 rounded-lg bg-card/60 border border-border p-4">
+      {/* Search filters: on phones behind the same toggle as browse filters */}
+      {isSearch && !isImdb && isMobile && (
+        <FilterToggle
+          open={mobileFiltersOpen}
+          onToggle={() => setMobileFiltersOpen((v) => !v)}
+          count={searchFilterCount}
+          controls="search-filter-panel"
+        />
+      )}
+      {isSearch && !isImdb && (!isMobile || mobileFiltersOpen) && (
+        <div
+          id="search-filter-panel"
+          className="space-y-3 rounded-lg bg-card/60 border border-border p-4"
+        >
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {t("search.advancedFilters")}
           </p>
@@ -534,44 +633,22 @@ export default function BrowsePage() {
         </div>
       )}
 
-      <CategoryBar category={category} onCategoryChange={setCategory} />
+      {/* Categories don't apply to search results; Clear returns to them. */}
+      {!isSearch && (
+        <CategoryBar category={category} onCategoryChange={setCategory} />
+      )}
 
       {/* Persistent browse filter — desktop full card / mobile collapsible (same card content) */}
       {!isSearch && (
         <div className="space-y-2">
           {isMobile && (
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setMobileFiltersOpen((v) => !v)}
-                aria-expanded={mobileFiltersOpen}
-                aria-controls="mobile-filter-panel"
-                aria-label={
-                  mobileFiltersOpen
-                    ? t("browse.hideFilters")
-                    : t("browse.showFilters")
-                }
-                className="relative inline-flex items-center justify-center w-9 h-9 rounded-full border bg-accent text-foreground-secondary border-border hover:border-input transition-colors"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M3 6h18M6 12h12M10 18h4" />
-                </svg>
-                {activeFilterCount > 0 && (
-                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-[16px] px-1 rounded-full bg-primary text-primary-foreground text-[11px] font-bold leading-none">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
+              <FilterToggle
+                open={mobileFiltersOpen}
+                onToggle={() => setMobileFiltersOpen((v) => !v)}
+                count={activeFilterCount}
+                controls="mobile-filter-panel"
+              />
               {activeFilterCount > 0 && (
                 <button
                   type="button"
@@ -598,187 +675,45 @@ export default function BrowsePage() {
           )}
           {(!isMobile || mobileFiltersOpen) && (
             <div id={isMobile ? "mobile-filter-panel" : undefined}>
-              {category === "new_releases" ? (
-                // new_releases keeps the legacy FilterBar so the daysBack toggle stays available.
-                <Card>
-                  <FilterBar
-                    onlyMine={onlyMine}
-                    type={type}
-                    onTypeChange={setType}
-                    showDaysFilter
-                    daysBack={daysBack}
-                    onDaysBackChange={setDaysBack}
-                    genre={genre}
-                    onGenreChange={setGenre}
-                    genres={filterGenres}
-                    provider={provider}
-                    onProviderChange={setProvider}
-                    providers={filterProviders}
-                    regionProviderIds={filterRegionProviderIds}
-                    language={language}
-                    onLanguageChange={setLanguage}
-                    languages={filterLanguages}
-                    priorityLanguageCodes={filterPriorityLanguageCodes}
-                    onClearFilters={clearFilters}
-                    hideTracked={hideTracked}
-                    onHideTrackedChange={setHideTracked}
-                    showOwned={!!user}
-                  />
-                </Card>
-              ) : (
-                <BrowseFilterCard
-                  onlyMine={onlyMine}
-                  genre={genre}
-                  onGenreChange={setGenre}
-                  genres={filterGenres}
-                  provider={provider}
-                  onProviderChange={setProvider}
-                  providers={filterProviders.map((p) => ({
-                    id: p.id,
-                    name: p.name,
-                    iconUrl: p.icon_url,
-                  }))}
-                  regionProviderIds={filterRegionProviderIds}
-                  yearMin={browseYearMin}
-                  yearMax={browseYearMax}
-                  onYearChange={setBrowseYearRange}
-                  minRating={browseMinRating}
-                  onMinRatingChange={setBrowseMinRating}
-                  type={type}
-                  onTypeChange={setType}
-                  language={language}
-                  onLanguageChange={setLanguage}
-                  languages={filterLanguages}
-                  priorityLanguageCodes={filterPriorityLanguageCodes}
-                  hideTracked={hideTracked}
-                  onHideTrackedChange={setHideTracked}
-                  onClearFilters={clearFilters}
-                />
-              )}
+              <BrowseFilterCard
+                onlyMine={onlyMine}
+                onOnlyMineChange={
+                  subscriptions?.providerIds.length ? setOnlyMine : undefined
+                }
+                genre={genre}
+                onGenreChange={setGenre}
+                genres={filterGenres}
+                provider={provider}
+                onProviderChange={setProvider}
+                providers={filterProviders.map((p) => ({
+                  id: p.id,
+                  name: p.name,
+                  iconUrl: p.icon_url,
+                }))}
+                regionProviderIds={filterRegionProviderIds}
+                showOwned={isNewReleases && !!user}
+                yearMin={browseYearMin}
+                yearMax={browseYearMax}
+                onYearChange={setBrowseYearRange}
+                minRating={browseMinRating}
+                onMinRatingChange={setBrowseMinRating}
+                daysBack={isNewReleases ? daysBack : undefined}
+                onDaysBackChange={isNewReleases ? setDaysBack : undefined}
+                type={type}
+                onTypeChange={setType}
+                language={language}
+                onLanguageChange={setLanguage}
+                singleLanguage={!isNewReleases}
+                languages={filterLanguages}
+                priorityLanguageCodes={filterPriorityLanguageCodes}
+                hideTracked={hideTracked}
+                onHideTrackedChange={setHideTracked}
+                onClearFilters={clearFilters}
+              />
             </div>
           )}
         </div>
       )}
-
-      {/* On my services toggle chip — shown when user has subscribed providers */}
-      {!isSearch &&
-        subscriptions &&
-        subscriptions.providerIds.length > 0 &&
-        (!isMobile || mobileFiltersOpen) && (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setOnlyMine(!onlyMine)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold font-mono border transition-colors ${
-                onlyMine
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-accent text-foreground-secondary border-border hover:border-input"
-              }`}
-              aria-pressed={onlyMine}
-            >
-              {onlyMine ? "✓ " : ""}On my services
-            </button>
-          </div>
-        )}
-
-      {/* Active filter chips */}
-      {!isSearch &&
-        (!isMobile || mobileFiltersOpen) &&
-        (onlyMine ||
-          type.length > 0 ||
-          genre.length > 0 ||
-          provider.length > 0 ||
-          language.length > 0 ||
-          browseYearMin !== "" ||
-          browseYearMax !== "" ||
-          browseMinRating !== "") && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground mr-1">Active</span>
-            {onlyMine && (
-              <button
-                type="button"
-                onClick={() => setOnlyMine(false)}
-                aria-label="Remove 'On my services' filter"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-soft text-primary-text border border-primary-border cursor-pointer hover:bg-primary-soft/80 transition-colors"
-              >
-                On my services ×
-              </button>
-            )}
-            {type.map((ty) => (
-              <button
-                key={ty}
-                type="button"
-                onClick={() => setType(type.filter((v) => v !== ty))}
-                aria-label={t("browse.removeFilter", {
-                  name: ty === "MOVIE" ? t("filter.movies") : t("filter.shows"),
-                })}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-soft text-primary-text border border-primary-border cursor-pointer hover:bg-primary-soft/80 transition-colors"
-              >
-                {ty === "MOVIE" ? t("filter.movies") : t("filter.shows")} ×
-              </button>
-            ))}
-            {genre.map((g) => (
-              <button
-                key={g}
-                type="button"
-                onClick={() => setGenre(genre.filter((v) => v !== g))}
-                aria-label={t("browse.removeFilter", { name: g })}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-soft text-primary-text border border-primary-border cursor-pointer hover:bg-primary-soft/80 transition-colors"
-              >
-                {g} ×
-              </button>
-            ))}
-            {provider.map((p) => {
-              const name =
-                p === "owned"
-                  ? t("owned.filterOption")
-                  : (filterProviders.find((fp) => String(fp.id) === p)?.name ??
-                    p);
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setProvider(provider.filter((v) => v !== p))}
-                  aria-label={t("browse.removeFilter", { name })}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-soft text-primary-text border border-primary-border cursor-pointer hover:bg-primary-soft/80 transition-colors"
-                >
-                  {name} ×
-                </button>
-              );
-            })}
-            {language.map((l) => (
-              <button
-                key={l}
-                type="button"
-                onClick={() => setLanguage(language.filter((v) => v !== l))}
-                aria-label={t("browse.removeLanguageFilter", { name: l })}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-soft text-primary-text border border-primary-border cursor-pointer hover:bg-primary-soft/80 transition-colors"
-              >
-                {l} ×
-              </button>
-            ))}
-            {(browseYearMin !== "" || browseYearMax !== "") && (
-              <button
-                type="button"
-                onClick={() => setBrowseYearRange("", "")}
-                aria-label={t("browse.removeYearFilter")}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-soft text-primary-text border border-primary-border cursor-pointer hover:bg-primary-soft/80 transition-colors"
-              >
-                {browseYearMin || "…"}–{browseYearMax || "…"} ×
-              </button>
-            )}
-            {browseMinRating !== "" && (
-              <button
-                type="button"
-                onClick={() => setBrowseMinRating("")}
-                aria-label={t("browse.removeRatingFilter")}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary-soft text-primary-text border border-primary-border cursor-pointer hover:bg-primary-soft/80 transition-colors"
-              >
-                ★ {browseMinRating}+ ×
-              </button>
-            )}
-          </div>
-        )}
 
       {isSearch ? (
         <div className="space-y-3">
@@ -810,32 +745,29 @@ export default function BrowsePage() {
             </div>
           ) : isPeopleSearch ? (
             searchPeople?.length ? (
-              <ul className="flex flex-wrap gap-4">
-                {searchPeople.map((p) => (
-                  <li key={p.id} className="flex flex-col items-center gap-2">
-                    <PersonCard
-                      id={p.id}
-                      name={p.name}
-                      role={p.department ?? ""}
-                      profilePath={p.profilePath}
-                    />
-                    <FollowButton
-                      key={`${p.id}-${p.isFollowing}`}
-                      personId={p.id}
-                      initialIsFollowing={p.isFollowing}
-                    />
-                  </li>
-                ))}
-              </ul>
+              <PeopleList people={searchPeople} />
             ) : (
               <p className="text-muted-foreground">{t("browse.noResults")}</p>
             )
           ) : (
-            <TitleList
-              titles={searchResults ?? []}
-              emptyMessage={t("browse.noResults")}
-              applyContentAdvisory
-            />
+            <>
+              {/* "All" shows matching people above the titles. */}
+              {searchPeople && searchPeople.length > 0 && (
+                <section className="space-y-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground">
+                    {t("filter.people")}
+                  </h3>
+                  <PeopleList people={searchPeople} />
+                </section>
+              )}
+              {(searchResults?.length || !searchPeople?.length) && (
+                <TitleList
+                  titles={searchResults ?? []}
+                  emptyMessage={t("browse.noResults")}
+                  applyContentAdvisory
+                />
+              )}
+            </>
           )}
         </div>
       ) : (
@@ -859,22 +791,14 @@ export default function BrowsePage() {
             subscriptionsStatus !== "error" && (
               <p role="status">{t("browse.preferencesLoading")}</p>
             )
-          ) : category === "new_releases" ? (
+          ) : isNewReleases ? (
             <NewReleases
               type={type}
-              onTypeChange={setType}
               daysBack={daysBack}
-              onDaysBackChange={setDaysBack}
               genre={genre}
-              onGenreChange={setGenre}
               provider={provider}
-              onProviderChange={setProvider}
               language={language}
-              onLanguageChange={setLanguage}
-              onClearFilters={clearFilters}
               hideTracked={hideTracked}
-              onHideTrackedChange={setHideTracked}
-              hideFilterBar
               showProviderBadge
               showRating
               onResultsCount={setResultsCount}
@@ -885,20 +809,13 @@ export default function BrowsePage() {
               key={category}
               category={category}
               type={type}
-              onTypeChange={setType}
               genre={genre}
-              onGenreChange={setGenre}
               provider={provider}
-              onProviderChange={setProvider}
               language={language}
-              onLanguageChange={setLanguage}
               yearMin={browseYearMin}
               yearMax={browseYearMax}
               minRating={browseMinRating}
-              onClearFilters={clearFilters}
               hideTracked={hideTracked}
-              onHideTrackedChange={setHideTracked}
-              hideFilterBar
               showProviderBadge
               showRating
               onResultsCount={setResultsCount}

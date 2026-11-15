@@ -28,10 +28,8 @@ import {
   getStatsOverview,
   getUserGenreBreakdown,
   getMonthlyActivity,
-  getShowsByStatus,
   type GenreCount,
   type MonthlyActivity,
-  type ShowsByStatus,
   type StatsOverview,
 } from "./stats";
 
@@ -90,7 +88,6 @@ export async function getUserPublicProfile(
       statsOverview,
       genres,
       monthly,
-      showsByStatus,
       friends,
     ] = await Promise.all([
       showWatchlist ? getPublicTrackedCount(user.id) : Promise.resolve(0),
@@ -139,18 +136,6 @@ export async function getUserPublicProfile(
       showWatchlist
         ? getMonthlyActivity(user.id, 12)
         : Promise.resolve([] as MonthlyActivity[]),
-      showWatchlist
-        ? getShowsByStatus(user.id)
-        : Promise.resolve<ShowsByStatus>({
-            watching: 0,
-            caught_up: 0,
-            completed: 0,
-            not_started: 0,
-            unreleased: 0,
-            on_hold: 0,
-            dropped: 0,
-            plan_to_watch: 0,
-          }),
       showWatchlist
         ? getMutualFollowers(user.id, 4)
         : Promise.resolve([] as MutualFollower[]),
@@ -221,15 +206,6 @@ export async function getUserPublicProfile(
         bio: user.bio,
         country_code: user.country_code,
       },
-      stats: {
-        tracked_count: trackedCount,
-        watched_movies: watchedMoviesRow?.count ?? 0,
-        watched_episodes: watchedEpisodesRow?.count ?? 0,
-        shows_completed: showsCompleted,
-        shows_total: showsTotal,
-        total_watched_episodes: totalWatchedEpisodes,
-        total_released_episodes: totalReleasedEpisodes,
-      },
       overview: {
         tracked_count: trackedCount,
         tracked_movies: statsOverview.tracked_movies,
@@ -247,7 +223,6 @@ export async function getUserPublicProfile(
       },
       genres,
       monthly,
-      shows_by_status: showsByStatus,
       friends,
       show_watchlist: showWatchlist,
       profile_visibility: visibility,
