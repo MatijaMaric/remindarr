@@ -156,7 +156,6 @@
     }
   },
   "tracked": {
-    "title": "Titres suivis ({{count}})",
     "empty": "Aucun titre suivi pour l'instant. Recherchez des titres et cliquez sur « Ajouter à ma liste » pour les retrouver ici.",
     "sortBy": "Trier les titres par",
     "filterTabs": "Filtrer par statut",
@@ -175,19 +174,8 @@
     "kicker_one": "Votre bibliothèque · {{count}} titre",
     "kicker_many": "Votre bibliothèque · {{count}} titres",
     "kicker_other": "Votre bibliothèque · {{count}} titres",
-    "stats": {
-      "watching": "En cours",
-      "watchingSub": "sur {{count}} suivis",
-      "completedSub": "séries et films",
-      "avgScore": "Note moyenne",
-      "avgScoreSub": "sur {{count}} notés",
-      "noRatings": "aucune note pour l'instant",
-      "total": "Total suivi",
-      "totalSub": "titres dans la bibliothèque"
-    },
     "tabs": {
-      "all": "Tous",
-      "planning": "À voir"
+      "all": "Tous"
     },
     "view": {
       "select": "Sélectionner",
@@ -205,7 +193,6 @@
       "show": "Série",
       "status": "Statut",
       "progress": "Progression",
-      "next": "Prochain",
       "rating": "Note",
       "actions": "Actions"
     },
@@ -216,9 +203,9 @@
       "selectAll": "Sélectionner tous les titres",
       "select": "Sélectionner {{title}}",
       "eta": "Fin estimée : {{eta}}",
+      "nextAir": "Prochain : {{date}}",
       "show": "Série",
-      "movie": "Film",
-      "open": "Ouvrir"
+      "movie": "Film"
     },
     "bulk": {
       "updated_one": "{{count}} titre mis à jour",
@@ -1120,24 +1107,15 @@
     "snoozed": "Suspendu"
   },
   "stats": {
-    "title": "Statistiques",
     "loadError": "Impossible de charger les statistiques. Veuillez réessayer.",
     "moviesWatched": "Films vus",
     "episodesWatched": "Épisodes vus",
     "showsTracked": "Séries suivies",
     "moviesTracked": "Films suivis",
     "watchTime": "Temps de visionnage",
-    "total": "au total",
+    "watchTimeSplit": "Séries {{shows}} · Films {{movies}}",
     "watchlistEta": "Fin de la liste",
     "atCurrentPace": "à votre rythme actuel",
-    "tvWatchTime": "Temps en séries",
-    "movieWatchTime": "Temps en films",
-    "episodeCount_one": "{{count}} épisode",
-    "episodeCount_many": "{{count}} épisodes",
-    "episodeCount_other": "{{count}} épisodes",
-    "movieCount_one": "{{count}} film",
-    "movieCount_many": "{{count}} films",
-    "movieCount_other": "{{count}} films",
     "monthlyActivity": "Activité mensuelle",
     "episodes": "Épisodes",
     "movies": "Films",

@@ -154,7 +154,6 @@
     }
   },
   "tracked": {
-    "title": "Tracked Titles ({{count}})",
     "empty": "No tracked titles yet. Search for titles and click 'Add to watchlist' to add them here.",
     "sortBy": "Sort titles by",
     "filterTabs": "Filter by status",
@@ -172,19 +171,8 @@
     "heading": "Tracked",
     "kicker_one": "Your library · {{count}} title",
     "kicker_other": "Your library · {{count}} titles",
-    "stats": {
-      "watching": "Currently watching",
-      "watchingSub": "of {{count}} tracked",
-      "completedSub": "shows & movies",
-      "avgScore": "Avg score",
-      "avgScoreSub": "across {{count}} rated",
-      "noRatings": "no ratings yet",
-      "total": "Total tracked",
-      "totalSub": "titles in library"
-    },
     "tabs": {
-      "all": "All",
-      "planning": "Planning"
+      "all": "All"
     },
     "view": {
       "select": "Select",
@@ -202,7 +190,6 @@
       "show": "Show",
       "status": "Status",
       "progress": "Progress",
-      "next": "Next",
       "rating": "Rating",
       "actions": "Actions"
     },
@@ -213,9 +200,9 @@
       "selectAll": "Select all titles",
       "select": "Select {{title}}",
       "eta": "ETA: {{eta}}",
+      "nextAir": "Next: {{date}}",
       "show": "Show",
-      "movie": "Movie",
-      "open": "Open"
+      "movie": "Movie"
     },
     "bulk": {
       "updated_one": "Updated {{count}} title",
@@ -1099,22 +1086,15 @@
     "snoozed": "Snoozed"
   },
   "stats": {
-    "title": "Stats",
     "loadError": "Failed to load stats. Please try again.",
     "moviesWatched": "Movies Watched",
     "episodesWatched": "Episodes Watched",
     "showsTracked": "Shows Tracked",
     "moviesTracked": "Movies Tracked",
     "watchTime": "Watch Time",
-    "total": "total",
+    "watchTimeSplit": "TV {{shows}} · Movies {{movies}}",
     "watchlistEta": "Watchlist ETA",
     "atCurrentPace": "at your current pace",
-    "tvWatchTime": "TV Watch Time",
-    "movieWatchTime": "Movie Watch Time",
-    "episodeCount_one": "{{count}} episode",
-    "episodeCount_other": "{{count}} episodes",
-    "movieCount_one": "{{count}} movie",
-    "movieCount_other": "{{count}} movies",
     "monthlyActivity": "Monthly Activity",
     "episodes": "Episodes",
     "movies": "Movies",

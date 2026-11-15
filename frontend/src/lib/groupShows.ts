@@ -7,7 +7,8 @@ export interface ShowGroup {
   titles: Title[];
 }
 
-const STATUS_ORDER = [
+/** Every effective status, in the order the Tracked screen lists them. */
+export const STATUS_ORDER = [
   "watching",
   "caught_up",
   "not_started",

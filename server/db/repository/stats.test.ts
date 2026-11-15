@@ -6,9 +6,10 @@ import {
   createUser,
   upsertEpisodes,
   watchEpisode,
+  trackTitle,
 } from "../repository";
 import { logWatch } from "./watch-history";
-import { getUserPace, computeEta } from "./stats";
+import { getUserPace, computeEta, getWatchlistRemainingMinutes } from "./stats";
 import { getRawDb } from "../bun-db";
 
 let userId: string;
@@ -154,5 +155,40 @@ describe("computeEta", () => {
 
   it("returns 0 days when remaining is 0", () => {
     expect(computeEta(0, 60)).toBe(0);
+  });
+});
+
+describe("getWatchlistRemainingMinutes", () => {
+  it("returns 0 for an empty watchlist", async () => {
+    expect(await getWatchlistRemainingMinutes(userId)).toBe(0);
+  });
+
+  it("sums aired, unwatched episodes across tracked shows only", async () => {
+    await insertShow("show-a", 30);
+    await insertShow("show-b", 45);
+    await insertShow("show-untracked", 60);
+    await trackTitle("show-a", userId);
+    await trackTitle("show-b", userId);
+    const watched = await insertEpisodeForShow("show-a", 1, 1, "2024-01-01");
+    await insertEpisodeForShow("show-a", 1, 2, "2024-01-08");
+    await insertEpisodeForShow("show-a", 1, 3, "2999-01-01");
+    await insertEpisodeForShow("show-b", 1, 1, "2024-02-01");
+    await insertEpisodeForShow("show-untracked", 1, 1, "2024-02-01");
+    await watchEpisode(watched, userId);
+
+    // show-a E2 (30) + show-b E1 (45); the watched, future and untracked
+    // episodes are excluded.
+    expect(await getWatchlistRemainingMinutes(userId)).toBe(75);
+  });
+
+  it("returns null when an unwatched aired episode has no known duration", async () => {
+    await insertShow("show-a", 30);
+    await insertShow("show-unknown", null);
+    await trackTitle("show-a", userId);
+    await trackTitle("show-unknown", userId);
+    await insertEpisodeForShow("show-a", 1, 1, "2024-01-01");
+    await insertEpisodeForShow("show-unknown", 1, 1, "2024-01-01");
+
+    expect(await getWatchlistRemainingMinutes(userId)).toBeNull();
   });
 });

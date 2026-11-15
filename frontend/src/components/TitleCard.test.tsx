@@ -558,6 +558,39 @@ describe("TitleCard", () => {
     expect(screen.getByRole("button", { name: "In watchlist" })).toBeDefined();
   });
 
+  it("moves status, reminders and tags into a menu when showActionsMenu is set", () => {
+    const title = makeTitle({
+      is_tracked: true,
+      object_type: "SHOW",
+      show_status: "watching",
+      total_episodes: 10,
+      released_episodes_count: 10,
+      watched_episodes_count: 2,
+      snooze_until: "2099-01-01T00:00:00Z",
+    });
+    render(<TitleCard title={title} showProgressBar showActionsMenu />, {
+      wrapper: Wrapper,
+    });
+
+    expect(
+      screen.getByRole("button", { name: "More actions for Test Movie" }),
+    ).toBeDefined();
+    expect(screen.getByRole("button", { name: "In watchlist" })).toBeDefined();
+    // The pickers live in the menu, not on the card.
+    expect(screen.queryByRole("button", { name: "Auto" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /all episodes/i })).toBeNull();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    // The snoozed badge stays visible on the poster.
+    expect(screen.getByText("Snoozed")).toBeDefined();
+  });
+
+  it("does not show the actions menu for an untracked title", () => {
+    render(<TitleCard title={makeTitle()} showActionsMenu />, {
+      wrapper: Wrapper,
+    });
+    expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull();
+  });
+
   it("blurs the poster when the advisory overlay is requested", () => {
     const title = makeTitle({ age_certification: "R" });
     render(<TitleCard title={title} blurred />, { wrapper: Wrapper });
