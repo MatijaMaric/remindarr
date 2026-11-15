@@ -1071,6 +1071,8 @@
     "streamingOn": "Streaming on",
     "streamingOnHint": "Titles you watched, by the service they stream on today",
     "topShows": "Top shows",
+    "episodeCount_one": "{{count}} episode",
+    "episodeCount_other": "{{count}} episodes",
     "longestBinge": "Longest binge",
     "bingeMeta": "{{days}} days · {{episodes}} episodes",
     "mostRewatched": "Most rewatched",

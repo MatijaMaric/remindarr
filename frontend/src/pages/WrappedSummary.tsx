@@ -150,7 +150,7 @@ export function WrappedSummary({ data }: { data: Review }) {
               <TitleRow
                 key={show.title_id}
                 item={show}
-                meta={t("stats.episodeCount", { count: show.count })}
+                meta={t("wrapped.episodeCount", { count: show.count })}
               />
             ))}
           </div>

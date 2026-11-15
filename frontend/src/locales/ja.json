@@ -1052,6 +1052,7 @@
     "streamingOn": "配信中のサービス",
     "streamingOnHint": "視聴した作品を、現在配信しているサービス別に表示",
     "topShows": "よく見た番組",
+    "episodeCount_other": "{{count}} エピソード",
     "longestBinge": "最長の一気見",
     "bingeMeta": "{{days}} 日 · {{episodes}} エピソード",
     "mostRewatched": "最も見返した作品",

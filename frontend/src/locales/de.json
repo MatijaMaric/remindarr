@@ -1071,6 +1071,8 @@
     "streamingOn": "Streambar bei",
     "streamingOnHint": "Gesehene Titel nach dem Dienst, bei dem sie heute laufen",
     "topShows": "Top-Serien",
+    "episodeCount_one": "{{count}} Episode",
+    "episodeCount_other": "{{count}} Episoden",
     "longestBinge": "Längster Binge",
     "bingeMeta": "{{days}} Tage · {{episodes}} Episoden",
     "mostRewatched": "Am häufigsten wiederholt",
