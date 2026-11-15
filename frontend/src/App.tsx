@@ -429,9 +429,11 @@ export default function App() {
             <Route
               path="/u/:username/achievements"
               element={
-                <Page>
-                  <AchievementsPage />
-                </Page>
+                <RequireAuth>
+                  <Page>
+                    <AchievementsPage />
+                  </Page>
+                </RequireAuth>
               }
             />
             <Route
@@ -457,9 +459,11 @@ export default function App() {
             <Route
               path="/u/:username/achievements/:key"
               element={
-                <Page>
-                  <AchievementDetailPage />
-                </Page>
+                <RequireAuth>
+                  <Page>
+                    <AchievementDetailPage />
+                  </Page>
+                </RequireAuth>
               }
             />
             <Route

@@ -231,7 +231,6 @@ const defaults: Record<string, (...args: unknown[]) => Promise<unknown>> = {
   importCsv: async () => ({}),
 
   // ── Achievements / leaderboard / streak ───────────────────────────────────
-  getAchievementsRegistry: async () => ({ achievements: [] }),
   getMyAchievements: async () => ({ achievements: [] }),
   getUserAchievements: async () => ({ achievements: [] }),
   getMyAchievementDetail: async () => ({}),

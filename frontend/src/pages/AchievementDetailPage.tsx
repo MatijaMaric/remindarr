@@ -1,13 +1,20 @@
 import { useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getMyAchievementDetail, getUserAchievementDetail } from "../api";
-import { BadgeTile } from "../components/achievements/BadgeTile";
+import { BadgeIcon } from "../components/achievements/icons";
+import { CATEGORY_LABELS } from "../components/achievements/categories";
+import { earnedStyle } from "../components/achievements/tier";
 import { LadderProgress } from "../components/achievements/LadderProgress";
 import { EarnHistoryList } from "../components/achievements/EarnHistoryList";
 import { Kicker } from "../components/design/Kicker";
 import { Link } from "react-router";
 import { ChevronLeft } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { cn } from "@/lib/utils";
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 export default function AchievementDetailPage() {
   const { username, key } = useParams<{ username?: string; key: string }>();
@@ -24,9 +31,8 @@ export default function AchievementDetailPage() {
       isOwnProfile
         ? getMyAchievementDetail(key!, signal)
         : getUserAchievementDetail(username!, key!, signal),
-    // Own profile (/achievements/:key) is behind RequireAuth so user is always set.
-    // Public profile (/u/:username/achievements/:key) should fire for guests too.
-    enabled: !!key && (isOwnProfile ? !!user : true),
+    // Both routes sit behind RequireAuth: the API needs a session for either.
+    enabled: !!key && !!user,
   });
 
   const backHref = username ? `/u/${username}/achievements` : "/achievements";
@@ -51,7 +57,11 @@ export default function AchievementDetailPage() {
     );
   }
 
-  const isLadder = data.tier === "ladder" && data.ladder != null;
+  const earned = data.earned;
+  const style = earned ? earnedStyle(data) : null;
+  // A one-rung "ladder" (single-genre badges) is a single dot: nothing to show.
+  const isLadder =
+    data.tier === "ladder" && (data.ladder?.rungs.length ?? 0) > 1;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
@@ -66,21 +76,24 @@ export default function AchievementDetailPage() {
 
       {/* Hero */}
       <div className="flex items-start gap-4">
-        <div className="shrink-0">
-          <BadgeTile
-            achievement={data}
-            mode={isOwnProfile ? "self" : "other"}
-            compact={false}
-            baseHref={backHref}
-          />
+        <div
+          data-testid="achievement-hero-icon"
+          className={cn(
+            "shrink-0 rounded-md border p-3",
+            earned
+              ? cn("border-border", style?.bg, style?.ring, style?.icon)
+              : "bg-fill-subtle border-border text-muted-foreground opacity-60",
+          )}
+        >
+          <BadgeIcon name={data.icon} size={28} />
         </div>
         <div className="space-y-1 min-w-0">
-          <Kicker>{data.category}</Kicker>
+          <Kicker>{CATEGORY_LABELS[data.category] ?? data.category}</Kicker>
           <h1 className="text-2xl font-bold text-foreground">{data.title}</h1>
           <p className="text-muted-foreground text-sm">{data.description}</p>
           {data.rarity && (
             <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-primary/40 text-primary-text border border-primary-border">
-              {data.rarity.bucket} · {data.rarity.pct}% earned
+              {capitalize(data.rarity.bucket)} · {data.rarity.pct}% earned
             </span>
           )}
         </div>
@@ -108,7 +121,9 @@ export default function AchievementDetailPage() {
 
       {data.earned && (
         <p className="text-sm text-muted-foreground">
-          First earned{" "}
+          {data.repeatable
+            ? `${data.earnedCount > 1 ? `Earned ${data.earnedCount} times · ` : ""}First earned`
+            : "Earned"}{" "}
           {data.earnedAt ? new Date(data.earnedAt).toLocaleDateString() : "—"}
         </p>
       )}

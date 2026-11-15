@@ -1,49 +1,9 @@
 import { Link } from "react-router";
-import {
-  Film,
-  Tv,
-  Flame,
-  Swords,
-  Laugh,
-  Skull,
-  Sparkles,
-  Compass,
-  CheckCircle2,
-  MessageCircle,
-  UserPlus,
-  Zap,
-  Trophy,
-  type LucideProps,
-} from "lucide-react";
-import type { ForwardRefExoticComponent, RefAttributes } from "react";
 import { cn } from "@/lib/utils";
 import { ThinProgress } from "../profile/atoms/ThinProgress";
-import { tierFromRung, TIER_COLORS } from "./tier";
+import { BadgeIcon } from "./icons";
+import { earnedStyle } from "./tier";
 import type { UserAchievement } from "../../types";
-
-type IconComponent = ForwardRefExoticComponent<
-  Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>
->;
-
-const ICON_MAP: Record<string, IconComponent> = {
-  Film,
-  Tv,
-  Flame,
-  Swords,
-  Laugh,
-  Skull,
-  Sparkles,
-  Compass,
-  CheckCircle2,
-  MessageCircle,
-  UserPlus,
-  Zap,
-};
-
-function BadgeIcon({ name, size = 20 }: { name: string; size?: number }) {
-  const Icon = ICON_MAP[name] ?? Trophy;
-  return <Icon size={size} />;
-}
 
 export interface BadgeTileProps {
   achievement: UserAchievement;
@@ -58,45 +18,15 @@ export function BadgeTile({
   compact = false,
   baseHref = "/achievements",
 }: BadgeTileProps) {
-  const {
-    key,
-    icon,
-    title,
-    earned,
-    progress,
-    threshold,
-    earnedCount,
-    rungIndex,
-    tier,
-  } = achievement;
+  const { key, icon, title, earned, progress, threshold, earnedCount } =
+    achievement;
 
   // Other users only see earned badges
   if (!earned && mode === "other") {
     return null;
   }
 
-  // Determine tier styling
-  let ringClass = "";
-  let bgClass = "";
-  let iconColorClass = "";
-  let textColorClass = "";
-
-  if (earned) {
-    if (tier === "ladder" && rungIndex !== null) {
-      const { tier: t } = tierFromRung(rungIndex);
-      const style = TIER_COLORS[t];
-      ringClass = style.ring;
-      bgClass = style.bg;
-      iconColorClass = style.icon;
-      textColorClass = style.text;
-    } else {
-      // one-shot: accent fallback
-      ringClass = "ring-2 ring-primary-border";
-      bgClass = "bg-primary-soft";
-      iconColorClass = "text-primary-text";
-      textColorClass = "text-primary-text";
-    }
-  }
+  const style = earned ? earnedStyle(achievement) : null;
 
   const iconSize = compact ? 14 : 18;
   const href = `${baseHref}/${key}`;
@@ -108,7 +38,7 @@ export function BadgeTile({
         "relative flex flex-col gap-1.5 rounded-md border transition-opacity",
         compact ? "p-2" : "p-3",
         earned
-          ? cn("border-border", bgClass, ringClass)
+          ? cn("border-border", style?.bg, style?.ring)
           : "bg-fill-subtle border-border opacity-60",
       )}
       title={achievement.description}
@@ -121,7 +51,7 @@ export function BadgeTile({
       )}
 
       {/* Icon */}
-      <div className={cn(earned ? iconColorClass : "text-muted-foreground")}>
+      <div className={cn(style?.icon ?? "text-muted-foreground")}>
         <BadgeIcon name={icon} size={iconSize} />
       </div>
 
@@ -130,9 +60,7 @@ export function BadgeTile({
         className={cn(
           "font-semibold leading-tight truncate",
           compact ? "text-[11px]" : "text-[12px]",
-          earned
-            ? textColorClass || "text-foreground-secondary"
-            : "text-muted-foreground",
+          earned ? style?.text : "text-muted-foreground",
         )}
       >
         {title}

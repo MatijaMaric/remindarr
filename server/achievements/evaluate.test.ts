@@ -776,7 +776,7 @@ describe("evaluateMonthlyCountRepeatable", () => {
       2,
       achievementKey,
     );
-    expect(result.progress).toBe(0);
+    expect(result.progress).toBe(1); // best month so far
     expect(result.newEarns).toHaveLength(0);
   });
 });
@@ -864,7 +864,7 @@ describe("evaluateWeekendWarriorRepeatable", () => {
       2,
       achievementKey,
     );
-    expect(result.progress).toBe(1); // 1 week hit threshold
+    expect(result.progress).toBe(2); // best weekend: 2 episodes
     expect(result.newEarns).toHaveLength(1);
   });
 
@@ -892,27 +892,55 @@ describe("evaluateWeekendWarriorRepeatable", () => {
       .onConflictDoNothing()
       .run();
 
-    // Stamp this week as already earned — earnedAt is within the same week
-    // evaluateWeekendWarriorRepeatable stamps with new Date().toISOString(), so we use a known date
-    // The stamped weeks logic uses getUTCDate() / 7 which can be imprecise; stamp with the earn timestamp
+    // Earn rows are stamped with the evaluation time, so only context.week
+    // identifies the weekend. A second evaluation must not re-award it.
+    const first = await evaluateWeekendWarriorRepeatable(
+      userId,
+      2,
+      achievementKey,
+    );
+    expect(first.newEarns).toHaveLength(1);
     await db
       .insert(userAchievementEarns)
       .values({
         userId,
         achievementKey,
-        earnedAt: new Date().toISOString(), // this gets ceil'd via getUTCDate/7
-        context: null,
+        earnedAt: first.newEarns[0].earnedAt,
+        context: JSON.stringify(first.newEarns[0].context),
       })
       .run();
 
-    // With existing stamp for current week, and watching on week W01 (2024),
-    // the week keys won't match the current week, so new earns are still returned
+    const second = await evaluateWeekendWarriorRepeatable(
+      userId,
+      2,
+      achievementKey,
+    );
+    expect(second.newEarns).toHaveLength(0);
+    expect(second.progress).toBe(2);
+  });
+
+  it("reports the best weekend as progress before the first earn", async () => {
+    const db = getDb();
+    const eps = await db.select().from(episodes).all();
+
+    // One Saturday episode: below the threshold of 2
+    await db
+      .insert(watchedEpisodes)
+      .values({
+        episodeId: eps[1].id,
+        userId,
+        watchedAt: "2024-01-06T10:00:00.000Z",
+      })
+      .onConflictDoNothing()
+      .run();
+
     const result = await evaluateWeekendWarriorRepeatable(
       userId,
       2,
       achievementKey,
     );
-    expect(result.newEarns).toHaveLength(1); // W01-2024 not stamped yet
+    expect(result.progress).toBe(1);
+    expect(result.newEarns).toHaveLength(0);
   });
 
   it("returns zero when no weekend episodes hit threshold", async () => {

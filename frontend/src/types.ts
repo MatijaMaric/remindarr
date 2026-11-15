@@ -1094,19 +1094,8 @@ export interface UserAchievement extends AchievementDef {
   progress: number;
   earned: boolean;
   earnedAt: string | null;
-  // PR1 additions
   earnedCount: number;
   lastEarnedAt: string | null;
-  nextRung: {
-    key: string;
-    threshold: number;
-    rungIndex: number;
-    points: number;
-  } | null;
-  rarity: {
-    pct: number;
-    bucket: "common" | "rare" | "epic" | "legendary";
-  } | null;
 }
 
 export interface LeaderboardEntry {

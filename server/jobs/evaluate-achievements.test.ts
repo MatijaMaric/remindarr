@@ -189,4 +189,42 @@ describe("evaluate-achievements job handler", () => {
     upsertSpy.mockRestore();
     evalSpy.mockRestore();
   });
+
+  it("persists progress for a repeatable that has not been earned yet", async () => {
+    const handler = getHandler("evaluate-achievements")!;
+    const upsertSpy = spyOn(
+      achievementsRepo,
+      "upsertUserAchievements",
+    ).mockResolvedValue(new Map());
+    const appendSpy = spyOn(
+      achievementsRepo,
+      "appendUserAchievementEarns",
+    ).mockResolvedValue(undefined);
+    const evalSpy = spyOn(
+      evaluate,
+      "evaluateWeekendWarriorRepeatable",
+    ).mockResolvedValue({ progress: 7, newEarns: [] });
+
+    await handler(
+      makeJob({
+        userId,
+        kinds: ["weekend_warrior_repeatable"],
+        titleId: "movie-1",
+      }),
+    );
+
+    const entries = upsertSpy.mock.calls[0][1];
+    expect(entries).toEqual([
+      expect.objectContaining({
+        key: "weekend_warrior",
+        progress: 7,
+        earnedAt: null,
+      }),
+    ]);
+    expect(appendSpy).not.toHaveBeenCalled();
+
+    upsertSpy.mockRestore();
+    appendSpy.mockRestore();
+    evalSpy.mockRestore();
+  });
 });

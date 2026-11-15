@@ -25,8 +25,6 @@ function makeAchievement(
     earnedAt: null,
     earnedCount: 0,
     lastEarnedAt: null,
-    nextRung: null,
-    rarity: null,
     ...overrides,
   };
 }
@@ -91,5 +89,30 @@ describe("BadgeTile", () => {
       }),
     );
     expect(screen.getByText("×2")).toBeDefined();
+  });
+});
+
+describe("BadgeTile icons", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  test.each([
+    "Clock",
+    "Globe",
+    "Timer",
+    "BookCheck",
+    "Award",
+    "CalendarDays",
+    "Medal",
+  ])("renders the %s icon instead of the trophy fallback", (icon) => {
+    const { container } = renderTile(makeAchievement({ icon }));
+    expect(container.querySelector("svg.lucide-trophy")).toBeNull();
+    expect(container.querySelector("svg")).not.toBeNull();
+  });
+
+  test("falls back to the trophy for an unknown icon name", () => {
+    const { container } = renderTile(makeAchievement({ icon: "NoSuchIcon" }));
+    expect(container.querySelector("svg.lucide-trophy")).not.toBeNull();
   });
 });

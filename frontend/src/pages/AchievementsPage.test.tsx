@@ -96,8 +96,6 @@ function makeAchievement(
     earnedAt: "2025-01-01T00:00:00.000Z",
     earnedCount: 1,
     lastEarnedAt: "2025-01-01T00:00:00.000Z",
-    nextRung: null,
-    rarity: { pct: 60, bucket: "common" },
     ...overrides,
   };
 }
@@ -143,7 +141,6 @@ const inProgressWatching = makeAchievement({
   progress: 5,
   threshold: 10,
   points: 100,
-  rarity: null,
 });
 
 describe("AchievementsPage — own profile", () => {
@@ -254,6 +251,52 @@ describe("AchievementsPage — own profile", () => {
 
     expect(screen.queryByText("Recently earned")).toBeNull();
   });
+
+  test("hides the 'Next up' heading when nothing is in progress", async () => {
+    getMyAchievementsSpy.mockImplementation(() =>
+      Promise.resolve([earnedWatching]),
+    );
+
+    render(<AchievementsPage />, { wrapper: OwnWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Recently earned")).toBeDefined();
+    });
+    expect(screen.queryByText("Next up")).toBeNull();
+  });
+
+  test("strips follow the category filter", async () => {
+    getMyAchievementsSpy.mockImplementation(() =>
+      Promise.resolve([earnedWatching, earnedStreaks, inProgressWatching]),
+    );
+
+    const { container } = render(<AchievementsPage />, {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={newTestClient()}>
+          <MemoryRouter initialEntries={["/achievements?cat=streaks"]}>
+            <Routes>
+              <Route path="/achievements" element={<>{children}</>} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>
+      ),
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Recently earned")).toBeDefined();
+    });
+    // Nothing in Streaks is in progress, so Next up disappears
+    expect(screen.queryByText("Next up")).toBeNull();
+    expect(
+      container.querySelector('a[href="/achievements/watch-1"]'),
+    ).toBeNull();
+    expect(
+      container.querySelector('a[href="/achievements/watch-2"]'),
+    ).toBeNull();
+    expect(
+      container.querySelectorAll('a[href="/achievements/streak-1"]').length,
+    ).toBe(2); // strip + grid
+  });
 });
 
 describe("AchievementsPage — other user profile", () => {
@@ -273,6 +316,19 @@ describe("AchievementsPage — other user profile", () => {
     expect(screen.queryByText("Next up")).toBeNull();
   });
 
+  test("counts only earned badges for other users (no N/N total)", async () => {
+    getUserAchievementsSpy.mockImplementation(() =>
+      Promise.resolve([earnedWatching, earnedStreaks]),
+    );
+
+    render(<AchievementsPage />, { wrapper: OtherWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("2 earned · 80 XP")).toBeDefined();
+    });
+    expect(screen.queryByText(/2\/2 earned/)).toBeNull();
+  });
+
   test("does not link to the viewer's leaderboard on someone else's profile", async () => {
     getUserAchievementsSpy.mockImplementation(() =>
       Promise.resolve([earnedWatching]),
@@ -287,7 +343,7 @@ describe("AchievementsPage — other user profile", () => {
   });
 });
 
-describe("AchievementsPage — unauthenticated visitor on public route", () => {
+describe("AchievementsPage — signed-out visitor", () => {
   let useAuthSpy: ReturnType<typeof spyOn>;
 
   beforeEach(() => {
@@ -310,15 +366,14 @@ describe("AchievementsPage — unauthenticated visitor on public route", () => {
     useAuthSpy.mockRestore();
   });
 
-  test("fires getUserAchievements for a public profile even when not logged in", async () => {
+  test("does not fetch without a session (routes are behind RequireAuth)", async () => {
     getUserAchievementsSpy.mockImplementation(() =>
       Promise.resolve([earnedWatching]),
     );
 
     render(<AchievementsPage />, { wrapper: OtherWrapper });
 
-    await waitFor(() => {
-      expect(getUserAchievementsSpy).toHaveBeenCalled();
-    });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(getUserAchievementsSpy).not.toHaveBeenCalled();
   });
 });

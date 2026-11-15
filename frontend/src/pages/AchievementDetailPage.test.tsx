@@ -97,7 +97,6 @@ function makeDetail(
     earnedAt: "2025-01-01T00:00:00.000Z",
     earnedCount: 1,
     lastEarnedAt: "2025-01-01T00:00:00.000Z",
-    nextRung: null,
     rarity: null,
     ladder: {
       rungs: [
@@ -264,6 +263,99 @@ describe("AchievementDetailPage — own profile", () => {
       expect(screen.getByText("5 / 10")).toBeDefined();
     });
   });
+
+  test("hero shows the icon once, without repeating the title or linking to itself", async () => {
+    getMyDetailSpy.mockImplementation(() =>
+      Promise.resolve(
+        makeDetail({ earned: false, earnedAt: null, progress: 5 }),
+      ),
+    );
+
+    const { container } = render(<AchievementDetailPage />, {
+      wrapper: OwnWrapper,
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Movie Buff" })).toBeDefined();
+    });
+    expect(screen.getAllByText("Movie Buff")).toHaveLength(1);
+    expect(
+      container.querySelector('a[href="/achievements/movies_10"]'),
+    ).toBeNull();
+    expect(screen.getByTestId("achievement-hero-icon")).toBeDefined();
+    // One progress bar: the hero no longer carries its own
+    expect(container.querySelectorAll('[style*="width"]')).toHaveLength(1);
+  });
+
+  test("shows the category label instead of the raw key", async () => {
+    getMyDetailSpy.mockImplementation(() =>
+      Promise.resolve(makeDetail({ category: "long-haul", ladder: null })),
+    );
+
+    render(<AchievementDetailPage />, { wrapper: OwnWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByText("Long Haul")).toBeDefined();
+    });
+    expect(screen.queryByText("long-haul")).toBeNull();
+  });
+
+  test("says 'Earned' for a one-time achievement and 'First earned' for a repeatable", async () => {
+    getMyDetailSpy.mockImplementation(() => Promise.resolve(makeDetail()));
+    render(<AchievementDetailPage />, { wrapper: OwnWrapper });
+    await waitFor(() => {
+      expect(screen.getByText(/^Earned /)).toBeDefined();
+    });
+    expect(screen.queryByText(/First earned/)).toBeNull();
+    cleanup();
+
+    getMyDetailSpy.mockImplementation(() =>
+      Promise.resolve(makeDetail({ repeatable: true, ladder: null })),
+    );
+    render(<AchievementDetailPage />, { wrapper: OwnWrapper });
+    await waitFor(() => {
+      expect(screen.getByText(/^First earned /)).toBeDefined();
+    });
+    cleanup();
+
+    // The hero no longer carries the ×N chip, so the count is spelled out
+    getMyDetailSpy.mockImplementation(() =>
+      Promise.resolve(
+        makeDetail({ repeatable: true, earnedCount: 3, ladder: null }),
+      ),
+    );
+    render(<AchievementDetailPage />, { wrapper: OwnWrapper });
+    await waitFor(() => {
+      expect(screen.getByText(/^Earned 3 times · First earned /)).toBeDefined();
+    });
+  });
+
+  test("capitalizes the rarity bucket", async () => {
+    getMyDetailSpy.mockImplementation(() =>
+      Promise.resolve(makeDetail({ rarity: { bucket: "rare", pct: 12 } })),
+    );
+    render(<AchievementDetailPage />, { wrapper: OwnWrapper });
+    await waitFor(() => {
+      expect(screen.getByText("Rare · 12% earned")).toBeDefined();
+    });
+  });
+
+  test("hides ladder progress for a single-rung ladder", async () => {
+    const detail = makeDetail();
+    getMyDetailSpy.mockImplementation(() =>
+      Promise.resolve({
+        ...detail,
+        ladder: { rungs: detail.ladder!.rungs.slice(0, 1) },
+      }),
+    );
+
+    render(<AchievementDetailPage />, { wrapper: OwnWrapper });
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Movie Buff" })).toBeDefined();
+    });
+    expect(screen.queryByText("Ladder progress")).toBeNull();
+  });
 });
 
 describe("AchievementDetailPage — other user profile", () => {
@@ -292,7 +384,7 @@ describe("AchievementDetailPage — other user profile", () => {
   });
 });
 
-describe("AchievementDetailPage — unauthenticated visitor on public route", () => {
+describe("AchievementDetailPage — signed-out visitor", () => {
   let useAuthSpy: ReturnType<typeof spyOn>;
 
   beforeEach(() => {
@@ -315,15 +407,14 @@ describe("AchievementDetailPage — unauthenticated visitor on public route", ()
     useAuthSpy.mockRestore();
   });
 
-  test("fires getUserAchievementDetail for a public profile even when not logged in", async () => {
+  test("does not fetch without a session (routes are behind RequireAuth)", async () => {
     getUserDetailSpy.mockImplementation(() =>
       Promise.resolve(makeDetail({ ladder: null, history: [] })),
     );
 
     render(<AchievementDetailPage />, { wrapper: OtherWrapper });
 
-    await waitFor(() => {
-      expect(getUserDetailSpy).toHaveBeenCalled();
-    });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(getUserDetailSpy).not.toHaveBeenCalled();
   });
 });

@@ -193,11 +193,10 @@ describe("GET /achievements/me", () => {
       // /me-only extra fields
       expect(row).toHaveProperty("earnedCount");
       expect(row).toHaveProperty("lastEarnedAt");
-      expect(row).toHaveProperty("nextRung");
-      expect(row).toHaveProperty("rarity");
       expect(typeof row.earnedCount).toBe("number");
-      expect(row.nextRung).toBeNull();
-      expect(row.rarity).toBeNull();
+      // nextRung/rarity were always null here; rarity lives on the detail route
+      expect(row).not.toHaveProperty("nextRung");
+      expect(row).not.toHaveProperty("rarity");
     }
   });
 

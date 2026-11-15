@@ -8,7 +8,7 @@ export const habitAchievements: Achievement[] = [
     points: 75,
     title: "Centurion",
     description: "Watch 100 episodes in a calendar month",
-    icon: "Trophy",
+    icon: "Medal",
     repeatable: true,
     repeatPeriod: "monthly",
   },

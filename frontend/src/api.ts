@@ -39,7 +39,6 @@ import type {
   ContentAdvisorySettings,
   UserSubscriptions,
   SuggestionsAggregateResponse,
-  AchievementDef,
   UserAchievement,
   LeaderboardEntry,
   StreakData,
@@ -1826,16 +1825,6 @@ export async function undismissSuggestion(
 
 // ─── Achievements ─────────────────────────────────────────────────────────────
 
-export async function getAchievementsRegistry(
-  signal?: AbortSignal,
-): Promise<AchievementDef[]> {
-  const data = await fetchJson<{ achievements: AchievementDef[] }>(
-    "/achievements",
-    { signal },
-  );
-  return data.achievements;
-}
-
 export async function getMyAchievements(
   signal?: AbortSignal,
 ): Promise<UserAchievement[]> {
@@ -1859,6 +1848,11 @@ export async function getUserAchievements(
 }
 
 export interface AchievementDetail extends UserAchievement {
+  /** Only for one-shots, and only once enough users have earned it. */
+  rarity: {
+    pct: number;
+    bucket: "common" | "rare" | "epic" | "legendary";
+  } | null;
   ladder: {
     rungs: Array<{
       key: string;
