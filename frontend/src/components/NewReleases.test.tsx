@@ -8,7 +8,7 @@ import {
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { apiMock, resetApiMock } from "../test-utils/apiMock";
 import { AuthContext } from "../context/AuthContext";
 import "../i18n";
@@ -69,9 +69,13 @@ const mockAuthValue = {
 };
 
 function Wrapper({ children }: { children: ReactNode }) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+  // One client per mounted test, kept across rerenders.
+  const [client] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      }),
+  );
   return (
     <QueryClientProvider client={client}>
       <MemoryRouter>
@@ -112,6 +116,22 @@ describe("NewReleases", () => {
     await waitFor(() => expect(onResultsCount).toHaveBeenLastCalledWith(105));
     expect(apiMock.getTitles.mock.calls[1][0]).toMatchObject({ offset: 100 });
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+  });
+
+  it("drops the previous count when a new request fails", async () => {
+    apiMock.getTitles.mockResolvedValueOnce(page(0, 3));
+    const onResultsCount = mock((_: number | null) => {});
+    const view = render(
+      <NewReleases {...props} onResultsCount={onResultsCount} />,
+      { wrapper: Wrapper },
+    );
+    await waitFor(() => expect(onResultsCount).toHaveBeenLastCalledWith(3));
+    apiMock.getTitles.mockRejectedValueOnce(new Error("Server error"));
+    view.rerender(
+      <NewReleases {...props} daysBack={90} onResultsCount={onResultsCount} />,
+    );
+    await screen.findByRole("alert");
+    expect(onResultsCount).toHaveBeenLastCalledWith(null);
   });
 
   it("shows no Load more when the first page is not full", async () => {

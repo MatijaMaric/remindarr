@@ -694,6 +694,20 @@ describe("BrowsePage people search", () => {
     ).toBeTruthy();
   });
 
+  it("All search keeps people to one sideways-scrolling row so titles stay in view", async () => {
+    apiMock.searchTitles.mockResolvedValue({
+      ...makeBrowseResponse(),
+      people: PEOPLE_RESPONSE.people,
+    });
+    renderBrowse("/browse?q=tom");
+    await screen.findByText("Tom Hanks");
+    const list = screen.getByRole("heading", { name: "People" })
+      .nextElementSibling as HTMLElement;
+    expect(list.tagName).toBe("UL");
+    expect(list.className).toContain("overflow-x-auto");
+    expect(list.className).not.toContain("flex-wrap");
+  });
+
   it("shows the empty message when no people match", async () => {
     apiMock.searchTitles.mockResolvedValue({
       titles: [],

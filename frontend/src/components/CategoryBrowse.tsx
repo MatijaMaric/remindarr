@@ -109,12 +109,10 @@ export default function CategoryBrowse({
   const totalPages = lastPage?.totalPages ?? 1;
   const page = lastPage?.page ?? 1;
 
-  // Report total results count on first page load
+  // Report the total on first page load; none while loading or failed, so the
+  // header never keeps the previous list's count.
   useEffect(() => {
-    const firstPage = data?.pages[0];
-    if (firstPage) {
-      onResultsCount?.(firstPage.totalResults);
-    }
+    onResultsCount?.(data?.pages[0]?.totalResults ?? null);
   }, [data?.pages, onResultsCount]);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
