@@ -1,12 +1,13 @@
 import { useEffect, useRef, useCallback } from "react";
 import { X } from "lucide-react";
 import { Link } from "react-router";
-import type { Episode } from "../types";
+import { useQuery } from "@tanstack/react-query";
+import * as api from "../api";
 import WatchedToggleButton from "./WatchedToggleButton";
 
 interface ReelsSeasonPanelProps {
+  titleId: string;
   showTitle: string;
-  episodes: Episode[];
   seasonNumber: number;
   onClose: () => void;
   onBulkWatch: (episodeIds: number[]) => void;
@@ -14,13 +15,21 @@ interface ReelsSeasonPanelProps {
 }
 
 export default function ReelsSeasonPanel({
+  titleId,
   showTitle,
-  episodes,
   seasonNumber,
   onClose,
   onBulkWatch,
   onToggleWatched,
 }: ReelsSeasonPanelProps) {
+  // The whole season, with watched state. Same key as the episode page, and
+  // invalidateLibrary refreshes it after every toggle.
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["season-status", titleId, String(seasonNumber)],
+    queryFn: ({ signal }) =>
+      api.getSeasonEpisodeStatus(titleId, seasonNumber, signal),
+  });
+
   // Close on swipe right or tap outside
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -54,11 +63,13 @@ export default function ReelsSeasonPanel({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  const sorted = [...episodes].sort(
-    (a, b) => a.episode_number - b.episode_number,
-  );
-  const unwatchedIds = sorted.filter((ep) => !ep.is_watched).map((ep) => ep.id);
-  const allWatched = unwatchedIds.length === 0;
+  const today = new Date().toISOString().slice(0, 10);
+  const episodes = data?.episodes ?? [];
+  const aired = (ep: { air_date?: string | null }) =>
+    !!ep.air_date && ep.air_date <= today;
+  const unwatchedIds = episodes
+    .filter((ep) => !ep.is_watched && aired(ep))
+    .map((ep) => ep.id);
 
   return (
     <>
@@ -93,7 +104,7 @@ export default function ReelsSeasonPanel({
             </button>
           </div>
           <p className="text-sm text-muted-foreground">Season {seasonNumber}</p>
-          {!allWatched && (
+          {unwatchedIds.length > 0 && (
             <button
               onClick={() => onBulkWatch(unwatchedIds)}
               className="mt-3 w-full bg-primary hover:bg-primary/90 text-primary-foreground py-2 rounded-md text-sm font-medium transition-colors cursor-pointer"
@@ -105,7 +116,15 @@ export default function ReelsSeasonPanel({
 
         {/* Episode list */}
         <div className="p-4 space-y-2">
-          {sorted.map((ep) => (
+          {isLoading && (
+            <p className="text-sm text-muted-foreground">Loading episodes…</p>
+          )}
+          {isError && (
+            <p className="text-sm text-destructive">
+              Could not load this season.
+            </p>
+          )}
+          {episodes.map((ep) => (
             <div
               key={ep.id}
               className={`flex items-start gap-3 p-3 rounded-md border transition-colors ${
@@ -115,13 +134,14 @@ export default function ReelsSeasonPanel({
               }`}
             >
               <WatchedToggleButton
-                watched={!!ep.is_watched}
-                onClick={() => onToggleWatched(ep.id, !!ep.is_watched)}
+                watched={ep.is_watched}
+                disabled={!aired(ep)}
+                onClick={() => onToggleWatched(ep.id, ep.is_watched)}
                 size="sm"
               />
               <div className="flex-1 min-w-0">
                 <Link
-                  to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
+                  to={`/title/${titleId}/season/${seasonNumber}/episode/${ep.episode_number}`}
                   className="hover:text-primary-text transition-colors"
                 >
                   <p className="text-sm font-medium text-foreground">

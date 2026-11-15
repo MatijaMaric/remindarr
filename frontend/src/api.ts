@@ -552,8 +552,10 @@ export async function syncEpisodes(): Promise<{
 
 export async function getUpcomingEpisodes(
   signal?: AbortSignal,
+  perTitle?: number,
 ): Promise<{ today: Episode[]; upcoming: Episode[]; unwatched: Episode[] }> {
-  return fetchJson("/episodes/upcoming", { signal });
+  const qs = perTitle ? `?per_title=${perTitle}` : "";
+  return fetchJson(`/episodes/upcoming${qs}`, { signal });
 }
 
 export async function getSeasonEpisodeStatus(
@@ -561,7 +563,13 @@ export async function getSeasonEpisodeStatus(
   season: number,
   signal?: AbortSignal,
 ): Promise<{
-  episodes: Array<{ episode_number: number; id: number; is_watched: boolean }>;
+  episodes: Array<{
+    episode_number: number;
+    id: number;
+    name?: string | null;
+    air_date?: string | null;
+    is_watched: boolean;
+  }>;
 }> {
   return fetchJson(
     `/episodes/status/${encodeURIComponent(titleId)}/${season}`,
