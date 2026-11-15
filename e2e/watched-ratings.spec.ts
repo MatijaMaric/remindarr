@@ -67,11 +67,8 @@ test.describe("Watched / Ratings (TrackedPage)", () => {
     await expect(wrp.heading()).toBeVisible();
     // Kicker: "Your library · 1 title"
     await expect(page.getByText(/Your library · 1 title/)).toBeVisible();
-    // Stats band labels
-    await expect(page.getByText("Currently watching")).toBeVisible();
-    await expect(page.getByText("Completed").first()).toBeVisible();
-    await expect(page.getByText("Avg score")).toBeVisible();
-    await expect(page.getByText("Total tracked")).toBeVisible();
+    // No stats band repeating the library counts
+    await expect(page.getByText("Total tracked")).toHaveCount(0);
     // Title row
     await expect(page.getByText("Test Show").first()).toBeVisible();
   });
@@ -99,7 +96,7 @@ test.describe("Watched / Ratings (TrackedPage)", () => {
     await wrp.waitForVisible(wrp.heading());
     await wrp.waitForVisible(page.getByText("Test Show").first());
 
-    // Rating column shows ★ 8.2 (also appears in avg-score stats card)
+    // Rating column shows ★ 8.2
     await expect(page.getByText("★ 8.2").first()).toBeVisible();
   });
 
@@ -122,7 +119,6 @@ test.describe("Watched / Ratings (TrackedPage)", () => {
 
     await expect(page.getByText(/Your library · 0 titles/)).toBeVisible();
     await expect(page.getByText(/No tracked titles yet/i)).toBeVisible();
-    await expect(page.getByText("Total tracked")).toBeVisible();
   });
 
   test("TC-05: clicking a title in the list navigates to title detail", async ({

@@ -154,7 +154,6 @@
     }
   },
   "tracked": {
-    "title": "Gemerkte Titel ({{count}})",
     "empty": "Noch keine Titel gemerkt. Suche nach Titeln und klicke auf „Zur Merkliste hinzufügen“, um sie hier zu sehen.",
     "sortBy": "Titel sortieren nach",
     "filterTabs": "Nach Status filtern",
@@ -172,19 +171,8 @@
     "heading": "Merkliste",
     "kicker_one": "Deine Bibliothek · {{count}} Titel",
     "kicker_other": "Deine Bibliothek · {{count}} Titel",
-    "stats": {
-      "watching": "Schaue ich gerade",
-      "watchingSub": "von {{count}} gemerkt",
-      "completedSub": "Serien & Filme",
-      "avgScore": "Ø Bewertung",
-      "avgScoreSub": "aus {{count}} bewerteten",
-      "noRatings": "noch keine Bewertungen",
-      "total": "Insgesamt gemerkt",
-      "totalSub": "Titel in der Bibliothek"
-    },
     "tabs": {
-      "all": "Alle",
-      "planning": "Geplant"
+      "all": "Alle"
     },
     "view": {
       "select": "Auswählen",
@@ -202,7 +190,6 @@
       "show": "Serie",
       "status": "Status",
       "progress": "Fortschritt",
-      "next": "Nächste",
       "rating": "Bewertung",
       "actions": "Aktionen"
     },
@@ -213,9 +200,9 @@
       "selectAll": "Alle Titel auswählen",
       "select": "{{title}} auswählen",
       "eta": "ETA: {{eta}}",
+      "nextAir": "Nächste: {{date}}",
       "show": "Serie",
-      "movie": "Film",
-      "open": "Öffnen"
+      "movie": "Film"
     },
     "bulk": {
       "updated_one": "{{count}} Titel aktualisiert",
@@ -1127,22 +1114,15 @@
     "snoozed": "Pausiert"
   },
   "stats": {
-    "title": "Statistiken",
     "loadError": "Statistiken konnten nicht geladen werden. Bitte versuche es erneut.",
     "moviesWatched": "Gesehene Filme",
     "episodesWatched": "Gesehene Episoden",
     "showsTracked": "Gemerkte Serien",
     "moviesTracked": "Gemerkte Filme",
     "watchTime": "Sehzeit",
-    "total": "gesamt",
+    "watchTimeSplit": "Serien {{shows}} · Filme {{movies}}",
     "watchlistEta": "Merkliste fertig in",
     "atCurrentPace": "bei deinem aktuellen Tempo",
-    "tvWatchTime": "Serienzeit",
-    "movieWatchTime": "Filmzeit",
-    "episodeCount_one": "{{count}} Episode",
-    "episodeCount_other": "{{count}} Episoden",
-    "movieCount_one": "{{count}} Film",
-    "movieCount_other": "{{count}} Filme",
     "monthlyActivity": "Monatliche Aktivität",
     "episodes": "Episoden",
     "movies": "Filme",

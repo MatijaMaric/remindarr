@@ -152,7 +152,6 @@
     }
   },
   "tracked": {
-    "title": "ウォッチリストの作品（{{count}}）",
     "empty": "ウォッチリストはまだ空です。作品を検索して「ウォッチリストに追加」をクリックすると、ここに表示されます。",
     "sortBy": "作品の並び替え",
     "filterTabs": "ステータスで絞り込み",
@@ -169,19 +168,8 @@
     },
     "heading": "ウォッチリスト",
     "kicker_other": "ライブラリ · {{count}} 作品",
-    "stats": {
-      "watching": "視聴中",
-      "watchingSub": "{{count}} 作品中",
-      "completedSub": "番組と映画",
-      "avgScore": "平均スコア",
-      "avgScoreSub": "{{count}} 作品の評価",
-      "noRatings": "まだ評価なし",
-      "total": "登録作品数",
-      "totalSub": "ライブラリの作品"
-    },
     "tabs": {
-      "all": "すべて",
-      "planning": "見たい"
+      "all": "すべて"
     },
     "view": {
       "select": "選択",
@@ -199,7 +187,6 @@
       "show": "番組",
       "status": "ステータス",
       "progress": "進捗",
-      "next": "次回",
       "rating": "評価",
       "actions": "操作"
     },
@@ -210,9 +197,9 @@
       "selectAll": "すべての作品を選択",
       "select": "{{title}} を選択",
       "eta": "完了予定: {{eta}}",
+      "nextAir": "次回: {{date}}",
       "show": "番組",
-      "movie": "映画",
-      "open": "開く"
+      "movie": "映画"
     },
     "bulk": {
       "updated_other": "{{count}} 作品を更新しました",
@@ -1103,20 +1090,15 @@
     "snoozed": "通知停止中"
   },
   "stats": {
-    "title": "統計",
     "loadError": "統計を読み込めませんでした。もう一度お試しください。",
     "moviesWatched": "視聴した映画",
     "episodesWatched": "視聴したエピソード",
     "showsTracked": "登録した番組",
     "moviesTracked": "登録した映画",
     "watchTime": "視聴時間",
-    "total": "合計",
+    "watchTimeSplit": "番組 {{shows}} · 映画 {{movies}}",
     "watchlistEta": "リスト完了予定",
     "atCurrentPace": "今のペースで",
-    "tvWatchTime": "番組の視聴時間",
-    "movieWatchTime": "映画の視聴時間",
-    "episodeCount_other": "{{count}} エピソード",
-    "movieCount_other": "{{count}} 本",
     "monthlyActivity": "月別アクティビティ",
     "episodes": "エピソード",
     "movies": "映画",
