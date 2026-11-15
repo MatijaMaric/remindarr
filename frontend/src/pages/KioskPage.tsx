@@ -3,7 +3,6 @@ import { useParams, useSearchParams } from "react-router";
 import type {
   KioskData,
   KioskFidelity,
-  KioskAiringSlot,
   KioskRelease,
   KioskQueueItem,
 } from "../api";
@@ -66,6 +65,12 @@ const PALETTE: Record<KioskFidelity, KioskPalette> = {
   },
 };
 
+// Rows that fit in a panel on a 1080p screen; the kiosk cannot scroll.
+const PANEL_ROWS = 8;
+
+// The token is wrong, revoked or malformed: retrying will not help.
+const INVALID_LINK_STATUSES = new Set([400, 401, 404]);
+
 function useLiveClock() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -91,10 +96,29 @@ function formatKioskDate(d: Date): string {
   });
 }
 
-function airedAgo(airDate: string | null, nowMs: number): number | null {
+/**
+ * Whole calendar days between a date-only air date (YYYY-MM-DD) and today in
+ * the viewer's timezone. Date.parse would read the string as UTC midnight and
+ * shift it by the timezone offset.
+ */
+function airedDaysAgo(airDate: string | null, now: Date): number | null {
   if (!airDate) return null;
-  const ms = nowMs - Date.parse(airDate);
-  return Math.max(1, Math.round(ms / 86_400_000));
+  const [y, m, d] = airDate.slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return null;
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const aired = new Date(y, m - 1, d);
+  return Math.round((today.getTime() - aired.getTime()) / 86_400_000);
+}
+
+function airedLabel(days: number | null): string {
+  if (days === null) return "—";
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  return `${days}d ago`;
+}
+
+function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
 
 function kioskImageUrl(
@@ -174,66 +198,17 @@ function Poster({
   return <StripePoster title={title} tone={epaper ? "paper" : "dark"} />;
 }
 
-// ─── Cast icon (decoration only per design note 3) ───────────────────────────
-function CastIcon({
-  color = "#000",
-  size = 16,
-}: {
-  color?: string;
-  size?: number;
-}) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-    >
-      <rect
-        x="1.5"
-        y="2.5"
-        width="13"
-        height="9"
-        rx="1"
-        stroke={color}
-        strokeWidth="1.5"
-      />
-      <path
-        d="M1.5 13 q1.5 0 1.5 1.5"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M1.5 10.5 q4 0 4 4"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <path
-        d="M1.5 8 q6.5 0 6.5 6.5"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function KioskHeader({
   C,
   epaper,
-  fidelity,
   household,
   date,
   clock,
 }: {
   C: KioskPalette;
   epaper: boolean;
-  fidelity: KioskFidelity;
   household: string;
   date: string;
   clock: string;
@@ -271,23 +246,6 @@ function KioskHeader({
         </div>
         <div style={{ fontWeight: 700, fontSize: 18, letterSpacing: -0.3 }}>
           Remindarr
-        </div>
-        <div
-          style={{
-            ...Mono,
-            fontSize: 10,
-            letterSpacing: 2,
-            color: epaper ? "rgba(246,243,232,0.7)" : C.veryDim,
-            padding: "3px 8px",
-            borderRadius: epaper ? 0 : 4,
-            background: epaper ? "transparent" : "rgba(255,255,255,0.04)",
-            border: epaper
-              ? "1px solid rgba(246,243,232,0.5)"
-              : "1px solid rgba(255,255,255,0.06)",
-            textTransform: "uppercase",
-          }}
-        >
-          KIOSK · {fidelity.toUpperCase()}
         </div>
       </div>
       <div style={{ flex: 1 }} />
@@ -330,174 +288,8 @@ function KioskHeader({
   );
 }
 
-function HeroCard({
-  C,
-  epaper,
-  breathe,
-  slot,
-}: {
-  C: KioskPalette;
-  epaper: boolean;
-  breathe: boolean;
-  slot: KioskAiringSlot;
-}) {
-  const backdropUrl = kioskImageUrl(
-    slot.backdrop_url ?? slot.poster_url,
-    "w780",
-  );
-
-  return (
-    <div
-      style={{
-        position: "relative",
-        margin: "24px 56px 0",
-        height: 360,
-        borderRadius: epaper ? 0 : 14,
-        overflow: "hidden",
-        border: `${epaper ? 3 : 1}px solid ${epaper ? C.border : C.borderSoft}`,
-        background: C.surface,
-        animation: breathe ? "kfade 0.6s ease both" : "none",
-      }}
-    >
-      {/* Backdrop */}
-      {!epaper && backdropUrl && (
-        <div style={{ position: "absolute", inset: 0, opacity: 0.85 }}>
-          <img
-            src={backdropUrl}
-            alt=""
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: `linear-gradient(90deg, ${C.bg} 0%, ${C.bg}ee 35%, transparent 75%), linear-gradient(0deg, ${C.bg} 0%, transparent 55%)`,
-            }}
-          />
-        </div>
-      )}
-      {/* E-paper hatched fill instead of poster */}
-      {epaper && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: `repeating-linear-gradient(45deg, ${C.text} 0 1px, transparent 1px 5px)`,
-            opacity: 0.08,
-          }}
-        />
-      )}
-
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          padding: "32px 40px",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "flex-end",
-        }}
-      >
-        {/* Kicker */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 14,
-          }}
-        >
-          <span
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: "50%",
-              background: C.accent,
-              boxShadow: epaper ? "none" : "0 0 0 4px rgba(251,191,36,0.18)",
-              animation: breathe ? "kblink 1.6s ease-in-out infinite" : "none",
-              flexShrink: 0,
-            }}
-          />
-          <div
-            style={{
-              ...Mono,
-              fontSize: 11,
-              letterSpacing: 2,
-              textTransform: "uppercase",
-              color: C.accent,
-            }}
-          >
-            Airing now · {slot.provider ?? ""}
-          </div>
-        </div>
-
-        {/* Show title */}
-        <div
-          style={{
-            fontSize: 80,
-            fontWeight: 800,
-            letterSpacing: -3,
-            lineHeight: 0.92,
-            marginBottom: 16,
-            color: C.text,
-          }}
-        >
-          {slot.show_title}
-        </div>
-
-        {/* Episode info */}
-        <div
-          style={{
-            fontSize: 18,
-            color: C.dim,
-            marginBottom: 22,
-            maxWidth: 760,
-            lineHeight: 1.5,
-          }}
-        >
-          S{slot.season_number}·E{slot.episode_number}
-          {slot.ep_title && (
-            <>
-              {" "}
-              ·{" "}
-              <span style={{ color: C.text, fontWeight: 600 }}>
-                {slot.ep_title}
-              </span>
-            </>
-          )}
-        </div>
-
-        {/* Cast button — decorative only (design note 3: deferred until streaming-device registry) */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button
-            type="button"
-            disabled
-            aria-label="Cast to TV (not yet available)"
-            title="Cast to TV is not yet available"
-            style={{
-              background: C.accent,
-              color: C.accentInk,
-              padding: "12px 22px",
-              borderRadius: epaper ? 0 : 8,
-              border: epaper ? `2px solid ${C.text}` : "none",
-              fontWeight: 700,
-              fontSize: 15,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              opacity: 0.5,
-              cursor: "not-allowed",
-            }}
-          >
-            <CastIcon color={C.accentInk} /> Cast to TV
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 type FeaturedItem = {
+  id: number;
   show_title: string;
   season_number: number;
   episode_number: number;
@@ -507,18 +299,21 @@ type FeaturedItem = {
   provider: string | null;
 };
 
-function HeroFeatured({
+function Hero({
   C,
   epaper,
   breathe,
   item,
   kicker,
+  pulse,
 }: {
   C: KioskPalette;
   epaper: boolean;
   breathe: boolean;
   item: FeaturedItem;
   kicker: string;
+  /** Blink the kicker dot — only for something new today. */
+  pulse: boolean;
 }) {
   const backdropSrc = kioskImageUrl(
     item.backdrop_url ?? item.poster_url,
@@ -555,7 +350,7 @@ function HeroFeatured({
           />
         </div>
       )}
-      {/* E-paper hatched fill */}
+      {/* E-paper hatched fill instead of the backdrop */}
       {epaper && (
         <div
           style={{
@@ -592,6 +387,8 @@ function HeroFeatured({
               borderRadius: "50%",
               background: C.accent,
               boxShadow: epaper ? "none" : "0 0 0 4px rgba(251,191,36,0.18)",
+              animation:
+                breathe && pulse ? "kblink 1.6s ease-in-out infinite" : "none",
               flexShrink: 0,
             }}
           />
@@ -626,7 +423,6 @@ function HeroFeatured({
           style={{
             fontSize: 18,
             color: C.dim,
-            marginBottom: 22,
             maxWidth: 760,
             lineHeight: 1.5,
           }}
@@ -641,32 +437,6 @@ function HeroFeatured({
               </span>
             </>
           )}
-        </div>
-
-        {/* Cast button — decorative only (design note 3: deferred until streaming-device registry) */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button
-            type="button"
-            disabled
-            aria-label="Cast to TV (not yet available)"
-            title="Cast to TV is not yet available"
-            style={{
-              background: C.accent,
-              color: C.accentInk,
-              padding: "12px 22px",
-              borderRadius: epaper ? 0 : 8,
-              border: epaper ? `2px solid ${C.text}` : "none",
-              fontWeight: 700,
-              fontSize: 15,
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              opacity: 0.5,
-              cursor: "not-allowed",
-            }}
-          >
-            <CastIcon color={C.accentInk} /> Cast to TV
-          </button>
         </div>
       </div>
     </div>
@@ -771,157 +541,104 @@ function ReleasingTodayPanel({
   epaper,
   breathe,
   releases,
-  nowMs,
+  total,
 }: {
   C: KioskPalette;
   epaper: boolean;
   breathe: boolean;
   releases: KioskRelease[];
-  nowMs: number;
+  /** All of today's episodes, including the one in the hero. */
+  total: number;
 }) {
   return (
     <Panel C={C} epaper={epaper}>
-      <PanelHeader
-        C={C}
-        kicker="Releasing today"
-        right={`${releases.length} drops`}
-      />
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-          overflowY: "auto",
-        }}
-      >
-        {releases.length === 0 ? (
+      <PanelHeader C={C} kicker="New today" right={plural(total, "episode")} />
+      <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+        {releases.map((r, i) => (
           <div
+            key={r.id}
             style={{
-              padding: "16px 18px",
-              ...Mono,
-              fontSize: 12,
-              color: C.veryDim,
+              display: "grid",
+              gridTemplateColumns: "56px 1fr auto",
+              gap: 14,
+              alignItems: "center",
+              padding: "12px 16px",
+              borderBottom:
+                i < releases.length - 1 ? `1px solid ${C.borderSoft}` : "none",
+              animation: breathe ? `kfade 0.5s ease ${0.05 * i}s both` : "none",
             }}
           >
-            No releases today.
-          </div>
-        ) : (
-          releases.slice(0, 8).map((r, i) => {
-            const isPast = r.air_date ? Date.parse(r.air_date) < nowMs : false;
-            const epCode = `S${r.season_number}·E${r.episode_number}`;
-            return (
+            <div
+              style={{
+                width: 44,
+                height: 64,
+                borderRadius: epaper ? 0 : 4,
+                overflow: "hidden",
+                border: epaper ? `1px solid ${C.text}` : "none",
+                flexShrink: 0,
+              }}
+            >
+              <Poster
+                path={r.poster_url}
+                title={r.show_title}
+                size="w185"
+                epaper={epaper}
+              />
+            </div>
+            <div style={{ minWidth: 0 }}>
               <div
-                key={r.id}
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "70px 56px 1fr auto",
-                  gap: 14,
-                  alignItems: "center",
-                  padding: "12px 16px",
-                  borderBottom:
-                    i < releases.slice(0, 8).length - 1
-                      ? `1px solid ${C.borderSoft}`
-                      : "none",
-                  opacity: isPast ? (epaper ? 0.55 : 0.6) : 1,
-                  animation: breathe
-                    ? `kfade 0.5s ease ${0.05 * i}s both`
-                    : "none",
+                  fontSize: 15,
+                  fontWeight: 700,
+                  lineHeight: 1.15,
+                  marginBottom: 3,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  color: C.text,
                 }}
               >
-                <div
-                  style={{
-                    ...Mono,
-                    fontSize: 16,
-                    fontWeight: 700,
-                    color: isPast ? C.dim : C.accent,
-                    letterSpacing: 0.5,
-                  }}
-                >
-                  {r.air_date
-                    ? new Date(r.air_date).toLocaleTimeString(undefined, {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false,
-                      })
-                    : "—"}
-                </div>
-                <div
-                  style={{
-                    width: 44,
-                    height: 64,
-                    borderRadius: epaper ? 0 : 4,
-                    overflow: "hidden",
-                    border: epaper ? `1px solid ${C.text}` : "none",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Poster
-                    path={r.poster_url}
-                    title={r.show_title}
-                    size="w185"
-                    epaper={epaper}
-                  />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: 15,
-                      fontWeight: 700,
-                      lineHeight: 1.15,
-                      marginBottom: 3,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      color: C.text,
-                    }}
-                  >
-                    {r.show_title}
-                  </div>
-                  <div
-                    style={{
-                      ...Mono,
-                      fontSize: 11,
-                      color: C.veryDim,
-                      letterSpacing: 0.5,
-                    }}
-                  >
-                    {epCode}{" "}
-                    {r.provider && (
-                      <>
-                        · <span style={{ color: C.dim }}>{r.provider}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    ...Mono,
-                    fontSize: 9.5,
-                    fontWeight: 700,
-                    letterSpacing: 1.5,
-                    textTransform: "uppercase",
-                    padding: "3px 8px",
-                    borderRadius: epaper ? 0 : 999,
-                    background:
-                      r.kind === "series"
-                        ? epaper
-                          ? C.text
-                          : "rgba(251,191,36,0.12)"
-                        : epaper
-                          ? "transparent"
-                          : C.chip,
-                    color:
-                      r.kind === "series" ? (epaper ? C.bg : C.accent) : C.dim,
-                    border: epaper ? `1px solid ${C.text}` : "none",
-                    flexShrink: 0,
-                  }}
-                >
-                  {r.kind}
-                </div>
+                {r.show_title}
               </div>
-            );
-          })
-        )}
+              <div
+                style={{
+                  ...Mono,
+                  fontSize: 11,
+                  color: C.veryDim,
+                  letterSpacing: 0.5,
+                }}
+              >
+                S{r.season_number}·E{r.episode_number}{" "}
+                {r.provider && (
+                  <>
+                    · <span style={{ color: C.dim }}>{r.provider}</span>
+                  </>
+                )}
+              </div>
+            </div>
+            {r.kind === "premiere" ? (
+              <div
+                style={{
+                  ...Mono,
+                  fontSize: 9.5,
+                  fontWeight: 700,
+                  letterSpacing: 1.5,
+                  textTransform: "uppercase",
+                  padding: "3px 8px",
+                  borderRadius: epaper ? 0 : 999,
+                  background: epaper ? C.text : "rgba(251,191,36,0.12)",
+                  color: epaper ? C.bg : C.accent,
+                  border: epaper ? `1px solid ${C.text}` : "none",
+                  flexShrink: 0,
+                }}
+              >
+                premiere
+              </div>
+            ) : (
+              <span />
+            )}
+          </div>
+        ))}
       </div>
     </Panel>
   );
@@ -932,166 +649,165 @@ function UnwatchedQueuePanel({
   epaper,
   breathe,
   queue,
-  nowMs,
+  total,
+  now,
 }: {
   C: KioskPalette;
   epaper: boolean;
   breathe: boolean;
   queue: KioskQueueItem[];
-  nowMs: number;
+  /** Shows with an unwatched episode, including any in the hero. */
+  total: number;
+  now: Date;
 }) {
   return (
     <Panel C={C} epaper={epaper}>
       <PanelHeader
         C={C}
         kicker="Up next in your queue"
-        right={`${queue.length} unwatched`}
+        right={plural(total, "show")}
       />
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          flex: 1,
-          overflowY: "auto",
-        }}
-      >
-        {queue.length === 0 ? (
-          <div
-            style={{
-              padding: "16px 18px",
-              ...Mono,
-              fontSize: 12,
-              color: C.veryDim,
-            }}
-          >
-            All caught up!
-          </div>
-        ) : (
-          queue.slice(0, 8).map((q, i) => {
-            const daysAgo = airedAgo(q.air_date, nowMs);
-            const cold = daysAgo !== null && daysAgo >= 10;
-            const epCode = `S${q.season_number}·E${q.episode_number}`;
-            const airedText = daysAgo !== null ? `${daysAgo}d ago` : "—";
-            return (
+      <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+        {queue.map((q, i) => {
+          const daysAgo = airedDaysAgo(q.air_date, now);
+          const cold = daysAgo !== null && daysAgo >= 10;
+          return (
+            <div
+              key={q.id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "56px 1fr auto auto",
+                gap: 14,
+                alignItems: "center",
+                padding: "12px 16px",
+                borderBottom:
+                  i < queue.length - 1 ? `1px solid ${C.borderSoft}` : "none",
+                animation: breathe
+                  ? `kfade 0.5s ease ${0.05 * i}s both`
+                  : "none",
+              }}
+            >
               <div
-                key={q.id}
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "56px 1fr auto auto",
-                  gap: 14,
-                  alignItems: "center",
-                  padding: "12px 16px",
-                  borderBottom:
-                    i < queue.slice(0, 8).length - 1
-                      ? `1px solid ${C.borderSoft}`
-                      : "none",
-                  animation: breathe
-                    ? `kfade 0.5s ease ${0.05 * i}s both`
-                    : "none",
+                  width: 44,
+                  height: 64,
+                  borderRadius: epaper ? 0 : 4,
+                  overflow: "hidden",
+                  border: epaper ? `1px solid ${C.text}` : "none",
+                  flexShrink: 0,
                 }}
               >
+                <Poster
+                  path={q.poster_url}
+                  title={q.show_title}
+                  size="w185"
+                  epaper={epaper}
+                />
+              </div>
+              <div style={{ minWidth: 0 }}>
                 <div
                   style={{
-                    width: 44,
-                    height: 64,
-                    borderRadius: epaper ? 0 : 4,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    lineHeight: 1.15,
+                    marginBottom: 3,
+                    whiteSpace: "nowrap",
                     overflow: "hidden",
-                    border: epaper ? `1px solid ${C.text}` : "none",
-                    flexShrink: 0,
+                    textOverflow: "ellipsis",
+                    color: C.text,
                   }}
                 >
-                  <Poster
-                    path={q.poster_url}
-                    title={q.show_title}
-                    size="w185"
-                    epaper={epaper}
-                  />
+                  {q.show_title}
                 </div>
-                <div style={{ minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: 15,
-                      fontWeight: 700,
-                      lineHeight: 1.15,
-                      marginBottom: 3,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      color: C.text,
-                    }}
-                  >
-                    {q.show_title}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily:
-                        "ui-monospace, 'JetBrains Mono', Menlo, monospace",
-                      fontSize: 11,
-                      color: C.veryDim,
-                      letterSpacing: 0.5,
-                    }}
-                  >
-                    <span style={{ color: C.dim }}>{epCode}</span>
-                    {q.ep_title && <> · {q.ep_title}</>}
-                    {" · aired "}
-                    {airedText}
-                  </div>
-                </div>
-                {cold && (
-                  <div
-                    style={{
-                      ...Mono,
-                      fontSize: 9,
-                      fontWeight: 700,
-                      letterSpacing: 1.5,
-                      textTransform: "uppercase",
-                      padding: "3px 8px",
-                      borderRadius: epaper ? 0 : 999,
-                      background: epaper
-                        ? "transparent"
-                        : "rgba(255,255,255,0.04)",
-                      color: C.dim,
-                      border: `1px solid ${epaper ? C.text : "rgba(255,255,255,0.1)"}`,
-                      flexShrink: 0,
-                    }}
-                  >
-                    cold
-                  </div>
-                )}
                 <div
                   style={{
                     ...Mono,
-                    fontSize: 14,
-                    fontWeight: 800,
-                    color: q.left > 1 ? C.accent : C.text,
-                    minWidth: 30,
-                    textAlign: "right",
+                    fontSize: 11,
+                    color: C.veryDim,
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  <span style={{ color: C.dim }}>
+                    S{q.season_number}·E{q.episode_number}
+                  </span>
+                  {q.ep_title && <> · {q.ep_title}</>}
+                  {" · aired "}
+                  {airedLabel(daysAgo)}
+                </div>
+              </div>
+              {cold ? (
+                <div
+                  style={{
+                    ...Mono,
+                    fontSize: 9,
+                    fontWeight: 700,
+                    letterSpacing: 1.5,
+                    textTransform: "uppercase",
+                    padding: "3px 8px",
+                    borderRadius: epaper ? 0 : 999,
+                    background: epaper
+                      ? "transparent"
+                      : "rgba(255,255,255,0.04)",
+                    color: C.dim,
+                    border: `1px solid ${epaper ? C.text : "rgba(255,255,255,0.1)"}`,
                     flexShrink: 0,
                   }}
                 >
-                  {q.left}
-                  <span
-                    style={{
-                      ...Mono,
-                      fontSize: 10,
-                      color: C.veryDim,
-                      fontWeight: 400,
-                      marginLeft: 2,
-                    }}
-                  >
-                    left
-                  </span>
+                  cold
                 </div>
+              ) : (
+                <span />
+              )}
+              <div
+                style={{
+                  ...Mono,
+                  fontSize: 14,
+                  fontWeight: 800,
+                  color: q.left > 1 ? C.accent : C.text,
+                  minWidth: 30,
+                  textAlign: "right",
+                  flexShrink: 0,
+                }}
+              >
+                {q.left}
+                <span
+                  style={{
+                    ...Mono,
+                    fontSize: 10,
+                    color: C.veryDim,
+                    fontWeight: 400,
+                    marginLeft: 2,
+                  }}
+                >
+                  left
+                </span>
               </div>
-            );
-          })
-        )}
+            </div>
+          );
+        })}
       </div>
     </Panel>
   );
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
+
+/**
+ * One item leads the screen and is not repeated below it: today's first
+ * unwatched episode, else today's first episode, else the top of the queue.
+ */
+function pickHero(data: KioskData): {
+  item: FeaturedItem;
+  kicker: string;
+  pulse: boolean;
+} | null {
+  const today =
+    data.releasing_today.find((r) => !r.is_watched) ?? data.releasing_today[0];
+  if (today) return { item: today, kicker: "New today", pulse: true };
+  const next = data.unwatched_queue[0];
+  if (next) return { item: next, kicker: "Up next", pulse: false };
+  return null;
+}
 
 export default function KioskPage() {
   const { token } = useParams<{ token: string }>();
@@ -1106,7 +822,7 @@ export default function KioskPage() {
   const clock24 = searchParams.get("clock24") !== "false";
 
   const [data, setData] = useState<KioskData | null>(null);
-  const [error, setError] = useState(false);
+  const [invalidLink, setInvalidLink] = useState(false);
   const now = useLiveClock();
   const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -1122,14 +838,18 @@ export default function KioskPage() {
           headers: { "X-Timezone": tz },
         },
       );
-      if (!res.ok) {
-        setError(true);
+      if (INVALID_LINK_STATUSES.has(res.status)) {
+        setInvalidLink(true);
         return;
       }
+      // Anything else (5xx, rate limit) is transient on a wall display:
+      // keep the last good data and try again on the next poll.
+      if (!res.ok) return;
       const json = (await res.json()) as KioskData;
       setData(json);
+      setInvalidLink(false);
     } catch {
-      setError(true);
+      // Network blip — same as a transient server error.
     }
   }, [token, fidelity]);
 
@@ -1163,7 +883,7 @@ export default function KioskPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchData]);
 
-  if (error) {
+  if (invalidLink) {
     return (
       <div
         style={{
@@ -1217,22 +937,15 @@ export default function KioskPage() {
   const household = data?.meta.household ?? "";
   const refreshSec =
     data?.meta.refresh_interval_seconds ?? (fidelity === "epaper" ? 1800 : 300);
-  const refreshLabel =
-    refreshSec >= 1800
-      ? `Auto-refreshes every ${Math.round(refreshSec / 60)} min`
-      : "Auto-refreshes every 5 min";
 
-  let heroFallbackItem: FeaturedItem | null = null;
-  let heroFallbackKicker = "";
-  if (data && !data.airing_now) {
-    if (data.releasing_today.length > 0) {
-      heroFallbackItem = data.releasing_today[0];
-      heroFallbackKicker = "Releasing today";
-    } else if (data.unwatched_queue.length > 0) {
-      heroFallbackItem = data.unwatched_queue[0];
-      heroFallbackKicker = "Up next in your queue";
-    }
-  }
+  const hero = data ? pickHero(data) : null;
+  const heroId = hero?.item.id;
+  const releases = (data?.releasing_today ?? [])
+    .filter((r) => r.id !== heroId)
+    .slice(0, PANEL_ROWS);
+  const queue = (data?.unwatched_queue ?? [])
+    .filter((q) => q.id !== heroId)
+    .slice(0, PANEL_ROWS);
 
   return (
     <div
@@ -1261,32 +974,25 @@ export default function KioskPage() {
       <KioskHeader
         C={C}
         epaper={epaper}
-        fidelity={fidelity}
         household={household}
         date={formatKioskDate(now)}
         clock={formatKioskClock(now, clock24)}
       />
 
-      {data?.airing_now ? (
-        <HeroCard
+      {hero ? (
+        <Hero
           C={C}
           epaper={epaper}
           breathe={breathe}
-          slot={data.airing_now}
-        />
-      ) : heroFallbackItem ? (
-        <HeroFeatured
-          C={C}
-          epaper={epaper}
-          breathe={breathe}
-          item={heroFallbackItem}
-          kicker={heroFallbackKicker}
+          item={hero.item}
+          kicker={hero.kicker}
+          pulse={hero.pulse}
         />
       ) : (
         data !== null && <HeroEmpty C={C} epaper={epaper} />
       )}
 
-      {/* Two-column body — single column on narrow viewports, two columns on wide */}
+      {/* Panels render only when they have rows the hero does not already show */}
       <div
         className="kiosk-body-grid"
         style={{
@@ -1296,24 +1002,30 @@ export default function KioskPage() {
           display: "grid",
           gridTemplateColumns:
             "repeat(auto-fit, minmax(min(300px, 100%), 1fr))",
+          alignContent: "start",
           gap: 24,
           overflow: "hidden",
         }}
       >
-        <ReleasingTodayPanel
-          C={C}
-          epaper={epaper}
-          breathe={breathe}
-          releases={data?.releasing_today ?? []}
-          nowMs={now.getTime()}
-        />
-        <UnwatchedQueuePanel
-          C={C}
-          epaper={epaper}
-          breathe={breathe}
-          queue={data?.unwatched_queue ?? []}
-          nowMs={now.getTime()}
-        />
+        {releases.length > 0 && (
+          <ReleasingTodayPanel
+            C={C}
+            epaper={epaper}
+            breathe={breathe}
+            releases={releases}
+            total={data?.releasing_today.length ?? 0}
+          />
+        )}
+        {queue.length > 0 && (
+          <UnwatchedQueuePanel
+            C={C}
+            epaper={epaper}
+            breathe={breathe}
+            queue={queue}
+            total={data?.queue_total ?? queue.length}
+            now={now}
+          />
+        )}
       </div>
 
       {/* Footer */}
@@ -1333,12 +1045,7 @@ export default function KioskPage() {
           flexShrink: 0,
         }}
       >
-        <span>{refreshLabel}</span>
-        <span style={{ flex: 1 }} />
-        <span>read-only · token {token?.slice(0, 4) ?? "—"}</span>
-        <span>
-          {typeof window !== "undefined" ? window.location.hostname : ""}/kiosk
-        </span>
+        <span>Auto-refreshes every {Math.round(refreshSec / 60)} min</span>
       </div>
     </div>
   );

@@ -1,86 +1,49 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import * as api from "../api";
-import type { Title } from "../types";
 import TitleList from "./TitleList";
-import FilterBar from "./FilterBar";
-import { loadFilters } from "./loadFilters";
-import { useAsyncError } from "../hooks/useAsyncError";
+
+export const NEW_RELEASES_PAGE_SIZE = 100;
 
 interface Props {
   type: string[];
-  onTypeChange: (type: string[]) => void;
   daysBack: number;
-  onDaysBackChange: (days: number) => void;
   genre: string[];
-  onGenreChange: (genre: string[]) => void;
   provider: string[];
-  onProviderChange: (provider: string[]) => void;
   language: string[];
-  onLanguageChange: (language: string[]) => void;
-  onClearFilters?: () => void;
   hideTracked?: boolean;
-  onHideTrackedChange?: (value: boolean) => void;
-  hideFilterBar?: boolean;
   showProviderBadge?: boolean;
   showRating?: boolean;
-  onResultsCount?: (count: number) => void;
+  /** Loaded count once every page is in; null while more pages remain. */
+  onResultsCount?: (count: number | null) => void;
   onlyMine?: boolean;
 }
 
 export default function NewReleases({
   type,
-  onTypeChange,
   daysBack,
-  onDaysBackChange,
   genre,
-  onGenreChange,
   provider,
-  onProviderChange,
   language,
-  onLanguageChange,
-  onClearFilters,
   hideTracked,
-  onHideTrackedChange,
-  hideFilterBar,
   showProviderBadge,
   showRating,
   onResultsCount,
   onlyMine,
 }: Props) {
   const { t } = useTranslation();
-  const [titles, setTitles] = useState<Title[]>([]);
-  const { run, error, pending: loading } = useAsyncError();
-
-  const { data: filters } = useQuery({
-    queryKey: ["filters"],
-    queryFn: ({ signal }) => loadFilters(signal),
-    staleTime: Infinity,
-  });
-  const genres = filters?.genres ?? [];
-  const providers = filters?.providers ?? [];
-  const languages = filters?.languages ?? [];
-  const regionProviderIds = filters?.regionProviderIds ?? [];
-  const priorityLanguageCodes = filters?.priorityLanguageCodes ?? [];
-
-  const fetchTitles = useCallback(
-    () =>
-      run(async () => {
-        const res = await api.getTitles({
-          daysBack,
-          type: type.length ? type.join(",") : undefined,
-          genre: genre.length ? genre.join(",") : undefined,
-          provider: provider.length ? provider.join(",") : undefined,
-          language: language.length ? language.join(",") : undefined,
-          excludeTracked: hideTracked || undefined,
-          onlyMine: onlyMine || undefined,
-        });
-        setTitles(res.titles);
-        onResultsCount?.(res.titles.length);
-      }),
-    [
-      run,
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: [
+      "titles",
       daysBack,
       type,
       genre,
@@ -88,58 +51,80 @@ export default function NewReleases({
       language,
       hideTracked,
       onlyMine,
-      onResultsCount,
     ],
+    queryFn: ({ pageParam, signal }) =>
+      api.getTitles(
+        {
+          daysBack,
+          type: type.length ? type.join(",") : undefined,
+          genre: genre.length ? genre.join(",") : undefined,
+          provider: provider.length ? provider.join(",") : undefined,
+          language: language.length ? language.join(",") : undefined,
+          excludeTracked: hideTracked || undefined,
+          onlyMine: onlyMine || undefined,
+          limit: NEW_RELEASES_PAGE_SIZE,
+          offset: pageParam,
+        },
+        signal,
+      ),
+    initialPageParam: 0,
+    // ponytail: a full page means "maybe more"; one empty extra request at worst.
+    getNextPageParam: (last, pages) =>
+      last.titles.length < NEW_RELEASES_PAGE_SIZE
+        ? undefined
+        : pages.length * NEW_RELEASES_PAGE_SIZE,
+  });
+
+  const titles = useMemo(
+    () => data?.pages.flatMap((p) => p.titles) ?? [],
+    [data],
   );
 
   useEffect(() => {
-    fetchTitles();
-  }, [fetchTitles]);
+    if (!data) return;
+    onResultsCount?.(hasNextPage ? null : titles.length);
+  }, [data, hasNextPage, titles.length, onResultsCount]);
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        {t("releases.loading")}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      {!hideFilterBar && (
-        <FilterBar
-          type={type}
-          onTypeChange={onTypeChange}
-          daysBack={daysBack}
-          onDaysBackChange={onDaysBackChange}
-          genre={genre}
-          onGenreChange={onGenreChange}
-          genres={genres}
-          provider={provider}
-          onProviderChange={onProviderChange}
-          providers={providers}
-          regionProviderIds={regionProviderIds}
-          language={language}
-          onLanguageChange={onLanguageChange}
-          languages={languages}
-          priorityLanguageCodes={priorityLanguageCodes}
-          onClearFilters={onClearFilters}
-          hideTracked={hideTracked}
-          onHideTrackedChange={onHideTrackedChange}
-        />
-      )}
-
-      {error && (
-        <div className="bg-destructive-soft border border-destructive/40 text-destructive px-4 py-2 rounded-md text-sm">
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="text-center py-12 text-muted-foreground">
-          {t("releases.loading")}
+      {error && titles.length === 0 ? (
+        <div
+          role="alert"
+          className="bg-destructive-soft border border-destructive/40 text-destructive px-4 py-2 rounded-md text-sm"
+        >
+          {error.message}
         </div>
       ) : (
         <TitleList
           titles={titles}
-          onTrackToggle={fetchTitles}
+          onTrackToggle={() => void refetch()}
           emptyMessage={t("releases.empty")}
           showProviderBadge={showProviderBadge}
           showRating={showRating}
           applyContentAdvisory
         />
+      )}
+      {hasNextPage && (
+        <div className="text-center py-4">
+          <button
+            type="button"
+            onClick={() => void fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="bg-fill-subtle border border-border text-foreground-secondary px-6 py-2.5 rounded-lg text-[13px] font-semibold disabled:opacity-50"
+          >
+            {isFetchingNextPage
+              ? t("releases.loading")
+              : t("releases.loadMore")}
+          </button>
+        </div>
       )}
     </div>
   );

@@ -15,6 +15,7 @@ import {
 } from "../db/repository/tracked";
 import { getTrackedTitleIds } from "../db/repository/tracked";
 import { getWatchedTitleIds } from "../db/repository/watched-titles";
+import { getRatedTitleIds } from "../db/repository/ratings";
 import {
   dismissTitle,
   undismissTitle,
@@ -87,12 +88,13 @@ app.get("/", zValidator("query", listQuerySchema), async (c) => {
   const { limit } = c.req.valid("query");
 
   try {
-    const [sourceTitles, trackedIds, watchedIds, dismissedIds] =
+    const [sourceTitles, trackedIds, watchedIds, dismissedIds, ratedIds] =
       await Promise.all([
         getSuggestionSeedTitles(user.id, 5),
         getTrackedTitleIds(user.id),
         getWatchedTitleIds(user.id),
         getDismissedTitleIds(user.id),
+        getRatedTitleIds(user.id),
       ]);
 
     if (sourceTitles.length === 0) {
@@ -136,18 +138,18 @@ app.get("/", zValidator("query", listQuerySchema), async (c) => {
       ),
     );
 
-    // Dedupe by id, filter out tracked, watched, and dismissed titles
+    // Dedupe by id, filter out tracked, watched, rated, and dismissed titles
     const seen = new Set<string>();
     const flat: ParsedTitle[] = [];
 
     const GROUP_CAP = 12;
     const groups = groupResults
       .map(({ source, suggestions }) => {
-        const unfiltered = suggestions.length;
         const filtered = suggestions.filter(
           (t) =>
             !trackedIds.has(t.id) &&
             !watchedIds.has(t.id) &&
+            !ratedIds.has(t.id) &&
             !dismissedIds.has(t.id),
         );
         const capped = filtered.slice(0, GROUP_CAP);
@@ -159,7 +161,8 @@ app.get("/", zValidator("query", listQuerySchema), async (c) => {
             reason: source.reason,
           },
           suggestions: capped,
-          hiddenCount: unfiltered - capped.length,
+          // Only titles the user already has (or dismissed) — not the cap.
+          hiddenCount: suggestions.length - filtered.length,
         };
       })
       .filter((g) => g.suggestions.length > 0);

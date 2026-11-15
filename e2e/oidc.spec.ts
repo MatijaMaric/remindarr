@@ -71,7 +71,8 @@ test.describe("OIDC login flow", () => {
     await expect(page).toHaveURL(/\/login\?.*error=access_denied/, {
       timeout: 30_000,
     });
-    await expect(page.getByText(/access_denied/)).toBeVisible();
+    // The URL code is not echoed; the page shows a fixed message.
+    await expect(page.getByText(/sign-in failed/i)).toBeVisible();
     const session = await page.request.get("/api/auth/get-session");
     expect(await session.json().catch(() => null)).toBeNull();
   });
@@ -83,7 +84,7 @@ test.describe("OIDC login flow", () => {
       `/api/auth/oauth2/callback/${OIDC_PROVIDER_ID}?code=stale-code&state=expired-state`,
     );
     await expect(page).toHaveURL(/\/login\?.*error=/, { timeout: 30_000 });
-    await expect(page.getByText(/login failed/i)).toBeVisible();
+    await expect(page.getByText(/sign-in failed/i)).toBeVisible();
     const session = await page.request.get("/api/auth/get-session");
     expect(await session.json().catch(() => null)).toBeNull();
   });

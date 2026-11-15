@@ -121,7 +121,7 @@ describe("LeaderboardPage", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          /Track titles and follow people to appear on the leaderboard/,
+          /Earn achievements for XP and follow people to compare/,
         ),
       ).toBeDefined();
     });
@@ -185,9 +185,133 @@ describe("LeaderboardPage", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          /Track titles and follow people to appear on the leaderboard/,
+          /Earn achievements for XP and follow people to compare/,
         ),
       ).toBeDefined();
     });
+  });
+
+  // ── #1404 screen review ────────────────────────────────────────────────────
+
+  test("empty state links to achievements", async () => {
+    getLeaderboardSpy.mockImplementation(() => Promise.resolve([]));
+
+    render(<LeaderboardPage />, { wrapper: Wrapper });
+
+    const link = await screen.findByRole("link", {
+      name: "See your achievements",
+    });
+    expect(link.getAttribute("href")).toBe("/achievements");
+  });
+
+  test("shows the page title once", async () => {
+    getLeaderboardSpy.mockImplementation(() =>
+      Promise.resolve([
+        makeEntry({ userId: "u1", rank: 1 }),
+        makeEntry({ userId: "u2", username: "bob", name: "Bob", rank: 2 }),
+      ]),
+    );
+
+    render(<LeaderboardPage />, { wrapper: Wrapper });
+
+    await screen.findByRole("heading", { name: "Leaderboard" });
+    expect(screen.getAllByText("Leaderboard")).toHaveLength(1);
+  });
+
+  test("list rows use singular 'badge' for one badge", async () => {
+    getLeaderboardSpy.mockImplementation(() =>
+      Promise.resolve([
+        makeEntry({ userId: "u1", username: "a", name: "A", rank: 1 }),
+        makeEntry({ userId: "u2", username: "b", name: "B", rank: 2 }),
+        makeEntry({ userId: "u3", username: "c", name: "C", rank: 3 }),
+        makeEntry({
+          userId: "u4",
+          username: "d",
+          name: "D",
+          rank: 4,
+          badgeCount: 1,
+        }),
+      ]),
+    );
+
+    render(<LeaderboardPage />, { wrapper: Wrapper });
+
+    await screen.findByText("#4");
+    expect(screen.queryByText("1 badges")).toBeNull();
+    expect(screen.getByText("1 badge")).toBeDefined();
+  });
+
+  test("hides @username when it repeats the name shown above it", async () => {
+    getLeaderboardSpy.mockImplementation(() =>
+      Promise.resolve([
+        makeEntry({ userId: "u1", username: "alice", name: "Alice", rank: 1 }),
+        makeEntry({ userId: "u2", username: "bob", name: "Robert", rank: 2 }),
+        makeEntry({ userId: "u3", username: "carol", name: null, rank: 3 }),
+      ]),
+    );
+
+    render(<LeaderboardPage />, { wrapper: Wrapper });
+
+    await screen.findByText("#1");
+    expect(screen.queryByText("@alice")).toBeNull();
+    expect(screen.queryByText("@carol")).toBeNull();
+    expect(screen.getByText("@bob")).toBeDefined();
+    expect(screen.getByText("carol")).toBeDefined();
+  });
+
+  test("podium name and username truncate inside the card", async () => {
+    getLeaderboardSpy.mockImplementation(() =>
+      Promise.resolve([
+        makeEntry({
+          userId: "u1",
+          username: "averyveryverylongusername",
+          name: "Long",
+          rank: 1,
+        }),
+        makeEntry({ userId: "u2", username: "b", name: "B", rank: 2 }),
+      ]),
+    );
+
+    render(<LeaderboardPage />, { wrapper: Wrapper });
+
+    const handle = await screen.findByText("@averyveryverylongusername");
+    expect(handle.className).toContain("truncate");
+    // The wrapper must be able to shrink to the card so truncate takes effect.
+    expect(handle.parentElement!.className).toContain("w-full");
+    expect(handle.closest("a")!.className).toContain("min-w-0");
+  });
+
+  test("0 XP entries get no medal colour; #3 has its own colour", async () => {
+    getLeaderboardSpy.mockImplementation(() =>
+      Promise.resolve([
+        makeEntry({ userId: "u1", username: "a", name: "A", rank: 1, xp: 90 }),
+        makeEntry({ userId: "u2", username: "b", name: "B", rank: 2, xp: 50 }),
+        makeEntry({ userId: "u3", username: "c", name: "C", rank: 3, xp: 0 }),
+      ]),
+    );
+
+    render(<LeaderboardPage />, { wrapper: Wrapper });
+
+    const first = await screen.findByText("#1");
+    const third = screen.getByText("#3");
+    expect(first.className).toContain("text-primary-text");
+    expect(third.className).toContain("text-muted-foreground");
+    expect(third.className).not.toContain("text-primary-text");
+  });
+
+  test("#3 with XP uses a colour distinct from #1", async () => {
+    getLeaderboardSpy.mockImplementation(() =>
+      Promise.resolve([
+        makeEntry({ userId: "u1", username: "a", name: "A", rank: 1, xp: 90 }),
+        makeEntry({ userId: "u2", username: "b", name: "B", rank: 2, xp: 50 }),
+        makeEntry({ userId: "u3", username: "c", name: "C", rank: 3, xp: 10 }),
+      ]),
+    );
+
+    render(<LeaderboardPage />, { wrapper: Wrapper });
+
+    const third = await screen.findByText("#3");
+    expect(third.className).not.toContain("text-primary-text");
+    expect(third.className).not.toContain("text-muted-foreground");
   });
 });

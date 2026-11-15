@@ -282,7 +282,7 @@ describe("TrackedPage", () => {
     });
   });
 
-  it("uses manual status for summaries, tabs, rows, and grid groups, with Auto fallback", async () => {
+  it("uses manual status for tabs, rows, and grid groups, with Auto fallback", async () => {
     const titles = [
       makeShow("dropped", "watching", { user_status: "dropped" }),
       makeShow("held", "completed", { user_status: "on_hold" }),
@@ -298,12 +298,6 @@ describe("TrackedPage", () => {
     render(<TrackedPage />, { wrapper: Wrapper });
     await screen.findByText("Show dropped");
 
-    expect(
-      screen.getByText("Currently watching").parentElement?.textContent,
-    ).toContain("1of 5 tracked");
-    expect(screen.getByText("shows & movies").parentElement?.textContent).toBe(
-      "2shows & movies",
-    );
     for (const [tab, names] of [
       ["Watching 1", ["Show auto-watching"]],
       ["Completed 2", ["Show done", "Show auto-completed"]],
@@ -420,8 +414,11 @@ describe("TrackedPage", () => {
       ).toBeDefined(),
     );
 
-    const tabs = screen.getAllByRole("tab");
-    expect(tabs.length).toBe(6);
+    // Only statuses the library has get a tab.
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "All1",
+      "Watching1",
+    ]);
 
     const allTab = screen.getByRole("tab", { name: /All/ });
     expect(allTab.getAttribute("aria-selected")).toBe("true");
@@ -473,6 +470,205 @@ describe("TrackedPage", () => {
     });
 
     expect(screen.queryByText(/^Movies/)).toBeNull();
+  });
+});
+
+function renderAt(path: string) {
+  return render(
+    <QueryClientProvider client={newTestClient()}>
+      <MemoryRouter initialEntries={[path]}>
+        <TrackedPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+describe("TrackedPage trimmed layout", () => {
+  it("does not repeat library counts in a stats band", async () => {
+    apiMock.getTrackedTitles.mockResolvedValue({
+      titles: [makeShow("s1", "watching"), makeMovie("m1")],
+      count: 2,
+    });
+    render(<TrackedPage />, { wrapper: Wrapper });
+    await screen.findByText("Show s1");
+    for (const label of [
+      "Currently watching",
+      "Avg score",
+      "Total tracked",
+      "titles in library",
+    ])
+      expect(screen.queryByText(label)).toBeNull();
+  });
+
+  it("shows an ETA only for titles with something left to watch", async () => {
+    apiMock.getTrackedTitles.mockResolvedValue({
+      titles: [
+        makeShow("done", "completed", {
+          total_episodes: 10,
+          watched_episodes_count: 10,
+          eta_days: 0,
+          remaining_minutes: 0,
+        }),
+        makeShow("busy", "watching", {
+          total_episodes: 10,
+          watched_episodes_count: 4,
+          eta_days: 3,
+          remaining_minutes: 270,
+        }),
+        { ...makeMovie("m1"), eta_days: 0, remaining_minutes: 0 },
+      ],
+      count: 3,
+    });
+    render(<TrackedPage />, { wrapper: Wrapper });
+    await screen.findByText("Show done");
+    expect(screen.getAllByText(/^ETA:/).map((el) => el.textContent)).toEqual([
+      "ETA: 3d",
+    ]);
+  });
+
+  it("builds tabs from the statuses in the library and counts unmarked movies as not started", async () => {
+    apiMock.getTrackedTitles.mockResolvedValue({
+      titles: [
+        makeShow("caught", "caught_up"),
+        makeShow("soon", "unreleased"),
+        makeShow("later", "not_started", { user_status: "plan_to_watch" }),
+        makeMovie("unwatched"),
+        { ...makeMovie("legacy"), is_watched: true },
+      ],
+      count: 5,
+    });
+    render(<TrackedPage />, { wrapper: Wrapper });
+    await screen.findByText("Show caught");
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "All5",
+      "Caught Up1",
+      "Not Started1",
+      "Unreleased1",
+      "Plan to Watch1",
+      "Completed1",
+    ]);
+    expect(screen.queryByText("Planning")).toBeNull();
+
+    fireEvent.click(screen.getByRole("tab", { name: /^Not Started/ }));
+    const panel = screen.getByRole("tabpanel");
+    expect(within(panel).getByText("Movie unwatched")).toBeDefined();
+    expect(within(panel).queryByText("Movie legacy")).toBeNull();
+    expect(within(panel).queryByText("Show caught")).toBeNull();
+  });
+
+  it("keeps the selected tab when no title has that status any more", async () => {
+    apiMock.getTrackedTitles.mockResolvedValue({
+      titles: [makeShow("s1", "watching")],
+      count: 1,
+    });
+    renderAt("/tracked?status=dropped");
+    await screen.findByText(/No titles match these filters/);
+    const dropped = screen.getByRole("tab", { name: /^Dropped/ });
+    expect(dropped.getAttribute("aria-selected")).toBe("true");
+    expect(dropped.textContent).toBe("Dropped0");
+  });
+
+  it("opens the filter panel for search, tag or provider but not for a status tab", async () => {
+    apiMock.getTrackedTitles.mockResolvedValue({
+      titles: [makeShow("s1", "watching"), makeShow("s2", "completed")],
+      count: 2,
+    });
+    const first = renderAt("/tracked");
+    await screen.findByText("Show s1");
+    const details = () =>
+      first.container.querySelector("details") as HTMLDetailsElement;
+    expect(details().open).toBe(false);
+    fireEvent.click(screen.getByRole("tab", { name: /^Watching/ }));
+    expect(details().open).toBe(false);
+    first.unmount();
+
+    const second = renderAt("/tracked?q=Show");
+    await screen.findByText("Show s1");
+    expect(
+      (second.container.querySelector("details") as HTMLDetailsElement).open,
+    ).toBe(true);
+  });
+
+  it("puts the next air date under the status and links each row once", async () => {
+    apiMock.getTrackedTitles.mockResolvedValue({
+      titles: [
+        makeShow("s1", "watching", {
+          next_episode_air_date: "2099-03-05",
+          offers: [{ provider_id: 8, provider_name: "Netflix" }],
+        }),
+      ],
+      count: 1,
+    });
+    render(<TrackedPage />, { wrapper: Wrapper });
+    const link = await screen.findByRole("link", { name: "Show s1" });
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(screen.queryByRole("link", { name: "Open" })).toBeNull();
+    expect(screen.queryByText("Next")).toBeNull();
+    expect(screen.getByText(/^Next: /)).toBeDefined();
+    expect(link.nextElementSibling?.textContent).toBe("2024 · Show · Netflix");
+  });
+
+  it("joins desktop row details without stray separators", async () => {
+    apiMock.getTrackedTitles.mockResolvedValue({
+      titles: [{ ...makeMovie("m1"), release_year: null }],
+      count: 1,
+    });
+    render(<TrackedPage />, { wrapper: Wrapper });
+    const link = await screen.findByRole("link", { name: "Movie m1" });
+    expect(link.nextElementSibling?.textContent).toBe("Movie");
+  });
+
+  it("joins phone row details without stray separators", async () => {
+    const mobile = spyOn(useIsMobileModule, "useIsMobile").mockReturnValue(
+      true,
+    );
+    try {
+      apiMock.getTrackedTitles.mockResolvedValue({
+        titles: [makeShow("s1", "completed")],
+        count: 1,
+      });
+      render(<TrackedPage />, { wrapper: Wrapper });
+      const link = await screen.findByRole("link", { name: "Show s1" });
+      const texts = [...link.querySelectorAll("div")].map(
+        (el) => el.textContent ?? "",
+      );
+      expect(texts).toContain("Completed");
+      expect(texts.some((text) => text.trim().startsWith("·"))).toBe(false);
+    } finally {
+      mobile.mockRestore();
+    }
+  });
+
+  it("puts grid card status, reminder and tag controls in the actions menu", async () => {
+    apiMock.getTrackedTitles.mockResolvedValue({
+      titles: [makeShow("s1", "watching"), makeMovie("m1")],
+      count: 2,
+    });
+    renderAt("/tracked?view=grid");
+    for (const name of ["Show s1", "Movie m1"]) {
+      const card = await screen.findByRole("article", { name });
+      expect(
+        within(card).getByRole("button", { name: `More actions for ${name}` }),
+      ).toBeDefined();
+      expect(within(card).queryByRole("button", { name: "Auto" })).toBeNull();
+      expect(within(card).queryByRole("textbox")).toBeNull();
+    }
+  });
+
+  it("shows Backdate to air dates only in the stats view", async () => {
+    apiMock.getTrackedTitles.mockResolvedValue({
+      titles: [makeShow("s1", "watching")],
+      count: 1,
+    });
+    renderViewRoute("/tracked");
+    await screen.findByText("Show s1");
+    expect(
+      screen.queryByRole("button", { name: /Backdate to air dates/ }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Stats" }));
+    expect(
+      await screen.findByRole("button", { name: /Backdate to air dates/ }),
+    ).toBeDefined();
   });
 });
 

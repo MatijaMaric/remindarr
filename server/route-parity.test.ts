@@ -78,6 +78,9 @@ const WRITE_LIMITED_ROUTES = [
   "/api/integrations",
   "/api/import/*",
   "/api/import",
+  // List and dismiss/undo have separate budgets (#1407).
+  "/api/suggestions",
+  "/api/suggestions/dismiss/*",
 ] as const;
 
 function escapeRegExp(value: string): string {
@@ -107,7 +110,12 @@ describe("Bun vs CF Workers write-path rate limiter parity", () => {
   const cfSrc = fs.readFileSync(CF_WORKER, "utf-8");
 
   test("write and import limiters use the same store, scope, and budget", () => {
-    for (const name of ["writeRateLimiter", "importRateLimiter"] as const) {
+    for (const name of [
+      "writeRateLimiter",
+      "importRateLimiter",
+      "suggestionsRateLimiter",
+      "dismissRateLimiter",
+    ] as const) {
       const bun = extractLimiterConfig(bunSrc, name);
       const cf = extractLimiterConfig(cfSrc, name);
       expect(bun, `${name} missing from server/index.ts`).not.toBeNull();
@@ -123,6 +131,16 @@ describe("Bun vs CF Workers write-path rate limiter parity", () => {
       expect(bun, `${route} missing from server/index.ts`).not.toBeNull();
       expect(cf).toBe(bun);
       expect(cf).toMatch(/RateLimiter, requireAuth$/);
+    }
+  });
+
+  test("suggestion dismiss/undo does not share the list's 20/min budget (#1407)", () => {
+    for (const src of [bunSrc, cfSrc]) {
+      expect(extractUseArgs(src, "/api/suggestions/dismiss/*")).toBe(
+        "dismissRateLimiter, requireAuth",
+      );
+      // A wildcard mount would also apply the list limiter to /dismiss/*.
+      expect(extractUseArgs(src, "/api/suggestions/*")).toBeNull();
     }
   });
 });

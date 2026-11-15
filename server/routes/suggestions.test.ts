@@ -361,6 +361,36 @@ describe("GET /suggestions", () => {
     expect(body.flat.every((t: any) => t.id !== "movie-200")).toBe(true);
   });
 
+  it("filters out titles the user has rated but does not track (#1407)", async () => {
+    await upsertTitles([
+      makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" }),
+      makeParsedTitle({ id: "movie-200", tmdbId: "200", objectType: "MOVIE" }),
+    ]);
+    await trackTitle("movie-100", mockUserId);
+    await rateTitle(mockUserId, "movie-200", "LOVE");
+
+    (tmdbClient.fetchMovieSuggestions as any).mockResolvedValue({
+      results: [
+        makeTmdbDiscoverMovie({ id: 200, title: "Loved, not tracked" }),
+        makeTmdbDiscoverMovie({ id: 300, title: "New" }),
+      ],
+      page: 1,
+      total_pages: 1,
+      total_results: 2,
+    });
+
+    const res = await app.request("/suggestions");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const ids = [
+      ...body.flat.map((t: any) => t.id),
+      ...body.groups.flatMap((g: any) => g.suggestions.map((t: any) => t.id)),
+    ];
+    expect(ids).toContain("movie-300");
+    expect(ids).not.toContain("movie-200");
+    for (const g of body.groups) expect(g.hiddenCount).toBe(1);
+  });
+
   it("includes hiddenCount per group reflecting filtered titles", async () => {
     await upsertTitles([
       makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" }),
@@ -632,14 +662,14 @@ describe("payload-size fixes", () => {
     }
   });
 
-  it("hiddenCount reflects the cap — equals unfiltered minus capped length", async () => {
+  it("hiddenCount ignores the cap — titles cut by it are not 'hidden'", async () => {
     await upsertTitles([
       makeParsedTitle({ id: "movie-100", tmdbId: "100", objectType: "MOVIE" }),
     ]);
     await trackTitle("movie-100", mockUserId);
 
-    // 20 raw suggestions from TMDB, none tracked/watched/dismissed → all pass filter,
-    // then cap to 12. hiddenCount should be 20 - 12 = 8.
+    // Regression (#1407): 20 raw suggestions, none tracked/watched/dismissed.
+    // The cap keeps 12, but nothing was hidden, so the row must not say "8 hidden".
     (tmdbClient.fetchMovieSuggestions as any).mockResolvedValueOnce({
       results: Array.from({ length: 20 }, (_, i) =>
         makeTmdbDiscoverMovie({ id: 3000 + i, title: `Cap Test ${i}` }),
@@ -654,8 +684,7 @@ describe("payload-size fixes", () => {
     const body = await res.json();
     expect(body.groups.length).toBeGreaterThan(0);
     const group = body.groups[0];
-    // 20 raw - 12 capped = 8 hidden
-    expect(group.hiddenCount).toBe(8);
+    expect(group.hiddenCount).toBe(0);
     expect(group.suggestions.length).toBe(12);
   });
 

@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import * as api from "../api";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
+import { ApiError } from "../lib/api-error";
 import TitleCard from "../components/TitleCard";
 import type { OverlapTitle, Provider } from "../types";
 import MultiSelectDropdown from "../components/MultiSelectDropdown";
@@ -46,7 +47,9 @@ export default function UserOverlapPage() {
     queryKey: ["user-overlap", friendUsername],
     queryFn: ({ signal }) => api.getOverlap(friendUsername!, signal),
     enabled: !!friendUsername,
-    retry: false,
+    // 403/404 are definitive; retry a 5xx or network failure once.
+    retry: (failureCount, err) =>
+      !(err instanceof ApiError && err.status < 500) && failureCount < 1,
   });
 
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
@@ -77,7 +80,7 @@ export default function UserOverlapPage() {
       titles = titles.filter((t) =>
         t.offers.some(
           (o) =>
-            o.monetization_type === "flatrate" &&
+            o.monetization_type === "FLATRATE" &&
             sharedProviderIds.has(o.provider_id),
         ),
       );

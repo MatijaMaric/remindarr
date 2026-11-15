@@ -52,7 +52,7 @@ import {
   isOidcConfigured,
   getOidcConfig,
   getUserByWatchlistShareToken,
-  getTrackedTitles,
+  getSharedWatchlistTitles,
   getYearInReview,
   deleteExpiredSessions,
 } from "./db/repository";
@@ -528,7 +528,15 @@ function createApp(env: Env) {
     limit: 20,
     windowMs: 60_000,
   });
-  app.use("/api/suggestions/*", suggestionsRateLimiter, requireAuth);
+  // Dismiss/undo get their own budget so a run of dismissals is not capped by
+  // the list limit above (#1407).
+  const dismissRateLimiter = rateLimiter({
+    store: rateLimitStore,
+    scope: "suggestion-dismiss",
+    limit: 60,
+    windowMs: 60_000,
+  });
+  app.use("/api/suggestions/dismiss/*", dismissRateLimiter, requireAuth);
   app.use("/api/suggestions", suggestionsRateLimiter, requireAuth);
   app.route("/api/suggestions", suggestionsRoutes);
 
@@ -690,7 +698,7 @@ function createApp(env: Env) {
     const user = await getUserByWatchlistShareToken(token);
     let ogTags = "";
     if (user) {
-      const titles = await getTrackedTitles(user.id);
+      const titles = await getSharedWatchlistTitles(user.id);
       const count = titles.length;
       const username = user.displayUsername ?? user.username;
       const firstPoster = titles[0]?.poster_url

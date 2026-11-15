@@ -1,11 +1,15 @@
-import { CheckCircle, Check, Share2, Info } from "lucide-react";
+import { CheckCircle, Check, Share2, ListVideo } from "lucide-react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { Episode, RatingValue } from "../types";
 import WatchButtonGroup from "./WatchButtonGroup";
+import TrackButton from "./TrackButton";
 import ReelsUndoBar from "./ReelsUndoBar";
 import { backdropUrl as mkBackdropUrl } from "../lib/tmdb-images";
+
+/** episode: next unwatched episode · movie: tracked movie · title: anything to discover */
+export type ReelsCardKind = "episode" | "movie" | "title";
 
 function formatEpisodeCode(ep: Episode): string {
   const s = String(ep.season_number).padStart(2, "0");
@@ -29,15 +33,18 @@ function isToday(dateStr: string | null): boolean {
   return dateStr === today;
 }
 
-function getCountdownLabel(airDate: string | null): string | null {
+/** Countdown chip text for a future date; null for today, past or missing dates. */
+export function getCountdownLabel(
+  airDate: string | null,
+  now: Date = new Date(),
+): string | null {
   if (!airDate) return null;
-  const today = new Date().toISOString().slice(0, 10);
-  if (airDate === today) return null; // handled as live
+  const midnight = new Date(now);
+  midnight.setHours(0, 0, 0, 0);
   const diff = Math.ceil(
-    (new Date(airDate + "T00:00:00").getTime() -
-      new Date().setHours(0, 0, 0, 0)) /
-      86400000,
+    (new Date(airDate + "T00:00:00").getTime() - midnight.getTime()) / 86400000,
   );
+  if (diff < 1) return null;
   if (diff === 1) return "TOMORROW";
   if (diff <= 6)
     return new Date(airDate + "T00:00:00")
@@ -85,40 +92,54 @@ export interface UndoInfo {
 
 interface ReelsCardProps {
   episode: Episode;
+  kind: ReelsCardKind;
   caughtUp: boolean;
   onMarkWatched: () => void;
   index: number;
   total: number;
   undoInfo?: UndoInfo;
-  isMovie?: boolean;
   blurred?: boolean;
+  /** Small line above the headline, e.g. who recommended it (title cards). */
+  kicker?: string;
+  /** "Movie" / "Show", shown after the date. */
+  typeLabel?: string;
+  /** Title cards: whether the title is on the watchlist. */
+  tracked?: boolean;
+  /** Episode cards: opens the season panel. */
+  onOpenSeason?: () => void;
 }
+
+const actionCircle =
+  "w-11 h-11 rounded-full bg-black/45 backdrop-blur border border-border flex items-center justify-center text-foreground";
+const actionLabel =
+  "text-[11px] text-foreground/75 font-semibold tracking-[0.05em]";
 
 export default function ReelsCard({
   episode,
+  kind,
   caughtUp,
   onMarkWatched,
   index,
   total,
   undoInfo,
-  isMovie,
   blurred,
+  kicker,
+  typeLabel,
+  tracked,
+  onOpenSeason,
 }: ReelsCardProps) {
   const { t } = useTranslation();
   const bgUrl = getBackgroundImageUrl(episode);
   const airDateFormatted = formatAirDate(episode.air_date);
   const isLive = isToday(episode.air_date);
   const countdownLabel = getCountdownLabel(episode.air_date);
-
-  const providerName =
-    episode.offers && episode.offers.length > 0
-      ? episode.offers[0].provider_name
-      : null;
+  const meta = [airDateFormatted, typeLabel].filter(Boolean).join(" · ");
+  const isEpisode = kind === "episode";
 
   return (
     <div
       className="dark-section snap-start snap-always w-full relative flex-shrink-0 overflow-hidden"
-      style={{ height: "calc(100dvh - env(safe-area-inset-top, 0px))" }}
+      style={{ height: "var(--reels-h, 100dvh)" }}
     >
       {/* Background image */}
       {bgUrl ? (
@@ -160,8 +181,8 @@ export default function ReelsCard({
       {/* Right-edge vignette behind action rail */}
       <div className="absolute top-0 bottom-0 right-0 w-28 bg-gradient-to-l from-black/40 to-transparent" />
 
-      {/* Top-left chips: Live/Countdown + Provider */}
-      {!caughtUp && (
+      {/* Top-left chip: airing today or a countdown to a future date */}
+      {!caughtUp && (isLive || countdownLabel) && (
         <div
           className="absolute z-10 flex items-center gap-1.5"
           style={{
@@ -172,16 +193,11 @@ export default function ReelsCard({
           {isLive ? (
             <span className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground text-[11px] font-extrabold font-mono px-2.5 py-1.5 rounded-full tracking-[0.12em]">
               <span className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
-              AIRING NOW
+              {isEpisode ? "AIRED TODAY" : "OUT TODAY"}
             </span>
-          ) : countdownLabel ? (
+          ) : (
             <span className="inline-flex items-center gap-1.5 bg-scrim backdrop-blur text-primary-text border border-primary-border text-[11px] font-bold font-mono px-2.5 py-1.5 rounded-full tracking-[0.12em]">
               ◷ {countdownLabel}
-            </span>
-          ) : null}
-          {providerName && (
-            <span className="bg-scrim backdrop-blur text-foreground-secondary border border-border text-[11px] font-bold px-2.5 py-1.5 rounded-full tracking-[0.12em]">
-              {providerName}
             </span>
           )}
         </div>
@@ -197,43 +213,32 @@ export default function ReelsCard({
             onClick={() => shareEpisode(episode)}
             className="flex flex-col items-center gap-1"
           >
-            <div className="w-11 h-11 rounded-full bg-black/45 backdrop-blur border border-border flex items-center justify-center text-foreground">
-              <Share2 size={18} />
+            <div className={actionCircle}>
+              <Share2 size={18} aria-hidden="true" />
             </div>
-            <span className="text-[11px] text-foreground/75 font-semibold tracking-[0.05em]">
-              Share
-            </span>
+            <span className={actionLabel}>Share</span>
           </button>
-          <Link
-            to={`/title/${episode.title_id}`}
-            className="flex flex-col items-center gap-1"
-          >
-            <div className="w-11 h-11 rounded-full bg-black/45 backdrop-blur border border-border flex items-center justify-center text-foreground">
-              <Info size={18} />
-            </div>
-            <span className="text-[11px] text-foreground/75 font-semibold tracking-[0.05em]">
-              Info
-            </span>
-          </Link>
+          {onOpenSeason && (
+            <button
+              onClick={onOpenSeason}
+              className="flex flex-col items-center gap-1"
+            >
+              <div className={actionCircle}>
+                <ListVideo size={18} aria-hidden="true" />
+              </div>
+              <span className={actionLabel}>Season</span>
+            </button>
+          )}
         </div>
       )}
 
-      {/* Reel index dots — right-center */}
+      {/* Position in the feed */}
       <div
-        className="absolute z-10 flex flex-col gap-1 items-center"
-        style={{ right: 6, top: "50%", transform: "translateY(-50%)" }}
+        className="absolute z-10 font-mono text-[11px] text-foreground/70 bg-black/45 backdrop-blur rounded-full px-2 py-0.5"
+        style={{ right: 14, top: "50%", transform: "translateY(-50%)" }}
+        aria-label={`Card ${index + 1} of ${total}`}
       >
-        {Array.from({ length: total }).map((_, i) => (
-          <div
-            key={i}
-            className="rounded-sm transition-all duration-300"
-            style={{
-              width: 3,
-              height: i === index ? 14 : 3,
-              background: i === index ? "#fbbf24" : "rgba(255,255,255,0.25)",
-            }}
-          />
-        ))}
+        {index + 1} / {total}
       </div>
 
       {/* Swipe hint on first card — mobile only (irrelevant on pointer devices) */}
@@ -272,38 +277,41 @@ export default function ReelsCard({
           </div>
         ) : (
           <>
-            {/* Show title — mono amber kicker */}
-            <Link to={`/title/${episode.title_id}`}>
-              <div className="text-xs text-foreground-secondary font-medium mb-1.5 drop-shadow hover:opacity-80 transition-opacity">
-                <span>{episode.show_title}</span>
-                {!isMovie && <span> · {formatEpisodeCode(episode)}</span>}
-                {isMovie && <span> · Movie</span>}
-              </div>
-            </Link>
+            {/* Episodes: the show, linked. Other cards: an optional note. */}
+            {isEpisode ? (
+              <Link to={`/title/${episode.title_id}`}>
+                <div className="text-xs text-foreground-secondary font-medium mb-1.5 drop-shadow hover:opacity-80 transition-opacity">
+                  <span>{episode.show_title}</span>
+                  <span> · {formatEpisodeCode(episode)}</span>
+                </div>
+              </Link>
+            ) : (
+              kicker && (
+                <div className="text-xs text-foreground-secondary font-medium mb-1.5 drop-shadow">
+                  {kicker}
+                </div>
+              )
+            )}
 
-            {/* Episode name — large */}
             <Link
               to={
-                isMovie
-                  ? `/title/${episode.title_id}`
-                  : `/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`
+                isEpisode
+                  ? `/title/${episode.title_id}/season/${episode.season_number}/episode/${episode.episode_number}`
+                  : `/title/${episode.title_id}`
               }
             >
               <h2 className="text-[30px] font-extrabold tracking-[-0.02em] leading-[1.02] text-foreground mb-2.5 drop-shadow-lg hover:text-primary-text transition-colors select-text">
                 {episode.name ??
-                  (isMovie ? episode.show_title : formatEpisodeCode(episode))}
+                  (isEpisode ? formatEpisodeCode(episode) : episode.show_title)}
               </h2>
             </Link>
 
-            {/* Meta line */}
-            {airDateFormatted && (
+            {meta && (
               <div className="font-mono text-[12px] text-foreground-secondary mb-3.5 drop-shadow">
-                {airDateFormatted}
-                {providerName ? ` · ${providerName}` : ""}
+                {meta}
               </div>
             )}
 
-            {/* Overview */}
             {episode.overview && (
               <p className="text-sm text-foreground/70 line-clamp-3 mb-4 drop-shadow select-text">
                 {episode.overview}
@@ -337,7 +345,6 @@ export default function ReelsCard({
               );
             })()}
 
-            {/* Watch on provider button */}
             <div className="mb-2">
               <WatchButtonGroup
                 offers={episode.offers ?? []}
@@ -347,17 +354,23 @@ export default function ReelsCard({
               />
             </div>
 
-            {/* Undo/rating bar for previously marked episode */}
             {undoInfo && <ReelsUndoBar {...undoInfo} />}
 
-            {/* Mark as watched button */}
-            <button
-              onClick={onMarkWatched}
-              className="flex items-center gap-2 bg-primary hover:bg-primary/90 active:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg text-base font-semibold transition-colors cursor-pointer w-full justify-center"
-            >
-              <CheckCircle size={20} />
-              Mark as Watched
-            </button>
+            {kind === "title" ? (
+              <TrackButton
+                titleId={episode.title_id}
+                isTracked={!!tracked}
+                className="w-full min-h-12 px-6 py-3 rounded-lg text-base font-semibold"
+              />
+            ) : (
+              <button
+                onClick={onMarkWatched}
+                className="flex items-center gap-2 bg-primary hover:bg-primary/90 active:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg text-base font-semibold transition-colors cursor-pointer w-full justify-center"
+              >
+                <CheckCircle size={20} />
+                Mark as Watched
+              </button>
+            )}
           </>
         )}
       </div>

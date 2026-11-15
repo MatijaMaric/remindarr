@@ -71,7 +71,6 @@ export default function ProgressCard({ overview }: ProgressCardProps) {
           <StatBlock
             value={formatWatchTime(overview.watch_time_minutes_shows)}
             label={t("userProfile.dossier.watchTimeShows")}
-            sub={`${overview.watched_episodes} ${t("userProfile.dossier.legendEpisodes").toLowerCase()}`}
           />
           <StatBlock
             value={formatWatchTime(overview.watch_time_minutes_movies)}

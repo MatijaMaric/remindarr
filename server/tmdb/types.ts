@@ -454,6 +454,8 @@ export interface TmdbPersonCastCredit {
   vote_average: number;
   vote_count: number;
   popularity: number;
+  /** TV credits only: how many episodes the person appears in. */
+  episode_count?: number;
 }
 
 export interface TmdbPersonCrewCredit {
@@ -470,6 +472,8 @@ export interface TmdbPersonCrewCredit {
   vote_average: number;
   vote_count: number;
   popularity: number;
+  /** TV credits only: how many episodes the person worked on. */
+  episode_count?: number;
 }
 
 export interface TmdbPersonCombinedCredits {

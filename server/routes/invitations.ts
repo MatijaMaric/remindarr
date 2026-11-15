@@ -19,6 +19,12 @@ const log = logger.child({ module: "invitations" });
 const redeemParamSchema = z.object({ code: z.string().min(1).max(64) });
 const revokeParamSchema = z.object({ id: z.string().uuid() });
 
+// created_at / used_at come from SQLite datetime('now'): "YYYY-MM-DD HH:MM:SS"
+// in UTC, which the frontend date formatter cannot parse. expires_at is ISO.
+function sqliteToIso(value: string | null): string | null {
+  return value && !value.includes("T") ? `${value.replace(" ", "T")}Z` : value;
+}
+
 const app = new Hono<AppEnv>();
 
 // POST / — Generate an invitation
@@ -76,9 +82,9 @@ app.get("/", async (c) => {
     return {
       id: row.id,
       code: row.code,
-      created_at: row.createdAt,
+      created_at: sqliteToIso(row.createdAt),
       expires_at: row.expiresAt,
-      used_at: row.usedAt,
+      used_at: sqliteToIso(row.usedAt),
       used_by: usedBy,
     };
   });

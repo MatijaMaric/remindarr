@@ -97,6 +97,23 @@ describe("TrackButton", () => {
     expect(screen.getByRole("button", { name: "In watchlist" })).toBeDefined();
   });
 
+  it("className overrides the default size classes", () => {
+    render(
+      <TrackButton
+        titleId="123"
+        isTracked={false}
+        className="w-full text-base"
+      />,
+      { wrapper: Wrapper },
+    );
+    const cls = screen.getByRole("button", {
+      name: "Add to watchlist",
+    }).className;
+    expect(cls).toContain("w-full");
+    expect(cls).toContain("text-base");
+    expect(cls).not.toContain("text-xs");
+  });
+
   it("returns null when user is not logged in", () => {
     const noUserAuth = { ...mockAuthValue, user: null };
     const { container } = render(

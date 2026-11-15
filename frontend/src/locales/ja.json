@@ -24,10 +24,10 @@
       "ban": "ユーザーを停止",
       "unban": "停止を解除",
       "delete": "ユーザーを削除",
-      "banTitle": "ユーザーを停止",
+      "banTitle": "{{username}} を停止",
       "banReasonPlaceholder": "理由（任意）",
       "banConfirm": "ユーザーを停止",
-      "deleteTitle": "ユーザーを削除",
+      "deleteTitle": "{{username}} を削除",
       "deleteConfirm": "この操作は取り消せません。",
       "deleteConfirmButton": "完全に削除",
       "prevPage": "前のページ",
@@ -51,7 +51,21 @@
       "newPassword": "新しいパスワード（8 文字以上）",
       "resetPasswordConfirm": "パスワードを設定",
       "resetPasswordDone": "パスワードをリセットしました。ユーザーはすべての端末でサインアウトされました。",
-      "resetPasswordFailed": "パスワードをリセットできませんでした"
+      "resetPasswordFailed": "パスワードをリセットできませんでした",
+      "roleAdmin": "管理者",
+      "roleUser": "ユーザー",
+      "banned": "停止中",
+      "banReason": "理由: {{reason}}",
+      "promoteTitle": "{{username}} を管理者にしますか？",
+      "promoteHelp": "管理者はユーザーとサーバー設定を管理できます。",
+      "demoteTitle": "{{username}} の管理者権限を外しますか？",
+      "demoteHelp": "アカウントとデータはそのまま残り、管理設定にアクセスできなくなります。",
+      "promoted": "{{username}} を管理者にしました",
+      "demoted": "{{username}} の管理者権限を外しました",
+      "roleFailed": "権限を変更できませんでした",
+      "banFailed": "ユーザーを停止できませんでした",
+      "unbanFailed": "停止を解除できませんでした",
+      "deleteFailed": "ユーザーを削除できませんでした"
     }
   },
   "legal": {
@@ -158,7 +172,6 @@
     }
   },
   "tracked": {
-    "title": "ウォッチリストの作品（{{count}}）",
     "empty": "ウォッチリストはまだ空です。作品を検索して「ウォッチリストに追加」をクリックすると、ここに表示されます。",
     "sortBy": "作品の並び替え",
     "filterTabs": "ステータスで絞り込み",
@@ -175,19 +188,8 @@
     },
     "heading": "ウォッチリスト",
     "kicker_other": "ライブラリ · {{count}} 作品",
-    "stats": {
-      "watching": "視聴中",
-      "watchingSub": "{{count}} 作品中",
-      "completedSub": "番組と映画",
-      "avgScore": "平均スコア",
-      "avgScoreSub": "{{count}} 作品の評価",
-      "noRatings": "まだ評価なし",
-      "total": "登録作品数",
-      "totalSub": "ライブラリの作品"
-    },
     "tabs": {
-      "all": "すべて",
-      "planning": "見たい"
+      "all": "すべて"
     },
     "view": {
       "select": "選択",
@@ -205,7 +207,6 @@
       "show": "番組",
       "status": "ステータス",
       "progress": "進捗",
-      "next": "次回",
       "rating": "評価",
       "actions": "操作"
     },
@@ -216,9 +217,9 @@
       "selectAll": "すべての作品を選択",
       "select": "{{title}} を選択",
       "eta": "完了予定: {{eta}}",
+      "nextAir": "次回: {{date}}",
       "show": "番組",
-      "movie": "映画",
-      "open": "開く"
+      "movie": "映画"
     },
     "bulk": {
       "updated_other": "{{count}} 作品を更新しました",
@@ -277,21 +278,17 @@
     "title": "探す",
     "kicker": {
       "search": "検索",
-      "searchResults_other": "検索 · {{count}} 件",
       "catalog": "カタログ · 作品を探す",
       "catalogCount_other": "カタログ · {{formatted}} 作品"
     },
     "hideFilters": "フィルターを隠す",
     "showFilters": "フィルターを表示",
-    "clearAllFilters": "すべてのフィルターをクリア",
-    "removeFilter": "{{name}} のフィルターを解除",
-    "removeLanguageFilter": "言語フィルター {{name}} を解除",
-    "removeYearFilter": "年の範囲フィルターを解除",
-    "removeRatingFilter": "最低評価フィルターを解除"
+    "clearAllFilters": "すべてのフィルターをクリア"
   },
   "signup": {
     "title": "アカウントを作成",
     "username": "ユーザー名",
+    "usernameHint": "英字、数字、ピリオド、ハイフン、アンダースコア",
     "email": "メールアドレス",
     "displayName": "表示名",
     "password": "パスワード",
@@ -314,7 +311,7 @@
     "signIn": "ログイン",
     "noAccount": "アカウントをお持ちでないですか？",
     "signUp": "登録",
-    "loginFailed": "ログインに失敗しました: {{error}}",
+    "loginFailed": "ログインに失敗しました。もう一度お試しください。",
     "signInWithPasskey": "パスキーでログイン",
     "passkeyFailed": "パスキーでのログインに失敗しました",
     "recoveryTitle": "パスワードをお忘れですか？",
@@ -382,11 +379,8 @@
     "movies": "映画",
     "shows": "番組",
     "people": "人物",
-    "allGenres": "すべてのジャンル",
-    "allPlatforms": "すべてのプラットフォーム",
     "allLanguages": "すべての言語",
     "hideTracked": "登録済みを隠す",
-    "clearFilters": "フィルターをクリア",
     "search": "検索...",
     "yearFrom": "開始年",
     "yearTo": "終了年",
@@ -420,7 +414,8 @@
   },
   "releases": {
     "loading": "読み込み中...",
-    "empty": "公開情報が見つかりません。"
+    "empty": "公開情報が見つかりません。",
+    "loadMore": "さらに読み込む"
   },
   "track": {
     "track": "ウォッチリストに追加",
@@ -528,42 +523,28 @@
     "hideWatched": "視聴済みを隠す",
     "showWatched": "視聴済みを表示",
     "gridView": "グリッド表示",
-    "weekView": "週表示",
     "agendaView": "予定表示",
     "close": "閉じる",
     "goToDay": "{{date}} に移動",
-    "densityCompact": "コンパクト",
-    "densityComfortable": "標準",
-    "densitySpacious": "ゆったり",
     "loadError": "カレンダーを読み込めませんでした。もう一度お試しください。",
     "stats": {
       "episodes_other": "{{count}} エピソード",
-      "titles_other": "{{count}} 作品",
-      "total_other": "合計 {{count}}"
+      "titles_other": "{{count}} 作品"
     },
     "episodes": "エピソード",
     "releases": "公開作品",
     "noReleasesOnDay": "この日に登録作品の公開はありません",
     "previousMonth": "前の月",
     "nextMonth": "次の月",
-    "month": "月",
-    "agenda": "予定",
-    "legend": {
-      "tracked": "登録済み · 放送中",
-      "followed": "フォロー中 · 新エピソード",
-      "premiere": "初回放送"
-    },
-    "episodesThisMonth_other": "今月 {{count}} エピソード",
-    "previousWeek": "前の週",
-    "nextWeek": "次の週",
-    "thisWeek": "今週"
+    "loadMonth": "{{month}}を表示",
+    "movie": "映画",
+    "show": "番組"
   },
   "landing": {
     "tagline": "好きな映画やドラマを追いかけよう",
     "subtitle": "新しいエピソードの通知を受け取り、見たものを記録し、配信中の作品を見つけましょう。",
     "signIn": "ログイン",
     "signUp": "アカウントを作成",
-    "popularNow": "いま人気",
     "discoverMore": "もっと見る"
   },
   "userProfile": {
@@ -604,7 +585,6 @@
       "watchTimeShows": "番組の視聴時間",
       "topGenres": "よく見るジャンル",
       "friendsCount": "友達 · {{count}}",
-      "seeAll": "すべて表示",
       "followedPeople": "フォロー中の人物",
       "followedSince": "{{date}} からフォロー",
       "activity12m": "過去 12 か月のアクティビティ",
@@ -623,7 +603,9 @@
         "completed": "視聴完了",
         "onHold": "一時停止",
         "planToWatch": "見たい",
-        "dropped": "視聴中止"
+        "dropped": "視聴中止",
+        "notStarted": "未視聴",
+        "unreleased": "未公開"
       },
       "activity": {
         "title": "最近のアクティビティ",
@@ -829,7 +811,7 @@
       "visibilityUpdateFailed": "公開範囲を更新できませんでした",
       "perTitleOverrides": "作品ごとの設定",
       "socialTitle": "ソーシャル",
-      "socialSubtitle": "友達をあなたの Remindarr に招待しましょう。登録用の限定リンクが送られます。",
+      "socialSubtitle": "友達をあなたの Remindarr に招待しましょう。リンクを開くと、お互いにフォローし合います。",
       "socialHint": "招待コードは招待ページで管理できます",
       "passkeyNameLabel": "パスキー名",
       "data": {
@@ -904,11 +886,10 @@
   "discovery": {
     "title": "おすすめ",
     "empty": "まだおすすめはありません。ほかのユーザーをフォローすると、その人のおすすめが表示されます！",
+    "emptyCta": "作品を探して登録し、いくつか評価するとおすすめが良くなります。",
     "movie": "映画",
-    "tv": "番組",
     "track": "登録",
     "dismiss": "非表示",
-    "tracked": "「{{title}}」をウォッチリストに追加しました",
     "trackFailed": "作品を登録できませんでした",
     "dismissFailed": "おすすめを非表示にできませんでした",
     "loadFailed": "おすすめを読み込めませんでした",
@@ -923,10 +904,8 @@
     "undo": "元に戻す",
     "friendCount_other": "友達 {{count}} 人",
     "direct": "直接",
-    "noPoster": "なし",
     "kicker": "あなたの視聴履歴とフォロー中のユーザーから",
     "forYou": "あなたへ",
-    "activity": "アクティビティ",
     "sessionCounts": "{{tracked}} 件登録 · {{dismissed}} 件非表示",
     "moreForYou": {
       "kicker": "さらにおすすめ",
@@ -937,8 +916,7 @@
       "kicker": "フォロー中のユーザーから",
       "title": "友達のおすすめ"
     },
-    "hiddenCount_other": "{{count}} 件を非表示（登録済みまたは非表示）",
-    "allHandled": "すべてのおすすめを登録または非表示にしました。",
+    "hiddenCount_other": "{{count}} 件を非表示（登録済み・視聴済みまたは非表示）",
     "hero": {
       "kicker": "イチオシ",
       "tvSeries": "テレビシリーズ",
@@ -947,9 +925,7 @@
       "tasteProfile": "あなたの好みからのイチオシです。",
       "friends": "友達",
       "recCount_other": "おすすめ {{count}} 件",
-      "noFriendRecs": "まだ友達からのおすすめはありません。",
       "viewDetails": "詳細を見る",
-      "undoDismiss": "非表示を取り消す",
       "notInterested": "興味なし"
     }
   },
@@ -965,14 +941,18 @@
     "redeeming": "招待を適用中...",
     "redeemSuccess": "@{{name}} さんと相互フォローになりました！",
     "statusPending": "未使用",
-    "statusUsed": "@{{username}} さんが使用",
+    "statusUsed": "<profile>@{{username}}</profile> さんが使用",
     "statusExpired": "期限切れ",
     "created_at": "作成日",
     "expires_at": "有効期限",
-    "usedBy": "使用者",
     "shareTitle": "Remindarr で一緒に楽しもう",
     "shareText": "招待リンクから Remindarr に参加してください！",
-    "settingsLink": "友達を招待"
+    "settingsLink": "友達を招待",
+    "statusUsedDeleted": "削除されたアカウントが使用",
+    "used_at": "使用日",
+    "remove": "削除",
+    "removing": "削除中...",
+    "removed": "招待を削除しました"
   },
   "common": {
     "scrollLeft": "左にスクロール",
@@ -991,7 +971,10 @@
       "minutesAgo_other": "{{count}} 分前",
       "hoursAgo_other": "{{count}} 時間前",
       "daysAgo_other": "{{count}} 日前"
-    }
+    },
+    "share": "共有",
+    "linkCopied": "リンクをクリップボードにコピーしました",
+    "linkCopyFailed": "リンクをコピーできませんでした"
   },
   "feed": {
     "title": "カレンダーフィード",
@@ -1109,20 +1092,15 @@
     "snoozed": "通知停止中"
   },
   "stats": {
-    "title": "統計",
     "loadError": "統計を読み込めませんでした。もう一度お試しください。",
     "moviesWatched": "視聴した映画",
     "episodesWatched": "視聴したエピソード",
     "showsTracked": "登録した番組",
     "moviesTracked": "登録した映画",
     "watchTime": "視聴時間",
-    "total": "合計",
+    "watchTimeSplit": "番組 {{shows}} · 映画 {{movies}}",
     "watchlistEta": "リスト完了予定",
     "atCurrentPace": "今のペースで",
-    "tvWatchTime": "番組の視聴時間",
-    "movieWatchTime": "映画の視聴時間",
-    "episodeCount_other": "{{count}} エピソード",
-    "movieCount_other": "{{count}} 本",
     "monthlyActivity": "月別アクティビティ",
     "episodes": "エピソード",
     "movies": "映画",

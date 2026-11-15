@@ -6,6 +6,30 @@ import { useAuth } from "../context/AuthContext";
 import { Avatar } from "../components/profile/atoms/Avatar";
 import type { LeaderboardEntry } from "../types";
 
+const RANK_COLORS: Record<number, string> = {
+  1: "text-primary-text",
+  2: "text-foreground-secondary",
+  3: "text-[oklch(0.68_0.11_55)]", // bronze
+};
+
+/** Podium colour for a rank; nobody earns a medal colour with 0 XP. */
+function rankColor(entry: LeaderboardEntry): string {
+  if (entry.xp === 0) return "text-muted-foreground";
+  return RANK_COLORS[entry.rank] ?? "text-muted-foreground";
+}
+
+function badgeLabel(count: number): string {
+  return `${count} badge${count !== 1 ? "s" : ""}`;
+}
+
+/** The @handle line is only worth showing when it differs from the name above it. */
+function showHandle(entry: LeaderboardEntry): boolean {
+  return (
+    entry.name != null &&
+    entry.name.toLowerCase() !== entry.username.toLowerCase()
+  );
+}
+
 function PodiumSpot({
   entry,
   currentUserId,
@@ -14,23 +38,17 @@ function PodiumSpot({
   currentUserId: string | undefined;
 }) {
   const isMe = entry.userId === currentUserId;
-  const rankColors: Record<number, string> = {
-    1: "text-primary-text",
-    2: "text-foreground-secondary",
-    3: "text-primary-text",
-  };
-  const textColor = rankColors[entry.rank] ?? "text-muted-foreground";
 
   return (
     <Link
       to={`/user/${entry.username}`}
-      className={`flex flex-col items-center gap-2 px-4 py-4 rounded-lg border hover:opacity-90 transition-opacity ${
+      className={`flex flex-col items-center gap-2 px-4 py-4 rounded-lg border hover:opacity-90 transition-opacity min-w-0 ${
         isMe
           ? "border-primary-border bg-primary-soft"
           : "border-border bg-fill-subtle"
       }`}
     >
-      <span className={`font-mono text-2xl font-extrabold ${textColor}`}>
+      <span className={`font-mono text-2xl font-extrabold ${rankColor(entry)}`}>
         #{entry.rank}
       </span>
       <Avatar
@@ -39,13 +57,15 @@ function PodiumSpot({
         image={entry.image}
         size={48}
       />
-      <div className="text-center min-w-0">
-        <div className="text-sm font-bold text-foreground truncate max-w-[120px]">
+      <div className="text-center min-w-0 w-full">
+        <div className="text-sm font-bold text-foreground truncate">
           {entry.name ?? entry.username}
         </div>
-        <div className="font-mono text-xs text-muted-foreground truncate">
-          @{entry.username}
-        </div>
+        {showHandle(entry) && (
+          <div className="font-mono text-xs text-muted-foreground truncate">
+            @{entry.username}
+          </div>
+        )}
       </div>
       <div className="flex items-center gap-1.5">
         <Star size={13} className="text-primary-text" />
@@ -54,7 +74,7 @@ function PodiumSpot({
         </span>
       </div>
       <div className="font-mono text-xs text-muted-foreground">
-        {entry.badgeCount} badge{entry.badgeCount !== 1 ? "s" : ""}
+        {badgeLabel(entry.badgeCount)}
       </div>
     </Link>
   );
@@ -100,9 +120,6 @@ export default function LeaderboardPage() {
 
   const header = (
     <div>
-      <div className="text-xs text-foreground-secondary font-medium mb-1">
-        Leaderboard
-      </div>
       <h1 className="text-2xl font-extrabold tracking-tight">Leaderboard</h1>
       <p className="text-muted-foreground text-sm mt-1">
         Among people you follow
@@ -118,8 +135,14 @@ export default function LeaderboardPage() {
           <Trophy size={40} className="text-muted-foreground mx-auto mb-3" />
           <p className="text-muted-foreground mb-1">No rankings yet.</p>
           <p className="text-muted-foreground text-sm">
-            Track titles and follow people to appear on the leaderboard.
+            Earn achievements for XP and follow people to compare.
           </p>
+          <Link
+            to="/achievements"
+            className="inline-block mt-3 text-sm font-medium text-primary-text hover:underline"
+          >
+            See your achievements
+          </Link>
         </div>
       </div>
     );
@@ -177,16 +200,18 @@ export default function LeaderboardPage() {
                   <div className="text-sm font-semibold text-foreground truncate">
                     {entry.name ?? entry.username}
                   </div>
-                  <div className="font-mono text-xs text-muted-foreground truncate">
-                    @{entry.username}
-                  </div>
+                  {showHandle(entry) && (
+                    <div className="font-mono text-xs text-muted-foreground truncate">
+                      @{entry.username}
+                    </div>
+                  )}
                 </div>
                 <div className="text-right shrink-0">
                   <div className="font-mono text-sm font-bold text-primary-text">
                     {entry.xp} XP
                   </div>
                   <div className="font-mono text-xs text-muted-foreground">
-                    {entry.badgeCount} badges
+                    {badgeLabel(entry.badgeCount)}
                   </div>
                 </div>
               </Link>
