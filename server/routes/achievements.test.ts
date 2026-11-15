@@ -515,6 +515,36 @@ describe("GET /leaderboard", () => {
     const bobEntry = body.entries.find((e: any) => e.userId === userBId);
     expect(bobEntry).toBeDefined();
   });
+
+  it("gives tied users the same rank, ordered by username (#1404)", async () => {
+    // alice and bob both have 0 XP; carol earns one achievement.
+    const carolId = await createUser("carol", "hash", "Carol");
+    await follow(userAId, userBId);
+    await follow(userAId, carolId);
+
+    const moviesDef = ACHIEVEMENTS.find((a) => a.key === "movies_10")!;
+    await upsertAchievementDef(moviesDef);
+    const { getDb, userAchievements } = await import("../db/schema");
+    await getDb()
+      .insert(userAchievements)
+      .values({
+        userId: carolId,
+        achievementKey: "movies_10",
+        progress: 10,
+        earnedAt: new Date().toISOString(),
+      })
+      .run();
+
+    const res = await app.request("/leaderboard", {
+      headers: authHeaders(userAToken),
+    });
+    const body = await res.json();
+    expect(body.entries.map((e: any) => [e.username, e.rank])).toEqual([
+      ["carol", 1],
+      ["alice", 2],
+      ["bob", 2],
+    ]);
+  });
 });
 
 describe("GET /streak/me", () => {

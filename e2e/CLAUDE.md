@@ -65,10 +65,10 @@ If a spec is skipped in CI (`e2e.yml`): either fix and re-enable, or open a GitH
 
 New specs should use Page Objects rather than raw locators inline. Page objects live in `e2e/pages/`.
 
-| File            | Purpose                                                             |
-| --------------- | ------------------------------------------------------------------- |
-| `base-page.ts`  | `BasePage` abstract class — `goto(path)`, `waitForVisible(locator)` |
-| `login-page.ts` | `LoginPage` — reference implementation; handles OIDC/passkey toggle |
+| File            | Purpose                                                                      |
+| --------------- | ---------------------------------------------------------------------------- |
+| `base-page.ts`  | `BasePage` abstract class — `goto(path)`, `waitForVisible(locator)`          |
+| `login-page.ts` | `LoginPage` — reference implementation; username form + passkey/OIDC buttons |
 
 **Conventions:**
 

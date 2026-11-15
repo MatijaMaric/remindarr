@@ -6,12 +6,7 @@ async function signIn(
   user: RegisteredUser,
   password = user.password,
 ) {
-  const username = page.getByLabel("Username");
-  if (!(await username.isVisible()))
-    await page
-      .getByRole("button", { name: /sign in with username instead/i })
-      .click();
-  await username.fill(user.username);
+  await page.getByLabel("Username").fill(user.username);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: /^Sign In$/i }).click();
 }

@@ -41,6 +41,12 @@ import { episodeRuntime } from "../db/repository/episode-runtime";
 import { getUserPace, computeEta } from "../db/repository/stats";
 import { getDb, episodes as episodesTable } from "../db/schema";
 import { isFollowingPerson } from "../db/repository/person-follows";
+import { getTrackedTitleIds } from "../db/repository/tracked";
+import type {
+  TmdbPersonCastCredit,
+  TmdbPersonCrewCredit,
+  TmdbPersonDetails,
+} from "../tmdb/types";
 import { sql, eq, and, asc } from "drizzle-orm";
 
 const log = logger.child({ module: "details" });
@@ -482,35 +488,82 @@ app.get("/person/:personId", zValidator("param", personIdParam), async (c) => {
     return err(c, "TMDB not configured", 503);
   }
 
+  let person: TmdbPersonDetails;
   try {
-    const person = await fetchPersonDetails(personId);
-    const user = c.get("user");
-    const is_following = user
-      ? await isFollowingPerson(user.id, personId)
-      : false;
-    return ok(c, { person, is_following });
+    person = await fetchPersonDetails(personId);
   } catch (e) {
     log.error("TMDB person fetch failed", { personId, err: e });
-    // When TMDB is unreachable (e.g. dev/test with a placeholder key), return
-    // a minimal stub so the PersonPage renders rather than showing an error.
-    return ok(c, {
-      person: {
-        id: personId,
-        name: `Person ${personId}`,
-        biography: "",
-        birthday: null,
-        deathday: null,
-        place_of_birth: null,
-        known_for_department: "",
-        profile_path: null,
-        also_known_as: [],
-        popularity: 0,
-        external_ids: {},
-        combined_credits: { cast: [], crew: [] },
-      },
-    });
+    // tmdbRequest throws "TMDB API error <status>: ..." for non-2xx replies.
+    if (e instanceof Error && e.message.startsWith("TMDB API error 404")) {
+      return err(c, "Person not found", 404);
+    }
+    return err(c, "Failed to fetch person", 503);
   }
+
+  const user = c.get("user");
+  const [is_following, library] = user
+    ? await Promise.all([
+        isFollowingPerson(user.id, personId),
+        getTrackedTitleIds(user.id),
+      ])
+    : [false, new Set<string>()];
+
+  setPublicCacheIfAnon(c, 3600);
+  return ok(c, { person: slimPerson(person, library), is_following });
 });
+
+/** Credit fields the Person page reads; TMDB sends ~4x more per credit. */
+function slimCredit<T extends TmdbPersonCastCredit | TmdbPersonCrewCredit>(
+  credit: T,
+  library: Set<string>,
+) {
+  const role =
+    "character" in credit
+      ? { character: credit.character ?? "" }
+      : { job: credit.job };
+  return {
+    id: credit.id,
+    media_type: credit.media_type,
+    title: credit.title,
+    name: credit.name,
+    ...role,
+    release_date: credit.release_date,
+    first_air_date: credit.first_air_date,
+    poster_path: credit.poster_path,
+    vote_count: credit.vote_count ?? 0,
+    popularity: credit.popularity ?? 0,
+    episode_count: credit.episode_count,
+    in_library: library.has(`${credit.media_type}-${credit.id}`),
+  };
+}
+
+function slimPerson(person: TmdbPersonDetails, library: Set<string>) {
+  const ids = person.external_ids;
+  return {
+    id: person.id,
+    name: person.name,
+    biography: person.biography,
+    birthday: person.birthday,
+    deathday: person.deathday,
+    place_of_birth: person.place_of_birth,
+    known_for_department: person.known_for_department,
+    profile_path: person.profile_path,
+    external_ids: {
+      imdb_id: ids?.imdb_id ?? null,
+      instagram_id: ids?.instagram_id ?? null,
+      twitter_id: ids?.twitter_id ?? null,
+      facebook_id: ids?.facebook_id ?? null,
+    },
+    combined_credits: {
+      cast: (person.combined_credits?.cast ?? []).map((c) =>
+        slimCredit(c, library),
+      ),
+      crew: (person.combined_credits?.crew ?? []).map((c) =>
+        slimCredit(c, library),
+      ),
+    },
+  };
+}
 
 app.get(
   "/movie/:id/suggestions",

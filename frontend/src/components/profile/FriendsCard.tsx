@@ -7,7 +7,6 @@ import type { ProfileFriend } from "../../types";
 
 interface FriendsCardProps {
   friends: ProfileFriend[];
-  profileUsername: string;
   totalFriends: number;
 }
 
@@ -23,7 +22,6 @@ function formatSince(iso: string | null): string {
 
 export default function FriendsCard({
   friends,
-  profileUsername,
   totalFriends,
 }: FriendsCardProps) {
   const { t } = useTranslation();
@@ -31,22 +29,14 @@ export default function FriendsCard({
 
   return (
     <DossierCard>
-      <div className="flex items-baseline justify-between mb-3">
-        <Kicker className="mb-0">
-          {t("userProfile.dossier.friendsCount", { count: totalFriends })}
-        </Kicker>
-        <Link
-          to={`/u/${profileUsername}/followers`}
-          className="text-[11px] font-semibold text-primary-text hover:text-primary-text transition-colors"
-        >
-          {t("userProfile.dossier.seeAll")}
-        </Link>
-      </div>
+      <Kicker className="mb-3">
+        {t("userProfile.dossier.friendsCount", { count: totalFriends })}
+      </Kicker>
       <div className="flex flex-col gap-2">
         {friends.map((f) => (
           <Link
             key={f.id}
-            to={`/u/${f.username}`}
+            to={`/user/${encodeURIComponent(f.username)}`}
             className="flex items-center gap-2.5 py-1 -mx-1 px-1 rounded-sm hover:bg-fill-subtle transition-colors"
           >
             <Avatar

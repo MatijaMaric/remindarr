@@ -91,9 +91,12 @@ describe("InvitePage", () => {
     render(<InvitePage />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(screen.getByText("CODE1")).toBeDefined();
-      expect(screen.getByText("CODE2")).toBeDefined();
+      expect(screen.getAllByText("Pending")).toHaveLength(2);
     });
+    // The raw code is not shown; the Share button hands out the link.
+    expect(screen.queryByText("CODE1")).toBeNull();
+    expect(screen.queryByText("CODE2")).toBeNull();
+    expect(screen.getAllByText("Share")).toHaveLength(2);
   });
 
   it("generate button creates new invitation", async () => {
@@ -122,7 +125,7 @@ describe("InvitePage", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("NEWCODE")).toBeDefined();
+      expect(screen.getByText("Pending")).toBeDefined();
     });
   });
 
@@ -164,11 +167,11 @@ describe("InvitePage", () => {
 
     // Card should be removed after revoke (cache invalidated and refetched)
     await waitFor(() => {
-      expect(screen.queryByText("REVOKEME")).toBeNull();
+      expect(screen.queryByText("Revoke")).toBeNull();
     });
   });
 
-  it("expired invitations show correct status", async () => {
+  it("expired invitations show correct status and can be removed", async () => {
     const invitations = [
       makeInvitation({
         id: "inv-expired",
@@ -186,23 +189,23 @@ describe("InvitePage", () => {
       expect(screen.getByText("Expired")).toBeDefined();
     });
 
-    // No share or revoke button for expired
+    // No share or revoke button for expired, only Remove
     expect(screen.queryByText("Share")).toBeNull();
     expect(screen.queryByText("Revoke")).toBeNull();
+
+    fireEvent.click(screen.getByText("Remove"));
+    await waitFor(() => {
+      expect(apiMock.revokeInvitation).toHaveBeenCalledWith("inv-expired");
+    });
   });
 
-  it("used invitations show used by info", async () => {
+  it("used invitations name the user once, link the profile, and show the used date", async () => {
     const invitations = [
       makeInvitation({
         id: "inv-used",
         code: "USED1",
-        used_at: new Date().toISOString(),
-        used_by: {
-          id: "u3",
-          username: "bob",
-          display_name: "Bob",
-          image: null,
-        },
+        used_at: "2026-03-02T10:00:00.000Z",
+        used_by: { id: "u3", username: "bob" },
       }),
     ];
     apiMock.getInvitations.mockImplementation(() =>
@@ -211,12 +214,35 @@ describe("InvitePage", () => {
 
     render(<InvitePage />, { wrapper: Wrapper });
 
-    await waitFor(() => {
-      expect(screen.getByText("@bob")).toBeDefined();
+    // Regression: a <link> tag in the translation is a void HTML element, so
+    // the anchor rendered empty with "@bob" outside it.
+    const link = await waitFor(() => {
+      const a = document.querySelector('a[href="/user/bob"]');
+      if (!a) throw new Error("profile link not rendered");
+      return a;
     });
+    expect(link.textContent).toBe("@bob");
+    expect(screen.getAllByText(/Used by/)).toHaveLength(1);
+    expect(screen.getByText(/^Used: /)).toBeDefined();
+    expect(screen.queryByText(/^Expires: /)).toBeNull();
 
     // No share or revoke button for used invitations
     expect(screen.queryByText("Revoke")).toBeNull();
+    expect(screen.queryByText("Remove")).toBeNull();
+  });
+
+  it("used invitation whose user was deleted says so instead of an empty @", async () => {
+    apiMock.getInvitations.mockImplementation(() =>
+      Promise.resolve({
+        invitations: [
+          makeInvitation({ used_at: new Date().toISOString(), used_by: null }),
+        ],
+      } as any),
+    );
+
+    render(<InvitePage />, { wrapper: Wrapper });
+
+    expect(await screen.findByText("Used by a deleted account")).toBeDefined();
   });
 
   it("auto-redeem from URL query parameter", async () => {

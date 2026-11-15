@@ -4,7 +4,6 @@ import {
   mockLoggedOut,
   MOCK_EPISODE,
   MOCK_UPCOMING_EPISODE,
-  MOCK_SEARCH_TITLE,
 } from "./helpers";
 import { HomePage } from "./pages/home-page";
 
@@ -121,20 +120,6 @@ test.describe("Home", () => {
   test("TC-05: unauthenticated user sees landing page", async ({ page }) => {
     const home = new HomePage(page);
     await mockLoggedOut(page);
-    // Browse endpoint for Popular Right Now section
-    await page.route("**/api/browse**", (route) =>
-      route.fulfill({
-        json: {
-          titles: [MOCK_SEARCH_TITLE],
-          page: 1,
-          totalPages: 1,
-          totalResults: 1,
-          availableGenres: [],
-          availableProviders: [],
-          availableLanguages: [],
-        },
-      }),
-    );
     await home.gotoHome();
 
     // Hero heading visible
@@ -145,13 +130,13 @@ test.describe("Home", () => {
     await expect(
       page.locator("#main-content").getByRole("link", { name: /sign in/i }),
     ).toBeVisible();
-    // Create Account link to /signup
+    // Sign Up link to /signup
     await expect(
-      page.getByRole("link", { name: /create account/i }),
+      page.locator("#main-content").getByRole("link", { name: /sign up/i }),
     ).toBeVisible();
-    // Popular Right Now section
+    // Discover More link to /browse (replaces the old popular titles grid)
     await expect(
-      page.getByRole("heading", { name: /popular right now/i }),
+      page.getByRole("link", { name: /discover more/i }),
     ).toBeVisible();
     // URL remains /
     await expect(page).toHaveURL("/");

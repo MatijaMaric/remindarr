@@ -116,14 +116,6 @@ export class HomePage extends BasePage {
     return this.page.getByRole("link", { name: /sign in/i });
   }
 
-  createAccountLink() {
-    return this.page.getByRole("link", { name: /create account/i });
-  }
-
-  popularNowHeading() {
-    return this.page.getByRole("heading", { name: /popular right now/i });
-  }
-
   homeNavLink() {
     return this.page.getByRole("link", { name: /^home$/i });
   }

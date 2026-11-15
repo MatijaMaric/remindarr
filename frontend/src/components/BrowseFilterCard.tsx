@@ -42,12 +42,25 @@ interface Props {
   languages: string[] | LanguageOption[];
   priorityLanguageCodes?: string[];
 
+  /** Only one language applies (TMDB discover takes a single language). */
+  singleLanguage?: boolean;
+
+  /** New Releases: a days toggle replaces the year and rating fields. */
+  daysBack?: number;
+  onDaysBackChange?: (days: number) => void;
+  /** Adds an "Owned by me" provider option (local /titles filtering only). */
+  showOwned?: boolean;
+
   onlyMine?: boolean;
+  /** Shown only when the user has subscribed services. */
+  onOnlyMineChange?: (value: boolean) => void;
   hideTracked?: boolean;
   onHideTrackedChange?: (value: boolean) => void;
 
   onClearFilters: () => void;
 }
+
+const DAYS = [7, 14, 30, 90] as const;
 
 const RATING_OPTIONS = [
   "5",
@@ -82,13 +95,19 @@ export default function BrowseFilterCard(props: Props) {
     onLanguageChange,
     languages,
     priorityLanguageCodes,
+    singleLanguage,
+    daysBack,
+    onDaysBackChange,
+    showOwned,
     onlyMine,
+    onOnlyMineChange,
     hideTracked,
     onHideTrackedChange,
     onClearFilters,
   } = props;
   const { t, i18n } = useTranslation();
   const uiLanguage = i18n.language;
+  const showDays = daysBack !== undefined && onDaysBackChange !== undefined;
 
   const hasActiveFilters =
     onlyMine ||
@@ -96,9 +115,8 @@ export default function BrowseFilterCard(props: Props) {
     provider.length > 0 ||
     language.length > 0 ||
     type.length > 0 ||
-    yearMin !== "" ||
-    yearMax !== "" ||
-    minRating !== "";
+    (showDays && daysBack !== 30) ||
+    (!showDays && (yearMin !== "" || yearMax !== "" || minRating !== ""));
 
   // Genre summary
   const genreSummary =
@@ -114,12 +132,16 @@ export default function BrowseFilterCard(props: Props) {
     for (const p of providers) m.set(String(p.id), p);
     return m;
   }, [providers]);
+  const providerName = (id: string) =>
+    id === "owned"
+      ? t("owned.filterOption")
+      : (providerById.get(id)?.name ?? id);
   const providerSummary =
     provider.length === 0
       ? t("filter.card.allProviders")
       : provider.length <= 2
-        ? provider.map((id) => providerById.get(id)?.name ?? id).join(", ")
-        : `${providerById.get(provider[0])?.name ?? provider[0]}, ${providerById.get(provider[1])?.name ?? provider[1]} +${provider.length - 2}`;
+        ? provider.map(providerName).join(", ")
+        : `${providerName(provider[0])}, ${providerName(provider[1])} +${provider.length - 2}`;
 
   // Year summary
   const yearSummary =
@@ -146,6 +168,19 @@ export default function BrowseFilterCard(props: Props) {
       sections.push({ label: t("filter.otherGroup"), options: other });
     return sections;
   }, [providers, regionProviderIds, t]);
+  const providerCheckboxSections = [
+    ...(showOwned
+      ? [{ options: [{ value: "owned", label: t("owned.filterOption") }] }]
+      : []),
+    ...providerSections.map((s) => ({
+      label: s.label,
+      options: s.options.map((p) => ({
+        value: String(p.id),
+        label: p.name,
+        iconUrl: p.iconUrl,
+      })),
+    })),
+  ];
 
   // Language sections
   const languageOptions = useMemo(() => {
@@ -183,8 +218,14 @@ export default function BrowseFilterCard(props: Props) {
 
   return (
     <div className="space-y-3">
-      {/* Primary: 4 dropdown fields + Clear */}
-      <Card className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[repeat(4,1fr)_auto] gap-3 items-end">
+      {/* Primary: dropdown fields + Clear */}
+      <Card
+        className={`grid grid-cols-1 md:grid-cols-2 gap-3 items-end ${
+          showDays
+            ? "lg:grid-cols-[repeat(2,1fr)_auto]"
+            : "lg:grid-cols-[repeat(4,1fr)_auto]"
+        }`}
+      >
         <FilterField label={t("filter.card.genre")} summary={genreSummary}>
           <CheckboxList
             sections={[
@@ -200,29 +241,30 @@ export default function BrowseFilterCard(props: Props) {
           summary={providerSummary}
         >
           <CheckboxList
-            sections={providerSections.map((s) => ({
-              label: s.label,
-              options: s.options.map((p) => ({
-                value: String(p.id),
-                label: p.name,
-                iconUrl: p.iconUrl,
-              })),
-            }))}
+            sections={providerCheckboxSections}
             selected={provider}
             onChange={onProviderChange}
             searchable
           />
         </FilterField>
-        <FilterField label={t("filter.card.year")} summary={yearSummary}>
-          <YearRangeInput
-            yearMin={yearMin}
-            yearMax={yearMax}
-            onChange={onYearChange}
-          />
-        </FilterField>
-        <FilterField label={t("filter.card.minRating")} summary={ratingSummary}>
-          <RatingList value={minRating} onChange={onMinRatingChange} />
-        </FilterField>
+        {/* /api/titles (New Releases) has no year or rating filter. */}
+        {!showDays && (
+          <>
+            <FilterField label={t("filter.card.year")} summary={yearSummary}>
+              <YearRangeInput
+                yearMin={yearMin}
+                yearMax={yearMax}
+                onChange={onYearChange}
+              />
+            </FilterField>
+            <FilterField
+              label={t("filter.card.minRating")}
+              summary={ratingSummary}
+            >
+              <RatingList value={minRating} onChange={onMinRatingChange} />
+            </FilterField>
+          </>
+        )}
         <button
           type="button"
           onClick={onClearFilters}
@@ -277,15 +319,56 @@ export default function BrowseFilterCard(props: Props) {
           </button>
         </div>
 
+        {showDays && (
+          <div
+            role="group"
+            aria-label={t("filter.timePeriod")}
+            className="flex gap-1 bg-muted/50 rounded-md p-1"
+          >
+            {DAYS.map((d) => (
+              <button
+                key={d}
+                aria-pressed={daysBack === d}
+                onClick={() => onDaysBackChange(d)}
+                className={`px-3 py-1 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
+                  daysBack === d
+                    ? "bg-primary-soft text-primary-text"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {d}d
+              </button>
+            ))}
+          </div>
+        )}
+
         {languageOptions.length > 0 && (
           <ChipDropdown summary={languageSummary} active={language.length > 0}>
             <CheckboxList
               sections={languageSections}
               selected={language}
-              onChange={onLanguageChange}
+              onChange={(next) =>
+                // Single mode: the newest pick replaces the previous one.
+                onLanguageChange(singleLanguage ? next.slice(-1) : next)
+              }
               searchable
             />
           </ChipDropdown>
+        )}
+
+        {onOnlyMineChange && (
+          <button
+            type="button"
+            aria-pressed={onlyMine}
+            onClick={() => onOnlyMineChange(!onlyMine)}
+            className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
+              onlyMine
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {onlyMine ? "✓ " : ""}On my services
+          </button>
         )}
 
         {onHideTrackedChange && (
@@ -584,6 +667,7 @@ function RatingList({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="py-1">
       <button
@@ -595,7 +679,7 @@ function RatingList({
             : "text-foreground-secondary hover:bg-muted-hover"
         }`}
       >
-        Any rating
+        {t("filter.anyRating")}
       </button>
       {RATING_OPTIONS.map((r) => (
         <button

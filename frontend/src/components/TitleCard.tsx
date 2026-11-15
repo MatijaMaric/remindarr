@@ -9,6 +9,7 @@ import VisibilityButton from "./VisibilityButton";
 import StatusPicker from "./StatusPicker";
 import NotificationModePicker from "./NotificationModePicker";
 import TagList from "./TagList";
+import TrackedActionsMenu from "./TrackedActionsMenu";
 
 interface Props {
   title: Title;
@@ -22,6 +23,8 @@ interface Props {
   showTags?: boolean;
   showProviderBadge?: boolean;
   showRating?: boolean;
+  /** Put status, reminders and tags in a "···" menu instead of inline pickers. */
+  showActionsMenu?: boolean;
   /** Blur the poster (mild content advisory). */
   blurred?: boolean;
 }
@@ -149,6 +152,7 @@ const TitleCard = memo(function TitleCard({
   showTags,
   showProviderBadge,
   showRating,
+  showActionsMenu,
   blurred,
 }: Props) {
   const { t } = useTranslation();
@@ -201,6 +205,14 @@ const TitleCard = memo(function TitleCard({
     show_status: title.show_status,
   });
   const isSnoozed = snoozeUntil != null && new Date(snoozeUntil) > new Date();
+  const trackButton = (
+    <TrackButton
+      titleId={title.id}
+      isTracked={title.is_tracked}
+      onToggle={onTrackToggle}
+      titleData={title}
+    />
+  );
 
   return (
     <article
@@ -314,7 +326,7 @@ const TitleCard = memo(function TitleCard({
             variant="overlay"
           />
         )}
-        {isSnoozed && showNotificationPicker && (
+        {isSnoozed && (showNotificationPicker || showActionsMenu) && (
           <span className="absolute top-2 right-2 bg-info/90 text-foreground text-[11px] font-bold px-1.5 py-0.5 rounded-sm">
             {t("titleCard.snoozed")}
           </span>
@@ -350,29 +362,36 @@ const TitleCard = memo(function TitleCard({
         {/* Buttons — always anchored at bottom */}
         <div className="mt-auto flex flex-col gap-2">
           <WatchButtonGroup offers={title.offers} variant="dropdown" />
-          <TrackButton
-            titleId={title.id}
-            isTracked={title.is_tracked}
-            onToggle={onTrackToggle}
-            titleData={title}
-          />
-          {title.is_tracked && (showProgressBar || showStatusPicker) && (
-            <StatusPicker
-              titleId={title.id}
-              objectType={title.object_type}
-              currentStatus={
-                userStatus as
-                  | "plan_to_watch"
-                  | "watching"
-                  | "on_hold"
-                  | "dropped"
-                  | "completed"
-                  | null
-              }
-              onStatusChange={(s) => setUserStatus(s)}
-            />
+          {showActionsMenu && title.is_tracked ? (
+            <div className="flex items-center gap-1">
+              <div className="flex-1 min-w-0 flex flex-col">{trackButton}</div>
+              <TrackedActionsMenu
+                title={title}
+                onChange={() => onTrackToggle?.()}
+              />
+            </div>
+          ) : (
+            trackButton
           )}
-          {title.is_tracked && showNotificationPicker && (
+          {title.is_tracked &&
+            !showActionsMenu &&
+            (showProgressBar || showStatusPicker) && (
+              <StatusPicker
+                titleId={title.id}
+                objectType={title.object_type}
+                currentStatus={
+                  userStatus as
+                    | "plan_to_watch"
+                    | "watching"
+                    | "on_hold"
+                    | "dropped"
+                    | "completed"
+                    | null
+                }
+                onStatusChange={(s) => setUserStatus(s)}
+              />
+            )}
+          {title.is_tracked && !showActionsMenu && showNotificationPicker && (
             <NotificationModePicker
               titleId={title.id}
               currentMode={notifMode}
@@ -388,7 +407,7 @@ const TitleCard = memo(function TitleCard({
               onRemindOnReleaseChange={(enabled) => setRemindOnRelease(enabled)}
             />
           )}
-          {title.is_tracked && showTags && (
+          {title.is_tracked && !showActionsMenu && showTags && (
             <TagList titleId={title.id} tags={tags} onTagsChange={setTags} />
           )}
         </div>

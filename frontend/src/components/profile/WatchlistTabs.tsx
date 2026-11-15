@@ -4,9 +4,12 @@ import type { Title } from "../../types";
 
 export type WatchlistTab =
   | "watching"
+  | "not_started"
   | "completed"
   | "plan_to_watch"
   | "on_hold"
+  | "dropped"
+  | "unreleased"
   | "movies";
 
 interface WatchlistTabsProps {
@@ -17,11 +20,23 @@ interface WatchlistTabsProps {
 
 const TABS: { key: WatchlistTab; labelKey: string }[] = [
   { key: "watching", labelKey: "userProfile.dossier.tabWatching" },
+  { key: "not_started", labelKey: "userProfile.dossier.status.notStarted" },
   { key: "completed", labelKey: "userProfile.dossier.tabCompleted" },
   { key: "plan_to_watch", labelKey: "userProfile.dossier.tabPlanToWatch" },
   { key: "on_hold", labelKey: "userProfile.dossier.tabOnHold" },
+  { key: "dropped", labelKey: "userProfile.dossier.status.dropped" },
+  { key: "unreleased", labelKey: "userProfile.dossier.status.unreleased" },
   { key: "movies", labelKey: "userProfile.dossier.tabMovies" },
 ];
+
+/** The active tab if it has titles, else the first tab that does. */
+export function resolveWatchlistTab(
+  active: WatchlistTab,
+  counts: Record<WatchlistTab, number>,
+): WatchlistTab {
+  if (counts[active] > 0) return active;
+  return TABS.find((tab) => counts[tab.key] > 0)?.key ?? active;
+}
 
 export default function WatchlistTabs({
   active,
@@ -29,13 +44,15 @@ export default function WatchlistTabs({
   counts,
 }: WatchlistTabsProps) {
   const { t } = useTranslation();
+  const visible = TABS.filter((tab) => counts[tab.key] > 0);
+  if (visible.length === 0) return null;
   return (
     <div
       className="flex gap-1 overflow-x-auto border-b border-border"
       role="tablist"
       data-testid="watchlist-tabs"
     >
-      {TABS.map((tab) => {
+      {visible.map((tab) => {
         const isActive = active === tab.key;
         return (
           <button
@@ -68,30 +85,43 @@ export default function WatchlistTabs({
   );
 }
 
+/** Tab for a show: its user-set status, else the computed one. Every show lands in exactly one tab. */
+function tabForShow(show: Title): Exclude<WatchlistTab, "movies"> {
+  switch (show.user_status ?? show.show_status ?? null) {
+    case "not_started":
+      return "not_started";
+    case "completed":
+      return "completed";
+    case "plan_to_watch":
+      return "plan_to_watch";
+    case "on_hold":
+      return "on_hold";
+    case "dropped":
+      return "dropped";
+    case "unreleased":
+      return "unreleased";
+    default:
+      // watching, caught_up, or no computable status
+      return "watching";
+  }
+}
+
 export function useWatchlistFilters(shows: Title[], movies: Title[]) {
   return useMemo(() => {
-    const statusOf = (t: Title) => t.user_status ?? t.show_status ?? null;
-    const watching = shows.filter((s) => {
-      const st = statusOf(s);
-      return st === "watching" || st === "caught_up";
-    });
-    const completed = shows.filter((s) => statusOf(s) === "completed");
-    const planToWatch = shows.filter((s) => s.user_status === "plan_to_watch");
-    const onHold = shows.filter((s) => s.user_status === "on_hold");
-    const counts: Record<WatchlistTab, number> = {
-      watching: watching.length,
-      completed: completed.length,
-      plan_to_watch: planToWatch.length,
-      on_hold: onHold.length,
-      movies: movies.length,
-    };
     const lists: Record<WatchlistTab, Title[]> = {
-      watching,
-      completed,
-      plan_to_watch: planToWatch,
-      on_hold: onHold,
+      watching: [],
+      not_started: [],
+      completed: [],
+      plan_to_watch: [],
+      on_hold: [],
+      dropped: [],
+      unreleased: [],
       movies,
     };
+    for (const show of shows) lists[tabForShow(show)].push(show);
+    const counts = Object.fromEntries(
+      Object.entries(lists).map(([k, v]) => [k, v.length]),
+    ) as Record<WatchlistTab, number>;
     return { counts, lists };
   }, [shows, movies]);
 }

@@ -118,14 +118,6 @@ export async function loginAdminApi(
  */
 export async function loginUi(page: Page, username: string, password: string) {
   await page.goto("/login");
-  // The LoginPage hides the username form behind a toggle when OIDC/passkey is
-  // configured — click through if the field isn't immediately visible.
-  const usernameField = page.getByLabel("Username");
-  if (!(await usernameField.isVisible().catch(() => false))) {
-    await page
-      .getByRole("button", { name: /sign in with username instead/i })
-      .click();
-  }
   await page.getByLabel("Username").fill(username);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: /^sign in$/i }).click();

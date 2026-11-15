@@ -10,18 +10,6 @@ const STANDARD_KIOSK_DATA = {
     fidelity: "rich",
     refresh_interval_seconds: 300,
   },
-  airing_now: {
-    id: 101,
-    title_id: "tt9876543",
-    show_title: "Test Show",
-    poster_url: null,
-    backdrop_url: null,
-    season_number: 1,
-    episode_number: 2,
-    ep_title: "Second Episode",
-    air_date: "2026-05-23T20:00:00Z",
-    provider: "Netflix",
-  },
   releasing_today: [
     {
       id: 101,
@@ -32,9 +20,10 @@ const STANDARD_KIOSK_DATA = {
       season_number: 1,
       episode_number: 2,
       ep_title: "Second Episode",
-      air_date: "2026-05-23T20:00:00Z",
+      air_date: "2026-05-23",
       provider: "Netflix",
       kind: "episode",
+      is_watched: false,
     },
   ],
   unwatched_queue: [
@@ -46,11 +35,12 @@ const STANDARD_KIOSK_DATA = {
       season_number: 2,
       episode_number: 3,
       ep_title: "The One",
-      air_date: "2026-04-01T00:00:00Z",
+      air_date: "2026-04-01",
       provider: "HBO Max",
       left: 5,
     },
   ],
+  queue_total: 1,
 };
 
 async function setupKioskShellMocks(page: KioskPage["page"]) {
@@ -67,7 +57,7 @@ test.describe("Kiosk page", () => {
     "Running on chromium only",
   );
 
-  test("TC-01: Page renders the full kiosk layout with header, hero, and two panels", async ({
+  test("TC-01: Page renders header, hero, the queue panel and footer, each show once", async ({
     page,
   }) => {
     const kp = new KioskPage(page);
@@ -79,33 +69,28 @@ test.describe("Kiosk page", () => {
     await kp.gotoKiosk("test-kiosk-token");
     await kp.waitForVisible(kp.wordmark());
 
-    // Header: wordmark, fidelity badge, household
+    // Header: wordmark, household
     await expect(kp.wordmark()).toBeVisible();
-    await expect(kp.fidelityBadge("RICH")).toBeVisible();
     await expect(page.getByText("alice").first()).toBeVisible();
 
-    // Hero: kicker, show title, episode info, decorative cast button
-    await expect(
-      page.getByText(/airing now/i, { exact: false }).first(),
-    ).toBeVisible();
+    // Hero: today's episode leads the screen
+    await expect(page.getByText(/new today · netflix/i)).toBeVisible();
     await expect(page.getByText("Test Show").first()).toBeVisible();
     await expect(
       page.getByText(/S1·E2/, { exact: false }).first(),
     ).toBeVisible();
     await expect(page.getByText("Second Episode").first()).toBeVisible();
-    // Cast to TV is aria-hidden decorative element — check text is present
-    await expect(page.getByText("Cast to TV")).toBeVisible();
+    await expect(page.getByText("Cast to TV")).toHaveCount(0);
 
-    // Releasing today panel
-    await expect(page.getByText(/releasing today/i).first()).toBeVisible();
-    await expect(page.getByText(/1 drops/i)).toBeVisible();
-    await expect(page.getByText("Netflix").first()).toBeVisible();
+    // The hero is the only episode today, so it is not repeated in a panel
+    await expect(page.getByText("Test Show")).toHaveCount(1);
+    await expect(page.getByText(/^\d+ episodes?$/)).toHaveCount(0);
 
     // Up next panel
     await expect(
       page.getByText(/up next in your queue/i).first(),
     ).toBeVisible();
-    await expect(page.getByText(/1 unwatched/i)).toBeVisible();
+    await expect(page.getByText("1 show", { exact: true })).toBeVisible();
     await expect(page.getByText("Old Show").first()).toBeVisible();
     await expect(
       page.getByText(/5.*left/i, { exact: false }).first(),
@@ -113,7 +98,7 @@ test.describe("Kiosk page", () => {
 
     // Footer
     await expect(page.getByText(/auto-refreshes every 5 min/i)).toBeVisible();
-    await expect(page.getByText(/token test/i)).toBeVisible();
+    await expect(page.getByText(/token/i)).toHaveCount(0);
   });
 
   test("TC-02: Invalid token shows the 'Kiosk unavailable' error screen", async ({
@@ -140,7 +125,6 @@ test.describe("Kiosk page", () => {
 
     // Kiosk layout elements are NOT rendered
     await expect(kp.wordmark()).not.toBeVisible();
-    await expect(kp.fidelityBadge("RICH")).not.toBeVisible();
   });
 
   test("TC-03: Kiosk page does not require an active user session", async ({
@@ -183,14 +167,11 @@ test.describe("Kiosk page", () => {
     await kp.gotoKiosk("epaper-token", "epaper");
     await kp.waitForVisible(kp.wordmark());
 
-    // Fidelity badge reads EPAPER
-    await expect(kp.fidelityBadge("EPAPER")).toBeVisible();
-
     // Footer auto-refresh label: 1800s = 30 min
     await expect(page.getByText(/auto-refreshes every 30 min/i)).toBeVisible();
   });
 
-  test("TC-05: Hero falls back to 'Releasing today' when nothing is airing now", async ({
+  test("TC-05: A premiere today leads the screen with a 'New today' kicker", async ({
     page,
   }) => {
     const kp = new KioskPage(page);
@@ -203,7 +184,6 @@ test.describe("Kiosk page", () => {
             fidelity: "rich",
             refresh_interval_seconds: 300,
           },
-          airing_now: null,
           releasing_today: [
             {
               id: 200,
@@ -214,12 +194,14 @@ test.describe("Kiosk page", () => {
               season_number: 1,
               episode_number: 1,
               ep_title: "Pilot",
-              air_date: "2026-05-23T00:00:00Z",
+              air_date: "2026-05-23",
               provider: "Disney+",
-              kind: "series",
+              kind: "premiere",
+              is_watched: false,
             },
           ],
           unwatched_queue: [],
+          queue_total: 0,
         },
       }),
     );
@@ -227,10 +209,8 @@ test.describe("Kiosk page", () => {
     await kp.gotoKiosk("fallback-token");
     await kp.waitForVisible(kp.wordmark());
 
-    // Hero shows "Releasing today" kicker (text-transformed to uppercase by CSS)
-    await expect(
-      page.getByText(/releasing today/i, { exact: false }).first(),
-    ).toBeVisible();
+    // Hero kicker (text-transformed to uppercase by CSS)
+    await expect(page.getByText(/new today · disney\+/i)).toBeVisible();
 
     // Hero shows the fallback title info
     await expect(page.getByText("New Release").first()).toBeVisible();
@@ -253,9 +233,9 @@ test.describe("Kiosk page", () => {
             fidelity: "rich",
             refresh_interval_seconds: 300,
           },
-          airing_now: null,
           releasing_today: [],
           unwatched_queue: [],
+          queue_total: 0,
         },
       }),
     );
@@ -266,8 +246,8 @@ test.describe("Kiosk page", () => {
     // Hero empty state (text-transformed uppercase by CSS)
     await expect(page.getByText(/nothing on the slate today/i)).toBeVisible();
 
-    // Panel empty states
-    await expect(page.getByText("No releases today.")).toBeVisible();
-    await expect(page.getByText("All caught up!")).toBeVisible();
+    // Empty panels are not rendered
+    await expect(page.getByText("Up next in your queue")).toHaveCount(0);
+    await expect(page.getByText("New today", { exact: true })).toHaveCount(0);
   });
 });

@@ -9,7 +9,7 @@ import {
   getUserByWatchlistShareToken,
   getWatchlistShareToken,
   setWatchlistShareToken,
-  getTrackedTitles,
+  getSharedWatchlistTitles,
 } from "../db/repository";
 import { getYearInReview } from "../db/repository/year-in-review";
 import { requireAuth } from "../middleware/auth";
@@ -114,7 +114,7 @@ app.get(
     if (!user) {
       return c.json({ error: "Not found" }, 404);
     }
-    const titles = await getTrackedTitles(user.id);
+    const titles = await getSharedWatchlistTitles(user.id);
     const username = user.displayUsername ?? user.username;
     log.debug("Shared watchlist served", {
       userId: user.id,

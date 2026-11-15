@@ -414,33 +414,28 @@ export interface EpisodeDetailsResponse {
 
 // ─── Person Types ────────────────────────────────────────────────────────────
 
-export interface PersonCastCredit {
+interface PersonCreditBase {
   id: number;
   media_type: "movie" | "tv";
   title?: string;
   name?: string;
-  character: string;
   release_date?: string;
   first_air_date?: string;
   poster_path: string | null;
-  vote_average: number;
   vote_count: number;
   popularity: number;
+  /** TV credits only: episodes the person appears in / worked on. */
+  episode_count?: number;
+  /** True when the title is in the signed-in viewer's library. */
+  in_library?: boolean;
 }
 
-export interface PersonCrewCredit {
-  id: number;
-  media_type: "movie" | "tv";
-  title?: string;
-  name?: string;
+export interface PersonCastCredit extends PersonCreditBase {
+  character: string;
+}
+
+export interface PersonCrewCredit extends PersonCreditBase {
   job: string;
-  department: string;
-  release_date?: string;
-  first_air_date?: string;
-  poster_path: string | null;
-  vote_average: number;
-  vote_count: number;
-  popularity: number;
 }
 
 export interface PersonDetailsResponse {
@@ -453,15 +448,12 @@ export interface PersonDetailsResponse {
     place_of_birth: string | null;
     known_for_department: string;
     profile_path: string | null;
-    also_known_as: string[];
-    popularity: number;
     combined_credits: {
       cast: PersonCastCredit[];
       crew: PersonCrewCredit[];
     };
     external_ids?: ExternalIds;
   };
-  /** Absent on the TMDB-unreachable fallback. */
   is_following?: boolean;
 }
 
@@ -582,7 +574,6 @@ export interface AdminUser {
   ban_expires: number | null;
   created_at: string | null;
   updated_at: string | null;
-  tracked_count?: number;
 }
 
 export interface AdminUsersResponse {
@@ -644,17 +635,6 @@ export interface ProfileMonthlyActivity {
   episodes_watched: number;
 }
 
-export interface ProfileShowsByStatus {
-  watching: number;
-  caught_up: number;
-  completed: number;
-  not_started: number;
-  unreleased: number;
-  on_hold: number;
-  dropped: number;
-  plan_to_watch: number;
-}
-
 export interface ProfileFriend {
   id: string;
   username: string;
@@ -681,11 +661,9 @@ export interface PinnedTitle {
 
 export interface UserProfileResponse {
   user: UserProfileUser;
-  stats: UserProfileStats;
   overview: UserProfileOverview;
   genres: ProfileGenreCount[];
   monthly: ProfileMonthlyActivity[];
-  shows_by_status: ProfileShowsByStatus;
   friends: ProfileFriend[];
   movies: Title[];
   shows: Title[];
@@ -875,7 +853,7 @@ export interface InvitationItem {
   created_at: string;
   expires_at: string;
   used_at: string | null;
-  used_by: UserSummary | null;
+  used_by: { id: string; username: string } | null;
 }
 
 export interface UserSettings {

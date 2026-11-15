@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { getBackgroundImageUrl } from "./ReelsCard";
+import { getBackgroundImageUrl, getCountdownLabel } from "./ReelsCard";
 import type { Episode } from "../types";
 
 function makeEpisode(overrides: Partial<Episode> = {}): Episode {
@@ -44,5 +44,24 @@ describe("getBackgroundImageUrl", () => {
     expect(getBackgroundImageUrl(ep)).toBe(
       "https://image.tmdb.org/t/p/w780/still.jpg",
     );
+  });
+});
+
+describe("getCountdownLabel", () => {
+  const now = new Date("2026-11-15T12:00:00");
+
+  it("is null for past dates (the backlog already aired)", () => {
+    expect(getCountdownLabel("2026-11-13", now)).toBeNull();
+    expect(getCountdownLabel("1990-04-26", now)).toBeNull();
+  });
+
+  it("is null for today and missing dates", () => {
+    expect(getCountdownLabel("2026-11-15", now)).toBeNull();
+    expect(getCountdownLabel(null, now)).toBeNull();
+  });
+
+  it("counts down to future dates", () => {
+    expect(getCountdownLabel("2026-11-16", now)).toBe("TOMORROW");
+    expect(getCountdownLabel("2026-11-18", now)).toMatch(/^[A-Z]+$/);
   });
 });

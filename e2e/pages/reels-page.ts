@@ -10,9 +10,9 @@ export class ReelsPage extends BasePage {
     await super.goto("/reels");
   }
 
-  /** The "Coming Soon" source chip button. */
-  comingSoonChip() {
-    return this.page.getByRole("button", { name: "Coming Soon" });
+  /** The "Up Next" source chip button (the default feed). */
+  upNextChip() {
+    return this.page.getByRole("button", { name: "Up Next" });
   }
 
   /** The "Popular" source chip button. */

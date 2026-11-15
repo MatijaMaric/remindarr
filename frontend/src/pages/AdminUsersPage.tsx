@@ -3,8 +3,10 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import {
   Search,
-  Shield,
-  ShieldOff,
+  ShieldPlus,
+  ShieldMinus,
+  Ban,
+  UserCheck,
   Trash2,
   ChevronLeft,
   ChevronRight,
@@ -27,21 +29,29 @@ import { formatDate } from "../components/title-detail/utils";
 
 type Filter = "all" | "active" | "banned";
 
+const SEARCH_DEBOUNCE_MS = 300;
+
+function isAdminUser(user: AdminUser) {
+  return user.role === "admin" || user.is_admin === 1;
+}
+
 function RoleBadge({ user }: { user: AdminUser }) {
-  const isAdmin = user.role === "admin" || user.is_admin === 1;
+  const { t } = useTranslation();
+  const isAdmin = isAdminUser(user);
   return (
     <span
       className={`text-[11px] font-bold px-1.5 py-0.5 rounded-sm ${isAdmin ? "bg-primary-soft text-primary-text" : "bg-muted-hover text-muted-foreground"}`}
     >
-      {isAdmin ? "Admin" : "User"}
+      {isAdmin ? t("admin.users.roleAdmin") : t("admin.users.roleUser")}
     </span>
   );
 }
 
 function BannedBadge() {
+  const { t } = useTranslation();
   return (
     <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-sm bg-destructive-soft text-destructive">
-      Banned
+      {t("admin.users.banned")}
     </span>
   );
 }
@@ -51,14 +61,25 @@ export default function AdminUsersPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
 
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [page, setPage] = useState(1);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const [banReason, setBanReason] = useState("");
-  const [banTarget, setBanTarget] = useState<string | null>(null);
+  const [banTarget, setBanTarget] = useState<AdminUser | null>(null);
+  const [roleTarget, setRoleTarget] = useState<AdminUser | null>(null);
   const [resetTarget, setResetTarget] = useState<AdminUser | null>(null);
   const [newPassword, setNewPassword] = useState("");
+
+  // One request per pause in typing, not per keystroke.
+  useEffect(() => {
+    const id = setTimeout(
+      () => setSearch(searchInput.trim()),
+      SEARCH_DEBOUNCE_MS,
+    );
+    return () => clearTimeout(id);
+  }, [searchInput]);
 
   // Reset to page 1 when search/filter changes
   useEffect(() => {
@@ -69,17 +90,25 @@ export default function AdminUsersPage() {
     queryKey: ["admin-users", search, filter, page],
     queryFn: ({ signal }) =>
       api.getAdminUsers({ search, filter, page }, signal),
+    enabled: !!me?.is_admin,
   });
 
   const roleToggleMutation = useMutation({
     mutationFn: ({
-      userId,
+      user,
       newRole,
     }: {
-      userId: string;
+      user: AdminUser;
       newRole: "admin" | "user";
-    }) => api.setAdminUserRole(userId, newRole),
-    onError: () => toast.error("Failed to update role"),
+    }) => api.setAdminUserRole(user.id, newRole),
+    onSuccess: (_data, { user, newRole }) =>
+      toast.success(
+        t(
+          newRole === "admin" ? "admin.users.promoted" : "admin.users.demoted",
+          { username: user.username },
+        ),
+      ),
+    onError: () => toast.error(t("admin.users.roleFailed")),
     onSettled: () => void qc.invalidateQueries({ queryKey: ["admin-users"] }),
   });
 
@@ -90,20 +119,20 @@ export default function AdminUsersPage() {
       setBanTarget(null);
       setBanReason("");
     },
-    onError: () => toast.error("Failed to ban user"),
+    onError: () => toast.error(t("admin.users.banFailed")),
     onSettled: () => void qc.invalidateQueries({ queryKey: ["admin-users"] }),
   });
 
   const unbanMutation = useMutation({
     mutationFn: (userId: string) => api.unbanAdminUser(userId),
-    onError: () => toast.error("Failed to unban user"),
+    onError: () => toast.error(t("admin.users.unbanFailed")),
     onSettled: () => void qc.invalidateQueries({ queryKey: ["admin-users"] }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (userId: string) => api.deleteAdminUser(userId),
-    onSuccess: () => setConfirmDelete(null),
-    onError: () => toast.error("Failed to delete user"),
+    onSuccess: () => setDeleteTarget(null),
+    onError: () => toast.error(t("admin.users.deleteFailed")),
     onSettled: () => void qc.invalidateQueries({ queryKey: ["admin-users"] }),
   });
 
@@ -123,35 +152,19 @@ export default function AdminUsersPage() {
       ),
   });
 
-  function handleRoleToggle(user: AdminUser) {
-    const newRole =
-      user.role === "admin" || user.is_admin === 1 ? "user" : "admin";
-    roleToggleMutation.mutate({ userId: user.id, newRole });
-  }
-
-  function handleBan(userId: string) {
-    banMutation.mutate({ userId, reason: banReason || undefined });
-  }
-
-  function handleUnban(userId: string) {
-    unbanMutation.mutate(userId);
-  }
-
-  function handleDelete(userId: string) {
-    deleteMutation.mutate(userId);
-  }
-
   if (!me?.is_admin) {
     return (
       <div className="text-muted-foreground">{t("admin.accessDenied")}</div>
     );
   }
 
+  const roleTargetIsAdmin = roleTarget ? isAdminUser(roleTarget) : false;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Link
-          to="/settings"
+          to="/settings?tab=admin"
           className="text-muted-foreground hover:text-foreground transition-colors text-sm"
         >
           ← {t("admin.backToSettings")}
@@ -179,8 +192,8 @@ export default function AdminUsersPage() {
           />
           <input
             type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder={t("admin.users.searchPlaceholder")}
             aria-label={t("admin.users.searchPlaceholder")}
             className="w-full bg-card border border-border rounded-md pl-8 pr-4 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-border"
@@ -211,7 +224,9 @@ export default function AdminUsersPage() {
       >
         <AlertDialogPopup className="max-w-sm space-y-4 bg-card border-border">
           <AlertDialogTitle className="text-base font-semibold text-foreground">
-            {t("admin.users.banTitle")}
+            {t("admin.users.banTitle", {
+              username: banTarget?.username ?? "",
+            })}
           </AlertDialogTitle>
           <input
             type="text"
@@ -223,7 +238,11 @@ export default function AdminUsersPage() {
           <div className="flex gap-2">
             <AlertDialogClose
               onClick={() => {
-                if (banTarget) void handleBan(banTarget);
+                if (banTarget)
+                  banMutation.mutate({
+                    userId: banTarget.id,
+                    reason: banReason || undefined,
+                  });
               }}
               className="flex-1 py-2 bg-destructive-soft hover:bg-destructive/20 text-destructive text-sm font-medium rounded-md transition-colors cursor-pointer"
             >
@@ -293,16 +312,65 @@ export default function AdminUsersPage() {
         </AlertDialogPopup>
       </AlertDialog>
 
+      {/* Promote / demote confirmation modal */}
+      <AlertDialog
+        open={roleTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRoleTarget(null);
+        }}
+      >
+        <AlertDialogPopup className="max-w-sm space-y-4 bg-card border-border">
+          <AlertDialogTitle className="text-base font-semibold text-foreground">
+            {t(
+              roleTargetIsAdmin
+                ? "admin.users.demoteTitle"
+                : "admin.users.promoteTitle",
+              { username: roleTarget?.username ?? "" },
+            )}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {t(
+              roleTargetIsAdmin
+                ? "admin.users.demoteHelp"
+                : "admin.users.promoteHelp",
+            )}
+          </AlertDialogDescription>
+          <div className="flex gap-2">
+            <AlertDialogClose
+              onClick={() => {
+                if (roleTarget)
+                  roleToggleMutation.mutate({
+                    user: roleTarget,
+                    newRole: roleTargetIsAdmin ? "user" : "admin",
+                  });
+              }}
+              className="flex-1 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-md transition-colors cursor-pointer"
+            >
+              {t(
+                roleTargetIsAdmin
+                  ? "admin.users.demote"
+                  : "admin.users.promote",
+              )}
+            </AlertDialogClose>
+            <AlertDialogClose className="px-4 py-2 bg-muted hover:bg-muted-hover text-foreground-secondary text-sm rounded-md transition-colors cursor-pointer">
+              {t("admin.cancel")}
+            </AlertDialogClose>
+          </div>
+        </AlertDialogPopup>
+      </AlertDialog>
+
       {/* Delete confirmation modal */}
       <AlertDialog
-        open={confirmDelete !== null}
+        open={deleteTarget !== null}
         onOpenChange={(open) => {
-          if (!open) setConfirmDelete(null);
+          if (!open) setDeleteTarget(null);
         }}
       >
         <AlertDialogPopup className="max-w-sm space-y-4 bg-card border-border">
           <AlertDialogTitle className="text-base font-semibold text-destructive">
-            {t("admin.users.deleteTitle")}
+            {t("admin.users.deleteTitle", {
+              username: deleteTarget?.username ?? "",
+            })}
           </AlertDialogTitle>
           <AlertDialogDescription>
             {t("admin.users.deleteConfirm")}
@@ -310,7 +378,7 @@ export default function AdminUsersPage() {
           <div className="flex gap-2">
             <AlertDialogClose
               onClick={() => {
-                if (confirmDelete) void handleDelete(confirmDelete);
+                if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
               }}
               className="flex-1 py-2 bg-destructive-soft hover:bg-destructive/20 text-destructive text-sm font-medium rounded-md transition-colors cursor-pointer"
             >
@@ -341,7 +409,7 @@ export default function AdminUsersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-muted-foreground text-xs uppercase tracking-wide">
-                <th className="text-left px-4 py-3 font-medium">
+                <th className="text-left px-3 sm:px-4 py-3 font-medium">
                   {t("admin.users.col.user")}
                 </th>
                 <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">
@@ -353,7 +421,7 @@ export default function AdminUsersPage() {
                 <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">
                   {t("admin.users.col.joined")}
                 </th>
-                <th className="text-right px-4 py-3 font-medium">
+                <th className="text-right px-3 sm:px-4 py-3 font-medium">
                   {t("admin.users.col.actions")}
                 </th>
               </tr>
@@ -364,30 +432,35 @@ export default function AdminUsersPage() {
                   key={user.id}
                   className="hover:bg-fill-subtle transition-colors"
                 >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-foreground">
-                            {user.username}
-                          </span>
-                          {user.banned && <BannedBadge />}
-                          <span className="sm:hidden">
-                            <RoleBadge user={user} />
-                          </span>
-                        </div>
-                        {user.name && (
-                          <div className="text-xs text-muted-foreground">
-                            {user.name}
-                          </div>
-                        )}
-                        {user.email && (
-                          <div className="text-xs text-muted-foreground">
-                            {user.email}
-                          </div>
-                        )}
-                      </div>
+                  <td className="px-3 sm:px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-medium text-foreground break-all">
+                        {user.username}
+                      </span>
+                      {user.banned && <BannedBadge />}
+                      <span className="sm:hidden">
+                        <RoleBadge user={user} />
+                      </span>
                     </div>
+                    {user.banned && user.ban_reason && (
+                      <div className="text-xs text-destructive break-words">
+                        {t("admin.users.banReason", {
+                          reason: user.ban_reason,
+                        })}
+                      </div>
+                    )}
+                    {/* break-all: long emails would otherwise push the
+                        action buttons off a 375px screen */}
+                    {user.name && (
+                      <div className="text-xs text-muted-foreground break-all">
+                        {user.name}
+                      </div>
+                    )}
+                    {user.email && (
+                      <div className="text-xs text-muted-foreground break-all">
+                        {user.email}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
                     <RoleBadge user={user} />
@@ -398,48 +471,52 @@ export default function AdminUsersPage() {
                   <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground">
                     {formatDate(user.created_at)}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 sm:px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
                       {user.id !== me.id && (
                         <>
-                          {/* Role toggle */}
+                          {/* Role toggle (confirmed in a dialog) */}
                           <button
-                            onClick={() => handleRoleToggle(user)}
+                            onClick={() => setRoleTarget(user)}
                             title={
-                              user.role === "admin"
+                              isAdminUser(user)
                                 ? t("admin.users.demote")
                                 : t("admin.users.promote")
                             }
                             aria-label={
-                              user.role === "admin"
+                              isAdminUser(user)
                                 ? t("admin.users.demote")
                                 : t("admin.users.promote")
                             }
                             className="p-1.5 rounded-md text-muted-foreground hover:text-primary-text hover:bg-primary-soft transition-colors cursor-pointer"
                           >
-                            <Shield size={14} />
+                            {isAdminUser(user) ? (
+                              <ShieldMinus size={14} />
+                            ) : (
+                              <ShieldPlus size={14} />
+                            )}
                           </button>
                           {/* Ban/unban */}
                           {user.banned ? (
                             <button
-                              onClick={() => handleUnban(user.id)}
+                              onClick={() => unbanMutation.mutate(user.id)}
                               title={t("admin.users.unban")}
                               aria-label={t("admin.users.unban")}
                               className="p-1.5 rounded-md text-muted-foreground hover:text-success hover:bg-success/10 transition-colors cursor-pointer"
                             >
-                              <ShieldOff size={14} />
+                              <UserCheck size={14} />
                             </button>
                           ) : (
                             <button
                               onClick={() => {
-                                setBanTarget(user.id);
+                                setBanTarget(user);
                                 setBanReason("");
                               }}
                               title={t("admin.users.ban")}
                               aria-label={t("admin.users.ban")}
                               className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive-soft transition-colors cursor-pointer"
                             >
-                              <ShieldOff size={14} />
+                              <Ban size={14} />
                             </button>
                           )}
                           {/* Reset password (local accounts only) */}
@@ -458,7 +535,7 @@ export default function AdminUsersPage() {
                           )}
                           {/* Delete */}
                           <button
-                            onClick={() => setConfirmDelete(user.id)}
+                            onClick={() => setDeleteTarget(user)}
                             title={t("admin.users.delete")}
                             aria-label={t("admin.users.delete")}
                             className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive-soft transition-colors cursor-pointer"

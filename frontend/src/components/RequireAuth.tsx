@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Navigate } from "react-router";
+import { Navigate, useLocation } from "react-router";
 import { useAuth } from "../context/AuthContext";
 
 export default function RequireAuth({
@@ -8,6 +8,7 @@ export default function RequireAuth({
   children: React.ReactNode;
 }) {
   const { user, loading, sessionStatus, refresh } = useAuth();
+  const location = useLocation();
 
   // Auto-retry once after a short delay when the session state is unknown
   // (e.g. after a service-worker update reload races the session check)
@@ -36,7 +37,15 @@ export default function RequireAuth({
   }
 
   if (sessionStatus === "unauthenticated" || !user) {
-    return <Navigate to="/login" replace />;
+    // Login and signup read `from` (lib/returnTo) to come back here, e.g. so
+    // an /invite?code=… link is still redeemed after signing in.
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location.pathname + location.search }}
+      />
+    );
   }
 
   return <>{children}</>;
