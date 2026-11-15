@@ -283,9 +283,6 @@
     "title": "Explorer",
     "kicker": {
       "search": "Recherche",
-      "searchResults_one": "Recherche · {{count}} résultat",
-      "searchResults_many": "Recherche · {{count}} résultats",
-      "searchResults_other": "Recherche · {{count}} résultats",
       "catalog": "Catalogue · découvrir des titres",
       "catalogCount_one": "Catalogue · {{formatted}} titre",
       "catalogCount_many": "Catalogue · {{formatted}} titres",
@@ -293,11 +290,7 @@
     },
     "hideFilters": "Masquer les filtres",
     "showFilters": "Afficher les filtres",
-    "clearAllFilters": "Effacer tous les filtres",
-    "removeFilter": "Retirer le filtre {{name}}",
-    "removeLanguageFilter": "Retirer le filtre de langue {{name}}",
-    "removeYearFilter": "Retirer le filtre d'années",
-    "removeRatingFilter": "Retirer le filtre de note minimale"
+    "clearAllFilters": "Effacer tous les filtres"
   },
   "signup": {
     "title": "Créer un compte",
@@ -392,11 +385,8 @@
     "movies": "Films",
     "shows": "Séries",
     "people": "Personnes",
-    "allGenres": "Tous les genres",
-    "allPlatforms": "Toutes les plateformes",
     "allLanguages": "Toutes les langues",
     "hideTracked": "Masquer les suivis",
-    "clearFilters": "Effacer les filtres",
     "search": "Rechercher...",
     "yearFrom": "À partir de l'année",
     "yearTo": "Jusqu'à l'année",
@@ -430,7 +420,8 @@
   },
   "releases": {
     "loading": "Chargement...",
-    "empty": "Aucune sortie trouvée."
+    "empty": "Aucune sortie trouvée.",
+    "loadMore": "Charger plus"
   },
   "track": {
     "track": "Ajouter à ma liste",

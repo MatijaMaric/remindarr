@@ -271,17 +271,12 @@
     "title": "探す",
     "kicker": {
       "search": "検索",
-      "searchResults_other": "検索 · {{count}} 件",
       "catalog": "カタログ · 作品を探す",
       "catalogCount_other": "カタログ · {{formatted}} 作品"
     },
     "hideFilters": "フィルターを隠す",
     "showFilters": "フィルターを表示",
-    "clearAllFilters": "すべてのフィルターをクリア",
-    "removeFilter": "{{name}} のフィルターを解除",
-    "removeLanguageFilter": "言語フィルター {{name}} を解除",
-    "removeYearFilter": "年の範囲フィルターを解除",
-    "removeRatingFilter": "最低評価フィルターを解除"
+    "clearAllFilters": "すべてのフィルターをクリア"
   },
   "signup": {
     "title": "アカウントを作成",
@@ -376,11 +371,8 @@
     "movies": "映画",
     "shows": "番組",
     "people": "人物",
-    "allGenres": "すべてのジャンル",
-    "allPlatforms": "すべてのプラットフォーム",
     "allLanguages": "すべての言語",
     "hideTracked": "登録済みを隠す",
-    "clearFilters": "フィルターをクリア",
     "search": "検索...",
     "yearFrom": "開始年",
     "yearTo": "終了年",
@@ -414,7 +406,8 @@
   },
   "releases": {
     "loading": "読み込み中...",
-    "empty": "公開情報が見つかりません。"
+    "empty": "公開情報が見つかりません。",
+    "loadMore": "さらに読み込む"
   },
   "track": {
     "track": "ウォッチリストに追加",

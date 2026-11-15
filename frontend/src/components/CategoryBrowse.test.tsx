@@ -114,6 +114,61 @@ afterEach(() => {
   intersectionCallback = null;
 });
 
+describe("CategoryBrowse list quality", () => {
+  it("does not repeat a title TMDB returns again on a later page", async () => {
+    apiMock.browseTitles.mockResolvedValueOnce(
+      makeBrowseResponse(1, [makeSearchTitle(1), makeSearchTitle(2)], 2),
+    );
+    apiMock.browseTitles.mockResolvedValueOnce(
+      makeBrowseResponse(2, [makeSearchTitle(2), makeSearchTitle(3)], 2),
+    );
+    render(
+      <CategoryBrowse
+        category="popular"
+        type={[]}
+        genre={[]}
+        provider={[]}
+        language={[]}
+      />,
+      { wrapper: Wrapper },
+    );
+    await screen.findByText("Title 1");
+    act(() => {
+      intersectionCallback!(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+    });
+    await screen.findByText("Title 3");
+    expect(screen.getAllByText("Title 2")).toHaveLength(1);
+  });
+
+  it("shows a failed first page once, without the empty-list message, and retries", async () => {
+    apiMock.browseTitles.mockRejectedValueOnce(new Error("Too many requests"));
+    render(
+      <CategoryBrowse
+        category="popular"
+        type={[]}
+        genre={[]}
+        provider={[]}
+        language={[]}
+      />,
+      { wrapper: Wrapper },
+    );
+    await screen.findByRole("alert");
+    expect(screen.getAllByText("Too many requests")).toHaveLength(1);
+    expect(screen.queryByText(/No titles found/i)).toBeNull();
+    apiMock.browseTitles.mockResolvedValueOnce(
+      makeBrowseResponse(1, [makeSearchTitle(1)], 1),
+    );
+    act(() => {
+      screen.getByRole("button", { name: "Retry" }).click();
+    });
+    await screen.findByText("Title 1");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
 describe("CategoryBrowse pagination", () => {
   it("keeps already-loaded titles visible while a subsequent page is fetching", async () => {
     let resolvePage2: (() => void) | null = null;
@@ -132,14 +187,9 @@ describe("CategoryBrowse pagination", () => {
       <CategoryBrowse
         category="popular"
         type={[]}
-        onTypeChange={() => {}}
         genre={[]}
-        onGenreChange={() => {}}
         provider={[]}
-        onProviderChange={() => {}}
         language={[]}
-        onLanguageChange={() => {}}
-        hideFilterBar
       />,
       { wrapper: Wrapper },
     );
@@ -178,14 +228,9 @@ describe("CategoryBrowse pagination", () => {
       <CategoryBrowse
         category="popular"
         type={[]}
-        onTypeChange={() => {}}
         genre={[]}
-        onGenreChange={() => {}}
         provider={[]}
-        onProviderChange={() => {}}
         language={[]}
-        onLanguageChange={() => {}}
-        hideFilterBar
       />,
       { wrapper: Wrapper },
     );
@@ -209,14 +254,9 @@ describe("CategoryBrowse pagination", () => {
       <CategoryBrowse
         category="popular"
         type={[]}
-        onTypeChange={() => {}}
         genre={[]}
-        onGenreChange={() => {}}
         provider={[]}
-        onProviderChange={() => {}}
         language={[]}
-        onLanguageChange={() => {}}
-        hideFilterBar
       />,
       { wrapper: Wrapper },
     );
@@ -249,14 +289,9 @@ describe("CategoryBrowse pagination", () => {
         <CategoryBrowse
           category="popular"
           type={[]}
-          onTypeChange={() => {}}
           genre={[]}
-          onGenreChange={() => {}}
           provider={[]}
-          onProviderChange={() => {}}
           language={[]}
-          onLanguageChange={() => {}}
-          hideFilterBar
         />
       );
     }

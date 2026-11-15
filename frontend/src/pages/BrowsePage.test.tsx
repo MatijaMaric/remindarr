@@ -62,7 +62,10 @@ mock.module("../context/AuthContext", () => ({
   AuthProvider: ({ children }: { children: ReactNode }) => children,
 }));
 
-mock.module("../hooks/useIsMobile", () => ({ useIsMobile: () => false }));
+let mockIsMobile = false;
+mock.module("../hooks/useIsMobile", () => ({
+  useIsMobile: () => mockIsMobile,
+}));
 mock.module("../hooks/useGridNavigation", () => ({
   useGridNavigation: () => undefined,
 }));
@@ -158,88 +161,9 @@ afterEach(() => {
   mockUser = null;
   mockAuthLoading = false;
   mockSubscriptionsStatus = "loading";
+  mockIsMobile = false;
   mockRefreshSubscriptions.mockClear();
   sessionStorage.clear();
-});
-
-describe("BrowsePage active filter chips", () => {
-  it("renders type filter chip as a <button>", () => {
-    render(<BrowsePage />, { wrapper: makeWrapper("/browse?type=MOVIE") });
-
-    const chip = screen.getByRole("button", { name: /remove movies filter/i });
-    expect(chip).toBeDefined();
-    expect(chip.tagName).toBe("BUTTON");
-  });
-
-  it("renders Shows type filter chip as a <button>", () => {
-    render(<BrowsePage />, { wrapper: makeWrapper("/browse?type=SHOW") });
-
-    const chip = screen.getByRole("button", { name: /remove shows filter/i });
-    expect(chip.tagName).toBe("BUTTON");
-  });
-
-  it("renders genre filter chip as a <button>", () => {
-    render(<BrowsePage />, { wrapper: makeWrapper("/browse?genre=Action") });
-
-    const chip = screen.getByRole("button", { name: /remove action filter/i });
-    expect(chip.tagName).toBe("BUTTON");
-  });
-
-  it("renders year range filter chip as a <button>", () => {
-    render(<BrowsePage />, {
-      wrapper: makeWrapper("/browse?yearMin=2020&yearMax=2024"),
-    });
-
-    const chip = screen.getByRole("button", {
-      name: /remove year range filter/i,
-    });
-    expect(chip.tagName).toBe("BUTTON");
-  });
-
-  it("renders minimum rating filter chip as a <button>", () => {
-    render(<BrowsePage />, { wrapper: makeWrapper("/browse?minRating=7") });
-
-    const chip = screen.getByRole("button", {
-      name: /remove minimum rating filter/i,
-    });
-    expect(chip.tagName).toBe("BUTTON");
-  });
-
-  it("renders multiple active filter chips all as <button> elements", () => {
-    render(<BrowsePage />, {
-      wrapper: makeWrapper("/browse?type=SHOW&genre=Drama&minRating=8"),
-    });
-
-    const chips = screen.getAllByRole("button", { name: /remove .* filter/i });
-    expect(chips.length).toBe(3);
-    for (const chip of chips) {
-      expect(chip.tagName).toBe("BUTTON");
-    }
-  });
-
-  it("clicking a type chip removes the Movies filter from the page", () => {
-    render(<BrowsePage />, {
-      wrapper: makeWrapper("/browse?type=MOVIE&genre=Action"),
-    });
-
-    const moviesChip = screen.getByRole("button", {
-      name: /remove movies filter/i,
-    });
-    expect(moviesChip).toBeDefined();
-
-    act(() => {
-      fireEvent.click(moviesChip);
-    });
-
-    // After removing the Movies filter, the Movies chip should be gone
-    expect(
-      screen.queryByRole("button", { name: /remove movies filter/i }),
-    ).toBeNull();
-    // Genre chip for Action should still be present
-    expect(
-      screen.getByRole("button", { name: /remove action filter/i }),
-    ).toBeDefined();
-  });
 });
 
 const USER = {
@@ -268,6 +192,93 @@ function renderBrowse(path = "/browse") {
     { wrapper: makeWrapper(path) },
   );
 }
+
+describe("BrowsePage filters say what they apply", () => {
+  it("shows filters once, in the card, with no separate Active chip row", async () => {
+    renderBrowse("/browse?type=MOVIE&genre=Action&minRating=7");
+    await screen.findByText(BROWSE_TITLE);
+    expect(screen.queryByText("Active")).toBeNull();
+    expect(screen.queryByRole("button", { name: /remove .* filter/i })).toBe(
+      null,
+    );
+    expect(screen.getByText("Action")).toBeTruthy(); // genre summary
+    expect(screen.getByText("★ 7+")).toBeTruthy(); // rating summary
+  });
+
+  it("sends only the first language to discover and shows its name", async () => {
+    apiMock.getLanguages.mockResolvedValue({
+      languages: ["ja", "ko"],
+      priorityLanguageCodes: [],
+    });
+    renderBrowse("/browse?language=ja,ko");
+    await screen.findByText(BROWSE_TITLE);
+    expect(apiMock.browseTitles.mock.calls[0][0]).toMatchObject({
+      language: "ja",
+    });
+    expect(screen.getByText("Japanese")).toBeTruthy();
+  });
+
+  it("switching to New Releases drops year and rating, which it can't apply", async () => {
+    renderBrowse("/browse?yearMin=2020&minRating=8&language=ja");
+    await screen.findByText(BROWSE_TITLE);
+    fireEvent.click(screen.getByRole("button", { name: "New Releases" }));
+    await waitFor(() => expect(apiMock.getTitles).toHaveBeenCalled());
+    const params = currentParams();
+    expect(params.get("category")).toBe("new_releases");
+    expect(params.has("yearMin")).toBe(false);
+    expect(params.has("minRating")).toBe(false);
+    expect(params.get("language")).toBe("ja");
+    expect(screen.getByRole("heading", { name: "New Releases" })).toBeTruthy();
+    expect(screen.queryByText("Min. rating")).toBeNull();
+    expect(screen.getByRole("group", { name: "Time period" })).toBeTruthy();
+  });
+
+  it("switching from New Releases to a discover category keeps one language", async () => {
+    renderBrowse("/browse?category=new_releases&language=ja,ko");
+    await waitFor(() => expect(apiMock.getTitles).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: "Top Rated" }));
+    await screen.findByText(BROWSE_TITLE);
+    expect(currentParams().get("language")).toBe("ja");
+  });
+});
+
+describe("BrowsePage search header", () => {
+  it("hides the category pills and shows the count only in the results heading", async () => {
+    apiMock.searchTitles.mockResolvedValue(makeBrowseResponse());
+    renderBrowse("/browse?q=dune");
+    await screen.findByText(BROWSE_TITLE);
+    expect(screen.queryByRole("button", { name: "Popular" })).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: "Search Results (1)" }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Search · 1 result/)).toBeNull();
+  });
+
+  it("keeps search filters behind the filter button on phones", async () => {
+    mockIsMobile = true;
+    apiMock.searchTitles.mockResolvedValue(makeBrowseResponse());
+    renderBrowse("/browse?q=dune&searchMinRating=7");
+    await screen.findByText(BROWSE_TITLE);
+    expect(screen.queryByPlaceholderText("From year")).toBeNull();
+    const toggle = screen.getByRole("button", { name: "Show filters" });
+    expect(toggle.textContent).toBe("1");
+    fireEvent.click(toggle);
+    expect(screen.getByPlaceholderText("From year")).toBeTruthy();
+  });
+
+  it("puts the streaming region in the header line", async () => {
+    apiMock.getProviders.mockResolvedValue({
+      providers: [],
+      regionProviderIds: [],
+      country: "HR",
+    } as never);
+    renderBrowse();
+    await screen.findByText(/Streaming region: HR/);
+    expect(
+      screen.getByText(/Catalog · 1 title · Streaming region: HR/),
+    ).toBeTruthy();
+  });
+});
 
 describe("BrowsePage saved service preference", () => {
   it("uses the saved enabled preference without preselecting separate providers", async () => {
@@ -667,6 +678,20 @@ describe("BrowsePage people search", () => {
     expect(screen.getByRole("button", { name: "Follow" })).toBeTruthy();
     expect(screen.queryByPlaceholderText("From year")).toBeNull();
     expect(screen.queryByText(BROWSE_TITLE)).toBeNull();
+  });
+
+  it("All search lists matching people above the titles", async () => {
+    apiMock.searchTitles.mockResolvedValue({
+      ...makeBrowseResponse(),
+      people: PEOPLE_RESPONSE.people,
+    });
+    renderBrowse("/browse?q=tom");
+    await screen.findByText("Tom Hanks");
+    expect(screen.getByText(BROWSE_TITLE)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "People" })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Search Results (2)" }),
+    ).toBeTruthy();
   });
 
   it("shows the empty message when no people match", async () => {

@@ -37,7 +37,7 @@ test.describe("Browse", () => {
     await expect(browse.categoryButton("Popular")).toBeVisible();
     await expect(browse.categoryButton("Upcoming")).toBeVisible();
     await expect(browse.categoryButton("Top Rated")).toBeVisible();
-    await expect(browse.categoryButton("Now Playing")).toBeVisible();
+    await expect(browse.categoryButton("New Releases")).toBeVisible();
 
     // Filter dropdowns
     await expect(browse.genreDropdownButton()).toBeVisible();
@@ -102,8 +102,8 @@ test.describe("Browse", () => {
     // Close the dropdown
     await page.keyboard.press("Escape");
 
-    // Active filter chip appears in the active-filters row (× is Unicode U+00D7)
-    await expect(browse.activeFilterChip("Action ×")).toBeVisible();
+    // The Genre field summary names the active filter
+    await expect(browse.filterSummary("Action")).toBeVisible();
 
     // New title appears; old title gone
     await expect(browse.titleCard("Action Movie")).toBeVisible();
@@ -143,8 +143,8 @@ test.describe("Browse", () => {
     // Close the dropdown
     await page.keyboard.press("Escape");
 
-    // Active filter chip appears in the active-filters row (× is Unicode U+00D7)
-    await expect(browse.activeFilterChip("Netflix ×")).toBeVisible();
+    // The Provider field summary names the active filter
+    await expect(browse.filterSummary("Netflix")).toBeVisible();
 
     // Netflix Movie appears; Test Movie gone
     await expect(browse.titleCard("Netflix Movie")).toBeVisible();
