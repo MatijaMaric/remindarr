@@ -87,6 +87,20 @@ async function loadDiscover<T>(
   }
 }
 
+// TMDB discover serves at most 500 pages of 20 results per media type.
+const MAX_PAGES = 500;
+const MAX_REACHABLE_PER_TYPE = MAX_PAGES * 20;
+
+/** Alternate movies and shows so neither type fills a page as one block. */
+export function interleave<T>(a: T[], b: T[]): T[] {
+  const out: T[] = [];
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if (i < a.length) out.push(a[i]);
+    if (i < b.length) out.push(b[i]);
+  }
+  return out;
+}
+
 function buildBrowseCacheKey(params: {
   category: string;
   type: string[];
@@ -100,7 +114,7 @@ function buildBrowseCacheKey(params: {
   onlyMine: boolean;
 }): string {
   return [
-    "browse:v1",
+    "browse:v2",
     params.category,
     [...params.type].sort().join(","),
     params.page,
@@ -340,16 +354,16 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
       basicTitles = movie.page.results.map((m) =>
         parseDiscoverMovie(m, allGenres),
       );
-      totalPages = Math.min(movie.page.total_pages, 500);
-      totalResults = movie.page.total_results;
+      totalPages = Math.min(movie.page.total_pages, MAX_PAGES);
+      totalResults = Math.min(movie.page.total_results, MAX_REACHABLE_PER_TYPE);
     } else if (fetchShows && !fetchMovies) {
       const tv = await loadDiscover("tv", () =>
         fetchTvByCategory(category as Category, discoverOpts),
       );
       degraded = degraded || tv.failed;
       basicTitles = tv.page.results.map((t) => parseDiscoverTv(t, allGenres));
-      totalPages = Math.min(tv.page.total_pages, 500);
-      totalResults = tv.page.total_results;
+      totalPages = Math.min(tv.page.total_pages, MAX_PAGES);
+      totalResults = Math.min(tv.page.total_results, MAX_REACHABLE_PER_TYPE);
     } else {
       // One side failing must not discard the other (#1139: movie+TV popular).
       const [movie, tv] = await Promise.all([
@@ -365,12 +379,15 @@ app.get("/", zValidator("query", browseQuerySchema), async (c) => {
         parseDiscoverMovie(m, allGenres),
       );
       const tvShows = tv.page.results.map((t) => parseDiscoverTv(t, allGenres));
-      basicTitles = [...movies, ...tvShows];
+      basicTitles = interleave(movies, tvShows);
       totalPages = Math.min(
         Math.max(movie.page.total_pages, tv.page.total_pages),
-        500,
+        MAX_PAGES,
       );
-      totalResults = movie.page.total_results + tv.page.total_results;
+      // Count only what paging can reach, not TMDB's full total.
+      totalResults =
+        Math.min(movie.page.total_results, MAX_REACHABLE_PER_TYPE) +
+        Math.min(tv.page.total_results, MAX_REACHABLE_PER_TYPE);
     }
 
     // Batch-read known titles from DB to skip TMDB calls for already-stored titles.

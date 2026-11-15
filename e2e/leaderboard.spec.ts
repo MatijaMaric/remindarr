@@ -104,9 +104,7 @@ test.describe("Leaderboard", () => {
 
     // Empty state message
     await expect(
-      page.getByText(
-        /track titles and follow people to appear on the leaderboard/i,
-      ),
+      page.getByText(/earn achievements for XP and follow people to compare/i),
     ).toBeVisible();
 
     // No podium rank labels

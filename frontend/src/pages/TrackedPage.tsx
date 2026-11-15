@@ -1,7 +1,6 @@
 import { invalidateLibrary } from "../lib/invalidateLibrary";
 import { Menu } from "@base-ui/react/menu";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Card } from "../components/ui/card";
 import { Link, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -10,17 +9,14 @@ import type { Title } from "../types";
 import TitleList from "../components/TitleList";
 import { TitleGridSkeleton } from "../components/SkeletonComponents";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { groupShowsByStatus } from "../lib/groupShows";
+import { groupShowsByStatus, STATUS_ORDER } from "../lib/groupShows";
 import { getEffectiveStatus, statusLabelKey } from "../lib/titleStatus";
 import { useGridNavigation } from "../hooks/useGridNavigation";
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { PageHeader, Pill } from "../components/design";
 import BackdateWatchedButton from "../components/BackdateWatchedButton";
-import StatusPicker from "../components/StatusPicker";
-import TagList from "../components/TagList";
-import NotificationModePicker from "../components/NotificationModePicker";
-import { Popover } from "@base-ui/react/popover";
+import TrackedActionsMenu from "../components/TrackedActionsMenu";
 import { StatsView, formatEta } from "./StatsPage";
 import {
   AlertDialog,
@@ -34,78 +30,25 @@ import {
 // reference and React.memo can short-circuit re-renders.
 const EMPTY_TITLES: Title[] = [];
 
-function TrackedStatsBand({ titles }: { titles: Title[] }) {
-  const { t } = useTranslation();
-  const watching = titles.filter(
-    (t) => getEffectiveStatus(t) === "watching",
-  ).length;
-  const completed = titles.filter(
-    (t) => getEffectiveStatus(t) === "completed",
-  ).length;
-  const scored = titles.filter((t) => t.imdb_score || t.tmdb_score);
-  const avgScore =
-    scored.length > 0
-      ? (
-          scored.reduce(
-            (sum, t) => sum + (t.imdb_score ?? t.tmdb_score ?? 0),
-            0,
-          ) / scored.length
-        ).toFixed(1)
-      : null;
-  const stats = [
-    {
-      label: t("tracked.stats.watching"),
-      value: String(watching),
-      sub: t("tracked.stats.watchingSub", { count: titles.length }),
-    },
-    {
-      label: t("status.completed"),
-      value: String(completed),
-      sub: t("tracked.stats.completedSub"),
-    },
-    {
-      label: t("tracked.stats.avgScore"),
-      value: avgScore ? `★ ${avgScore}` : "—",
-      sub:
-        scored.length > 0
-          ? t("tracked.stats.avgScoreSub", { count: scored.length })
-          : t("tracked.stats.noRatings"),
-    },
-    {
-      label: t("tracked.stats.total"),
-      value: String(titles.length),
-      sub: t("tracked.stats.totalSub"),
-    },
-  ];
-  return (
-    <div className="hidden sm:grid grid-cols-4 gap-3 mb-6">
-      {stats.map((s) => (
-        <Card key={s.label} padding="none" className="p-3 lg:p-[18px] min-w-0">
-          <div className="text-xs text-muted-foreground font-medium mb-2">
-            {s.label}
-          </div>
-          <div className="flex flex-wrap items-baseline gap-2">
-            <div className="text-[30px] sm:text-[36px] font-extrabold tracking-[-0.03em] leading-none">
-              {s.value}
-            </div>
-            <div className="font-mono text-[11px] text-muted-foreground">
-              {s.sub}
-            </div>
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
+type TrackedStatus = (typeof STATUS_ORDER)[number];
+
+/**
+ * Status used for Tracked tabs and rows. Titles without a user or computed
+ * status (movies nobody has marked) count as not started, or completed when
+ * the movie was watched before statuses existed.
+ */
+function trackedStatus(title: Title): TrackedStatus {
+  const status = getEffectiveStatus(title);
+  if (status && (STATUS_ORDER as readonly string[]).includes(status))
+    return status as TrackedStatus;
+  return title.is_watched ? "completed" : "not_started";
 }
 
-const STATUS_TABS = [
-  { key: "all", labelKey: "tracked.tabs.all" },
-  { key: "watching", labelKey: "status.watching" },
-  { key: "completed", labelKey: "status.completed" },
-  { key: "on_hold", labelKey: "status.onHold" },
-  { key: "plan_to_watch", labelKey: "tracked.tabs.planning" },
-  { key: "dropped", labelKey: "status.dropped" },
-] as const;
+/** ETA label, or null when nothing aired is left to watch. */
+function remainingEta(title: Title): string | null {
+  if (title.eta_days == null || !(title.remaining_minutes ?? 0)) return null;
+  return formatEta(title.eta_days);
+}
 
 type SortKey = "last_aired" | "title" | "rating" | "progress";
 
@@ -162,9 +105,9 @@ export default function TrackedPage() {
   const selectButtonRef = useRef<HTMLButtonElement>(null);
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const statusFilter =
-    STATUS_TABS.find((tab) => tab.key === searchParams.get("status"))?.key ??
-    "all";
+  const requestedStatus = searchParams.get("status");
+  const statusFilter: TrackedStatus | "all" =
+    STATUS_ORDER.find((status) => status === requestedStatus) ?? "all";
   const search = searchParams.get("q") ?? "";
   const tag = searchParams.get("tag") ?? "";
   const provider = searchParams.get("provider") ?? "";
@@ -191,7 +134,9 @@ export default function TrackedPage() {
       { replace: true },
     );
   }
-  const hasFilters = !!(search || tag || provider || statusFilter !== "all");
+  // The status tabs sit outside the filter panel, so only the panel's own
+  // fields open it.
+  const hasPanelFilters = !!(search || tag || provider);
   const requestedView = searchParams.get("view");
   const view =
     requestedView === "grid" || requestedView === "stats"
@@ -259,9 +204,26 @@ export default function TrackedPage() {
     };
   }, [matchingTitles, sort]);
 
+  const statusCounts = useMemo(() => {
+    const counts = new Map<TrackedStatus, number>();
+    for (const title of matchingTitles) {
+      const status = trackedStatus(title);
+      counts.set(status, (counts.get(status) ?? 0) + 1);
+    }
+    return counts;
+  }, [matchingTitles]);
+  // Only statuses the library has get a tab; the selected one stays so its
+  // panel still has a label after its last title changes status.
+  const statusTabs = [
+    "all" as const,
+    ...STATUS_ORDER.filter(
+      (status) => statusCounts.has(status) || status === statusFilter,
+    ),
+  ];
+
   const filteredTitles = useMemo(() => {
     if (statusFilter === "all") return matchingTitles;
-    return matchingTitles.filter((t) => getEffectiveStatus(t) === statusFilter);
+    return matchingTitles.filter((t) => trackedStatus(t) === statusFilter);
   }, [matchingTitles, statusFilter]);
 
   const sortedFilteredTitles = useMemo(
@@ -316,7 +278,11 @@ export default function TrackedPage() {
         title={t("tracked.heading")}
         right={
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            <BackdateWatchedButton scope="all" variant="ghost" />
+            {/* Bulk-rewrites watch dates for the monthly chart, so it lives
+                with the stats rather than in every view. */}
+            {view === "stats" && (
+              <BackdateWatchedButton scope="all" variant="ghost" />
+            )}
             {view === "list" && (
               <Pill
                 ref={selectButtonRef}
@@ -339,12 +305,10 @@ export default function TrackedPage() {
         }
       />
 
-      {!loading && <TrackedStatsBand titles={allTitles} />}
-
       {view !== "stats" && allTitles.length > 0 && (
         <details
           className="rounded-md border border-border p-2"
-          open={hasFilters || undefined}
+          open={hasPanelFilters || undefined}
         >
           <summary className="cursor-pointer min-h-8 text-sm font-medium">
             {t("tracked.filters.heading")}
@@ -385,7 +349,7 @@ export default function TrackedPage() {
               ))}
             </select>
           </div>
-          {hasFilters && (
+          {hasPanelFilters && (
             <button
               type="button"
               onClick={resetFilters}
@@ -404,32 +368,30 @@ export default function TrackedPage() {
             aria-label={t("tracked.filterTabs")}
             className="flex items-center gap-0 overflow-x-auto scrollbar-none -mx-1 px-1 sm:mx-0 sm:px-0 sm:flex-1"
           >
-            {STATUS_TABS.map((tab) => {
+            {statusTabs.map((tab) => {
               const count =
-                tab.key === "all"
+                tab === "all"
                   ? matchingTitles.length
-                  : matchingTitles.filter(
-                      (t) => getEffectiveStatus(t) === tab.key,
-                    ).length;
-              const isActive = statusFilter === tab.key;
+                  : (statusCounts.get(tab) ?? 0);
+              const isActive = statusFilter === tab;
+              const labelKey =
+                tab === "all" ? "tracked.tabs.all" : statusLabelKey(tab);
               return (
                 <button
-                  key={tab.key}
+                  key={tab}
                   type="button"
                   role="tab"
-                  id={`tracked-status-tab-${tab.key}`}
+                  id={`tracked-status-tab-${tab}`}
                   aria-selected={isActive}
                   aria-controls="tracked-status-panel"
-                  onClick={() =>
-                    setFilter("status", tab.key === "all" ? "" : tab.key)
-                  }
+                  onClick={() => setFilter("status", tab === "all" ? "" : tab)}
                   className={`shrink-0 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
                     isActive
                       ? "text-foreground border-primary font-semibold"
                       : "text-muted-foreground border-transparent hover:text-foreground"
                   }`}
                 >
-                  {t(tab.labelKey)}
+                  {labelKey ? t(labelKey) : tab}
                   <span className="ml-2 font-mono text-[11px] text-muted-foreground">
                     {count}
                   </span>
@@ -496,9 +458,7 @@ export default function TrackedPage() {
               onTrackToggle={refetch}
               hideTypeBadge
               showProgressBar
-              showStatusPicker
-              showNotificationPicker
-              showTags
+              showActionsMenu
             />
           ) : (
             <div className="space-y-6">
@@ -512,9 +472,7 @@ export default function TrackedPage() {
                     onTrackToggle={refetch}
                     hideTypeBadge
                     showProgressBar
-                    showStatusPicker
-                    showNotificationPicker
-                    showTags
+                    showActionsMenu
                   />
                 </div>
               ))}
@@ -526,9 +484,7 @@ export default function TrackedPage() {
                   <TitleList
                     titles={movies}
                     onTrackToggle={refetch}
-                    showStatusPicker
-                    showNotificationPicker
-                    showTags
+                    showActionsMenu
                   />
                 </div>
               )}
@@ -552,105 +508,16 @@ export default function TrackedPage() {
   );
 }
 
-const STATUS_COLORS: Record<string, string> = {
+const STATUS_COLORS: Record<TrackedStatus, string> = {
   watching: "#fbbf24",
+  caught_up: "oklch(0.7 0.1 185)",
+  not_started: "#71717a",
+  unreleased: "#71717a",
   completed: "oklch(0.7 0.14 140)",
   on_hold: "oklch(0.7 0.12 60)",
   plan_to_watch: "oklch(0.72 0.1 240)",
   dropped: "oklch(0.65 0.12 0)",
 };
-
-function RowActionsMenu({
-  title,
-  onRefetch,
-}: {
-  title: Title;
-  onRefetch: () => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <Popover.Root>
-      <Popover.Trigger
-        aria-label={t("tracked.row.moreActions", { title: title.title })}
-        className="min-w-11 min-h-11 rounded-sm text-foreground-secondary hover:bg-muted"
-      >
-        ···
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Positioner
-          side="bottom"
-          align="end"
-          sideOffset={4}
-          className="z-50"
-        >
-          <Popover.Popup className="w-64 max-w-[calc(100vw-2rem)] rounded-md bg-card border border-border shadow-xl p-3 space-y-3">
-            <Popover.Title className="font-semibold text-sm break-words">
-              {title.title}
-            </Popover.Title>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">
-                {t("tracked.columns.status")}
-              </p>
-              <StatusPicker
-                titleId={title.id}
-                objectType={title.object_type}
-                currentStatus={title.user_status}
-                onStatusChange={onRefetch}
-              />
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">
-                {t("notifications.label")}
-              </p>
-              <NotificationModePicker
-                titleId={title.id}
-                currentMode={title.notification_mode ?? null}
-                snoozeUntil={title.snooze_until}
-                remindOnRelease={title.remind_on_release}
-                releaseDate={title.release_date}
-                onModeChange={onRefetch}
-                onSnoozed={onRefetch}
-                onRemindOnReleaseChange={onRefetch}
-              />
-            </div>
-            <TagList
-              titleId={title.id}
-              tags={title.tags ?? []}
-              onTagsChange={onRefetch}
-            />
-            {title.tmdb_url && (
-              <a
-                href={title.tmdb_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block text-sm min-h-10"
-              >
-                {t("tracked.row.openTmdb")} ↗
-              </a>
-            )}
-            <button
-              type="button"
-              className="text-sm text-destructive min-h-10"
-              onClick={async () => {
-                try {
-                  await api.untrackTitle(title.id);
-                  onRefetch();
-                } catch {
-                  toast.error(t("common.error"));
-                }
-              }}
-            >
-              {t("tracked.row.untrack")}
-            </button>
-            <Popover.Close className="block min-h-10 text-sm">
-              {t("common.close")}
-            </Popover.Close>
-          </Popover.Popup>
-        </Popover.Positioner>
-      </Popover.Portal>
-    </Popover.Root>
-  );
-}
 
 interface TrackedTableProps {
   titles: Title[];
@@ -659,6 +526,8 @@ interface TrackedTableProps {
   selectedIds?: Set<string>;
   onSelectionChange?: (ids: Set<string>) => void;
 }
+
+const COLUMNS_DESKTOP = "38px minmax(0,1fr) 130px 140px 75px 44px";
 
 function TrackedTable({
   titles,
@@ -669,10 +538,15 @@ function TrackedTable({
 }: TrackedTableProps) {
   const { t } = useTranslation();
   const isMobile = useIsMobile("(max-width: 767px)");
-  const statusText = (key: string | null) => {
+  const statusText = (key: TrackedStatus) => {
     const labelKey = statusLabelKey(key);
-    return labelKey ? t(labelKey) : (key ?? "—");
+    return labelKey ? t(labelKey) : key;
   };
+  const shortDate = (iso: string) =>
+    new Date(iso).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
   const allSelected =
     titles.length > 0 && titles.every((title) => selectedIds.has(title.id));
   const someSelected = titles.some((title) => selectedIds.has(title.id));
@@ -716,16 +590,23 @@ function TrackedTable({
           </label>
         )}
         {titles.map((title) => {
-          const statusKey = getEffectiveStatus(title);
-          const statusColor = statusKey
-            ? (STATUS_COLORS[statusKey] ?? STATUS_COLORS["plan_to_watch"])
-            : "#71717a";
-          const statusLabel = statusText(statusKey);
+          const statusKey = trackedStatus(title);
+          const statusColor = STATUS_COLORS[statusKey];
           const watched = title.watched_episodes_count ?? 0;
           const total =
             title.total_episodes ?? title.released_episodes_count ?? 0;
           const pct = total > 0 ? Math.round((watched / total) * 100) : 0;
           const isSelected = selectedIds.has(title.id);
+          const eta = remainingEta(title);
+          const meta = [
+            title.offers[0]?.provider_name,
+            statusText(statusKey),
+            title.next_episode_air_date && statusKey !== "completed"
+              ? shortDate(title.next_episode_air_date)
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ");
 
           const rowContent = (
             <>
@@ -761,11 +642,7 @@ function TrackedTable({
                   </span>
                 </div>
                 <div className="font-mono text-[11px] text-muted-foreground mb-1.5">
-                  {title.offers[0]?.provider_name ?? ""}
-                  {statusKey ? ` · ${statusLabel}` : ""}
-                  {title.next_episode_air_date && statusKey !== "completed"
-                    ? ` · ${new Date(title.next_episode_air_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
-                    : ""}
+                  {meta}
                 </div>
                 {total > 0 && (
                   <div className="flex items-center gap-2">
@@ -780,9 +657,9 @@ function TrackedTable({
                     </span>
                   </div>
                 )}
-                {title.eta_days != null && (
+                {eta && (
                   <span className="font-mono text-[11px] text-muted-foreground">
-                    {t("tracked.row.eta", { eta: formatEta(title.eta_days) })}
+                    {t("tracked.row.eta", { eta })}
                   </span>
                 )}
               </div>
@@ -812,7 +689,7 @@ function TrackedTable({
               >
                 {rowContent}
               </Link>
-              <RowActionsMenu title={title} onRefetch={onRefetch} />
+              <TrackedActionsMenu title={title} onChange={onRefetch} />
             </div>
           );
         })}
@@ -821,59 +698,49 @@ function TrackedTable({
   }
 
   const Row = selectMode ? "label" : "div";
+  const columns = selectMode ? `32px ${COLUMNS_DESKTOP}` : COLUMNS_DESKTOP;
   return (
     <div>
       {/* Column header */}
       <div
         className="grid gap-4 px-4 py-2.5 text-xs text-muted-foreground"
-        style={{
-          gridTemplateColumns: selectMode
-            ? "32px 38px minmax(0,1fr) 110px 140px 100px 75px 105px"
-            : "38px minmax(0,1fr) 110px 140px 100px 75px 105px",
-        }}
+        style={{ gridTemplateColumns: columns }}
       >
         {selectMode && <div>{selectAll}</div>}
         <div />
         <div>{t("tracked.columns.show")}</div>
         <div>{t("tracked.columns.status")}</div>
         <div>{t("tracked.columns.progress")}</div>
-        <div>{t("tracked.columns.next")}</div>
         <div>{t("tracked.columns.rating")}</div>
-        <div className="text-right">{t("tracked.columns.actions")}</div>
+        <div className="sr-only">{t("tracked.columns.actions")}</div>
       </div>
       {/* Rows */}
       <div className="rounded-lg border border-border divide-y divide-border">
         {titles.map((title) => {
-          const statusKey = getEffectiveStatus(title);
-          const statusColor = statusKey
-            ? (STATUS_COLORS[statusKey] ?? STATUS_COLORS["plan_to_watch"])
-            : "#71717a";
-          const statusLabel = statusText(statusKey);
+          const statusKey = trackedStatus(title);
+          const statusColor = STATUS_COLORS[statusKey];
           const watched = title.watched_episodes_count ?? 0;
           const total =
             title.total_episodes ?? title.released_episodes_count ?? 0;
           const pct = total > 0 ? Math.round((watched / total) * 100) : 0;
           const score = title.imdb_score ?? title.tmdb_score;
-          const nextDate = title.next_episode_air_date
-            ? new Date(title.next_episode_air_date).toLocaleDateString(
-                undefined,
-                {
-                  month: "short",
-                  day: "numeric",
-                },
-              )
-            : null;
+          const eta = remainingEta(title);
           const isSelected = selectedIds.has(title.id);
+          const meta = [
+            title.release_year,
+            title.object_type === "SHOW"
+              ? t("tracked.row.show")
+              : t("tracked.row.movie"),
+            title.offers[0]?.provider_name,
+          ]
+            .filter(Boolean)
+            .join(" · ");
 
           return (
             <Row
               key={title.id}
               className={`grid gap-4 px-4 py-3 items-center transition-colors ${selectMode ? (isSelected ? "bg-primary-soft cursor-pointer" : "bg-card hover:bg-muted/60 cursor-pointer") : "bg-card hover:bg-muted/60"}`}
-              style={{
-                gridTemplateColumns: selectMode
-                  ? "32px 38px minmax(0,1fr) 110px 140px 100px 75px 105px"
-                  : "38px minmax(0,1fr) 110px 140px 100px 75px 105px",
-              }}
+              style={{ gridTemplateColumns: columns }}
             >
               {/* Checkbox column */}
               {selectMode && (
@@ -913,26 +780,30 @@ function TrackedTable({
                   </Link>
                 )}
                 <div className="font-mono text-[11px] text-muted-foreground mt-0.5">
-                  {title.release_year}
-                  {" · "}
-                  {title.object_type === "SHOW"
-                    ? t("tracked.row.show")
-                    : t("tracked.row.movie")}
-                  {title.offers[0] && ` · ${title.offers[0].provider_name}`}
+                  {meta}
                 </div>
               </div>
-              {/* Status */}
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ background: statusColor }}
-                />
-                <span
-                  className="text-[12px] font-semibold"
-                  style={{ color: statusColor }}
-                >
-                  {statusLabel}
-                </span>
+              {/* Status, with the next air date under it */}
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ background: statusColor }}
+                  />
+                  <span
+                    className="text-[12px] font-semibold"
+                    style={{ color: statusColor }}
+                  >
+                    {statusText(statusKey)}
+                  </span>
+                </div>
+                {title.next_episode_air_date && (
+                  <div className="font-mono text-[11px] text-muted-foreground mt-0.5">
+                    {t("tracked.row.nextAir", {
+                      date: shortDate(title.next_episode_air_date),
+                    })}
+                  </div>
+                )}
               </div>
               {/* Progress */}
               {total > 0 ? (
@@ -948,11 +819,9 @@ function TrackedTable({
                       {watched}/{total}
                     </span>
                   </div>
-                  {title.eta_days != null && (
+                  {eta && (
                     <span className="font-mono text-[11px] text-muted-foreground">
-                      {t("tracked.row.eta", {
-                        eta: formatEta(title.eta_days),
-                      })}
+                      {t("tracked.row.eta", { eta })}
                     </span>
                   )}
                 </div>
@@ -961,10 +830,6 @@ function TrackedTable({
                   —
                 </div>
               )}
-              {/* Next air date */}
-              <div className="font-mono text-[12px] text-foreground-secondary">
-                {nextDate ?? "—"}
-              </div>
               {/* Rating */}
               <div
                 className="font-mono text-[13px] font-semibold"
@@ -973,17 +838,9 @@ function TrackedTable({
                 {score ? `★ ${score.toFixed(1)}` : "—"}
               </div>
               {/* Actions */}
-              <div className="flex gap-1 justify-end">
+              <div className="flex justify-end">
                 {!selectMode && (
-                  <>
-                    <Link
-                      to={`/title/${title.id}`}
-                      className="px-2.5 py-1 text-[11px] font-medium bg-accent border border-border rounded-sm text-foreground-secondary hover:text-foreground transition-colors"
-                    >
-                      {t("tracked.row.open")}
-                    </Link>
-                    <RowActionsMenu title={title} onRefetch={onRefetch} />
-                  </>
+                  <TrackedActionsMenu title={title} onChange={onRefetch} />
                 )}
               </div>
             </Row>
@@ -993,7 +850,6 @@ function TrackedTable({
     </div>
   );
 }
-
 // ─── Bulk Action Bar ──────────────────────────────────────────────────────────
 
 const BULK_STATUS_OPTIONS = [

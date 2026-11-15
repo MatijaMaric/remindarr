@@ -5,7 +5,10 @@ import {
   createUser,
   createSession,
   getSessionWithUser,
+  upsertTitles,
+  trackTitle,
 } from "../db/repository";
+import { makeParsedTitle } from "../test-utils/fixtures";
 import { requireAuth } from "../middleware/auth";
 import shareApp from "./share";
 import type { AppEnv } from "../types";
@@ -189,6 +192,31 @@ describe("GET /share/watchlist/:token (public)", () => {
     const body = (await res.json()) as any;
     expect(body.username).toBe("shareuser");
     expect(Array.isArray(body.titles)).toBe(true);
+  });
+
+  it("returns only the fields the page renders — never notes or watch state", async () => {
+    await upsertTitles([
+      makeParsedTitle({
+        id: "movie-1",
+        title: "Shared Movie",
+        releaseYear: 2024,
+      }),
+    ]);
+    await trackTitle("movie-1", userId, "private note about my ex");
+    const genRes = await app.request("/share/token", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    const { token } = (await genRes.json()) as { token: string };
+
+    const res = await app.request(`/share/watchlist/${token}`);
+    const body = (await res.json()) as any;
+    expect(body.titles).toHaveLength(1);
+    expect(Object.keys(body.titles[0]).sort()).toEqual(
+      ["id", "object_type", "poster_url", "release_year", "title"].sort(),
+    );
+    expect(body.titles[0].title).toBe("Shared Movie");
+    expect(JSON.stringify(body)).not.toContain("private note");
   });
 });
 

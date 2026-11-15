@@ -42,8 +42,11 @@ function pickProvider(
   return sorted[0]?.provider_name ?? null;
 }
 
-function episodeKind(season: number, episode: number): "series" | "episode" {
-  return season === 1 && episode === 1 ? "series" : "episode";
+// The kiosk fits about 8 rows per panel on a 1080p screen and cannot scroll.
+const QUEUE_LIMIT = 8;
+
+function episodeKind(season: number, episode: number): "premiere" | "episode" {
+  return season === 1 && episode === 1 ? "premiere" : "episode";
 }
 
 // ─── Auth-gated token management (registered before /:token to avoid shadowing) ──
@@ -105,11 +108,7 @@ app.get(
       unwatchedCount: allUnwatched.length,
     });
 
-    // airing_now — first unwatched today, fall back to first today
-    const airingNow =
-      todayEpisodes.find((e) => !e.is_watched) ?? todayEpisodes[0] ?? null;
-
-    // releasing_today — all episodes today, projected with provider + kind
+    // releasing_today — all episodes dated today (date-only; no air time)
     const releasingToday = todayEpisodes.map((e) => ({
       id: e.id,
       title_id: e.title_id,
@@ -122,23 +121,19 @@ app.get(
       air_date: e.air_date,
       provider: pickProvider(e.offers),
       kind: episodeKind(e.season_number, e.episode_number),
+      is_watched: e.is_watched,
     }));
 
-    // unwatched_queue — next unwatched episode per tracked show
-    const seenTitles = new Set<string>();
+    // unwatched_queue — next unwatched episode per show, in the repository's
+    // most-recently-watched order. Shows already in releasing_today are left
+    // out so each show appears once on the screen.
+    const seenTitles = new Set(todayEpisodes.map((e) => e.title_id));
     const queueRows = allUnwatched.filter((e) => {
       if (seenTitles.has(e.title_id)) return false;
       seenTitles.add(e.title_id);
       return true;
     });
-    // Sort by air_date asc (oldest first, i.e. most overdue goes first)
-    queueRows.sort((a, b) => {
-      if (!a.air_date && !b.air_date) return 0;
-      if (!a.air_date) return 1;
-      if (!b.air_date) return -1;
-      return a.air_date < b.air_date ? -1 : a.air_date > b.air_date ? 1 : 0;
-    });
-    const unwatchedQueue = queueRows.slice(0, 12).map((e) => ({
+    const unwatchedQueue = queueRows.slice(0, QUEUE_LIMIT).map((e) => ({
       id: e.id,
       title_id: e.title_id,
       show_title: e.show_title,
@@ -154,21 +149,6 @@ app.get(
       ),
     }));
 
-    const airingNowProjected = airingNow
-      ? {
-          id: airingNow.id,
-          title_id: airingNow.title_id,
-          show_title: airingNow.show_title,
-          poster_url: airingNow.poster_url,
-          backdrop_url: airingNow.backdrop_url,
-          season_number: airingNow.season_number,
-          episode_number: airingNow.episode_number,
-          ep_title: airingNow.name,
-          air_date: airingNow.air_date,
-          provider: pickProvider(airingNow.offers),
-        }
-      : null;
-
     const household = user.displayUsername ?? user.username;
 
     c.header("Cache-Control", "no-cache, no-store");
@@ -179,9 +159,9 @@ app.get(
         refresh_interval_seconds: REFRESH_SECONDS[fidelity],
         generated_at: new Date().toISOString(),
       },
-      airing_now: airingNowProjected,
       releasing_today: releasingToday,
       unwatched_queue: unwatchedQueue,
+      queue_total: queueRows.length,
     });
   },
 );

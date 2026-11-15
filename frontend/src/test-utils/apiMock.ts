@@ -204,7 +204,6 @@ const defaults: Record<string, (...args: unknown[]) => Promise<unknown>> = {
   getJobs: async () => ({ jobs: [], recent: [] }),
   triggerJob: async () => ({}),
   getAdminUsers: async () => ({ users: [] }),
-  getAdminUser: async () => ({}),
   setAdminUserRole: async () => ({}),
   banAdminUser: async () => ({}),
   unbanAdminUser: async () => ({}),

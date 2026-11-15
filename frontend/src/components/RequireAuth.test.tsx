@@ -6,7 +6,7 @@ import {
   cleanup,
   fireEvent,
 } from "@testing-library/react";
-import { MemoryRouter, Routes, Route } from "react-router";
+import { MemoryRouter, Routes, Route, useLocation } from "react-router";
 import { createContext, useContext } from "react";
 
 import "../i18n";
@@ -48,6 +48,11 @@ mock.module("../context/AuthContext", () => ({
 
 const { default: RequireAuth } = await import("./RequireAuth");
 
+function LoginProbe() {
+  const state = useLocation().state as { from?: string } | null;
+  return <div data-testid="login-page">{state?.from}</div>;
+}
+
 function renderProtected() {
   const authValue = {
     user: mockUser,
@@ -63,7 +68,7 @@ function renderProtected() {
   };
 
   return render(
-    <MemoryRouter initialEntries={["/protected"]}>
+    <MemoryRouter initialEntries={["/protected?code=abc123"]}>
       <MockAuthContext value={authValue}>
         <Routes>
           <Route
@@ -74,10 +79,7 @@ function renderProtected() {
               </RequireAuth>
             }
           />
-          <Route
-            path="/login"
-            element={<div data-testid="login-page">Login</div>}
-          />
+          <Route path="/login" element={<LoginProbe />} />
         </Routes>
       </MockAuthContext>
     </MemoryRouter>,
@@ -112,6 +114,15 @@ describe("RequireAuth", () => {
       expect(screen.getByTestId("login-page")).toBeDefined();
     });
     expect(screen.queryByTestId("protected-content")).toBeNull();
+  });
+
+  it("passes the original path and query to /login so sign-in can return there", async () => {
+    renderProtected();
+    await waitFor(() => {
+      expect(screen.getByTestId("login-page").textContent).toBe(
+        "/protected?code=abc123",
+      );
+    });
   });
 
   it("shows Reconnecting panel without redirecting when session status is unknown", () => {

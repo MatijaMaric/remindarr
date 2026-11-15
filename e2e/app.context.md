@@ -44,8 +44,7 @@ Relationships:
 | **OIDC (pocketid)**     | `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` env vars | `e2e/fixtures/mock-oidc.ts` — in-process RS256 OIDC provider on port `4321`. Provider ID: `pocketid`. |
 | **Passkey (WebAuthn)**  | UI toggle                                                          | CDP virtual WebAuthn authenticator. **Chromium-only**. See `passkey.spec.ts`.                         |
 
-The login page hides the username/password form when OIDC or passkey is configured.
-`loginUi()` (and `LoginPage.signIn()`) handles the toggle automatically.
+The login page always shows the username/password form; passkey and OIDC buttons sit below it.
 
 ---
 

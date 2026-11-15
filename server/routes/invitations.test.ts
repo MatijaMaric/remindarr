@@ -166,6 +166,28 @@ describe("GET /invitations", () => {
     expect(unredeemed).toBeDefined();
     expect(unredeemed.used_by).toBeNull();
   });
+
+  it("returns created_at and used_at as ISO UTC timestamps", async () => {
+    // Regression: SQLite datetime('now') text ("YYYY-MM-DD HH:MM:SS") made
+    // the Invite page show "Created: —".
+    const { code } = await (
+      await app.request("/invitations", {
+        method: "POST",
+        headers: authHeaders(userAToken),
+      })
+    ).json();
+    await app.request(`/invitations/redeem/${code}`, {
+      method: "POST",
+      headers: authHeaders(userBToken),
+    });
+
+    const body = await (
+      await app.request("/invitations", { headers: authHeaders(userAToken) })
+    ).json();
+    const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
+    expect(body.invitations[0].created_at).toMatch(iso);
+    expect(body.invitations[0].used_at).toMatch(iso);
+  });
 });
 
 describe("POST /invitations/redeem/:code", () => {

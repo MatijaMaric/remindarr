@@ -7,6 +7,7 @@ import * as api from "../api";
 import type { Title } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { pendingWatchlist } from "../lib/offline";
+import { cn } from "../lib/utils";
 import {
   AlertDialog,
   AlertDialogPopup,
@@ -20,6 +21,8 @@ interface Props {
   isTracked: boolean;
   onToggle?: (tracked: boolean) => void;
   titleData?: Title;
+  /** Extra classes; tailwind-merge lets them override the default sizing. */
+  className?: string;
 }
 
 export default function TrackButton({
@@ -27,6 +30,7 @@ export default function TrackButton({
   isTracked,
   onToggle,
   titleData,
+  className,
 }: Props) {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -139,11 +143,13 @@ export default function TrackButton({
         aria-busy={loading || undefined}
         aria-describedby={tracked ? undefined : hintId}
         title={tracked ? undefined : t("track.hint")}
-        className={`min-h-8 inline-flex items-center justify-center px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer ${
+        className={cn(
+          "min-h-8 inline-flex items-center justify-center px-3 py-1.5 rounded-sm text-xs font-medium transition-colors cursor-pointer disabled:opacity-50",
           tracked
             ? "bg-primary-soft text-primary-text hover:bg-destructive-soft hover:text-destructive"
-            : "bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground"
-        } disabled:opacity-50`}
+            : "bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground",
+          className,
+        )}
       >
         {queued ? t("offline.queued") : label}
       </button>

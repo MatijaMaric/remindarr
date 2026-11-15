@@ -24,10 +24,10 @@
       "ban": "Ban user",
       "unban": "Unban user",
       "delete": "Delete user",
-      "banTitle": "Ban User",
+      "banTitle": "Ban {{username}}",
       "banReasonPlaceholder": "Reason (optional)",
       "banConfirm": "Ban User",
-      "deleteTitle": "Delete User",
+      "deleteTitle": "Delete {{username}}",
       "deleteConfirm": "This action is permanent and cannot be undone.",
       "deleteConfirmButton": "Delete permanently",
       "prevPage": "Previous page",
@@ -51,7 +51,21 @@
       "newPassword": "New password (at least 8 characters)",
       "resetPasswordConfirm": "Set password",
       "resetPasswordDone": "Password reset. The user has been signed out everywhere.",
-      "resetPasswordFailed": "Failed to reset password"
+      "resetPasswordFailed": "Failed to reset password",
+      "roleAdmin": "Admin",
+      "roleUser": "User",
+      "banned": "Banned",
+      "banReason": "Reason: {{reason}}",
+      "promoteTitle": "Make {{username}} an admin?",
+      "promoteHelp": "Admins can manage users and server settings.",
+      "demoteTitle": "Remove admin rights from {{username}}?",
+      "demoteHelp": "They keep their account and data but lose access to admin settings.",
+      "promoted": "{{username}} is now an admin",
+      "demoted": "{{username}} is no longer an admin",
+      "roleFailed": "Failed to update role",
+      "banFailed": "Failed to ban user",
+      "unbanFailed": "Failed to unban user",
+      "deleteFailed": "Failed to delete user"
     }
   },
   "legal": {
@@ -154,7 +168,6 @@
     }
   },
   "tracked": {
-    "title": "Tracked Titles ({{count}})",
     "empty": "No tracked titles yet. Search for titles and click 'Add to watchlist' to add them here.",
     "sortBy": "Sort titles by",
     "filterTabs": "Filter by status",
@@ -172,19 +185,8 @@
     "heading": "Tracked",
     "kicker_one": "Your library · {{count}} title",
     "kicker_other": "Your library · {{count}} titles",
-    "stats": {
-      "watching": "Currently watching",
-      "watchingSub": "of {{count}} tracked",
-      "completedSub": "shows & movies",
-      "avgScore": "Avg score",
-      "avgScoreSub": "across {{count}} rated",
-      "noRatings": "no ratings yet",
-      "total": "Total tracked",
-      "totalSub": "titles in library"
-    },
     "tabs": {
-      "all": "All",
-      "planning": "Planning"
+      "all": "All"
     },
     "view": {
       "select": "Select",
@@ -202,7 +204,6 @@
       "show": "Show",
       "status": "Status",
       "progress": "Progress",
-      "next": "Next",
       "rating": "Rating",
       "actions": "Actions"
     },
@@ -213,9 +214,9 @@
       "selectAll": "Select all titles",
       "select": "Select {{title}}",
       "eta": "ETA: {{eta}}",
+      "nextAir": "Next: {{date}}",
       "show": "Show",
-      "movie": "Movie",
-      "open": "Open"
+      "movie": "Movie"
     },
     "bulk": {
       "updated_one": "Updated {{count}} title",
@@ -277,23 +278,18 @@
     "title": "Browse",
     "kicker": {
       "search": "Search",
-      "searchResults_one": "Search · {{count}} result",
-      "searchResults_other": "Search · {{count}} results",
       "catalog": "Catalog · discover titles",
       "catalogCount_one": "Catalog · {{formatted}} title",
       "catalogCount_other": "Catalog · {{formatted}} titles"
     },
     "hideFilters": "Hide filters",
     "showFilters": "Show filters",
-    "clearAllFilters": "Clear all filters",
-    "removeFilter": "Remove {{name}} filter",
-    "removeLanguageFilter": "Remove {{name}} language filter",
-    "removeYearFilter": "Remove year range filter",
-    "removeRatingFilter": "Remove minimum rating filter"
+    "clearAllFilters": "Clear all filters"
   },
   "signup": {
     "title": "Create an account",
     "username": "Username",
+    "usernameHint": "Letters, numbers, dots, dashes and underscores",
     "email": "Email",
     "displayName": "Display Name",
     "password": "Password",
@@ -303,7 +299,7 @@
     "creating": "Creating account...",
     "signUp": "Sign Up",
     "alreadyHaveAccount": "Already have an account?",
-    "signIn": "Sign in"
+    "signIn": "Sign In"
   },
   "login": {
     "title": "Sign in to Remindarr",
@@ -315,8 +311,8 @@
     "signingIn": "Signing in...",
     "signIn": "Sign In",
     "noAccount": "Don't have an account?",
-    "signUp": "Sign up",
-    "loginFailed": "Login failed: {{error}}",
+    "signUp": "Sign Up",
+    "loginFailed": "Sign-in failed. Please try again.",
     "signInWithPasskey": "Sign in with Passkey",
     "passkeyFailed": "Passkey sign-in failed",
     "recoveryTitle": "Forgot your password?",
@@ -384,11 +380,8 @@
     "movies": "Movies",
     "shows": "Shows",
     "people": "People",
-    "allGenres": "All Genres",
-    "allPlatforms": "All Platforms",
     "allLanguages": "All Languages",
     "hideTracked": "Hide Tracked",
-    "clearFilters": "Clear filters",
     "search": "Search...",
     "yearFrom": "From year",
     "yearTo": "To year",
@@ -422,7 +415,8 @@
   },
   "releases": {
     "loading": "Loading...",
-    "empty": "No releases found."
+    "empty": "No releases found.",
+    "loadMore": "Load more"
   },
   "track": {
     "track": "Add to watchlist",
@@ -534,46 +528,30 @@
     "hideWatched": "Hide watched",
     "showWatched": "Show watched",
     "gridView": "Grid view",
-    "weekView": "Week view",
     "agendaView": "Agenda view",
     "close": "Close",
     "goToDay": "Go to {{date}}",
-    "densityCompact": "Compact",
-    "densityComfortable": "Comfortable",
-    "densitySpacious": "Spacious",
     "loadError": "Failed to load calendar. Please try again.",
     "stats": {
       "episodes_one": "{{count}} Episode",
       "episodes_other": "{{count}} Episodes",
       "titles_one": "{{count}} Title",
-      "titles_other": "{{count}} Titles",
-      "total_one": "{{count}} Total",
-      "total_other": "{{count}} Total"
+      "titles_other": "{{count}} Titles"
     },
     "episodes": "Episodes",
     "releases": "Releases",
     "noReleasesOnDay": "No tracked releases on this day",
     "previousMonth": "Previous month",
     "nextMonth": "Next month",
-    "month": "Month",
-    "agenda": "Agenda",
-    "legend": {
-      "tracked": "Tracked · airing",
-      "followed": "Followed · new episode",
-      "premiere": "Premiere"
-    },
-    "episodesThisMonth_one": "{{count}} episode this month",
-    "episodesThisMonth_other": "{{count}} episodes this month",
-    "previousWeek": "Previous week",
-    "nextWeek": "Next week",
-    "thisWeek": "This week"
+    "loadMonth": "Show {{month}}",
+    "movie": "Movie",
+    "show": "Show"
   },
   "landing": {
     "tagline": "Track movies & TV shows you love",
     "subtitle": "Get notified about new episodes, track what you've watched, and discover what's streaming.",
     "signIn": "Sign In",
-    "signUp": "Create Account",
-    "popularNow": "Popular Right Now",
+    "signUp": "Sign Up",
     "discoverMore": "Discover More"
   },
   "userProfile": {
@@ -614,7 +592,6 @@
       "watchTimeShows": "TV time",
       "topGenres": "Top genres",
       "friendsCount": "Friends · {{count}}",
-      "seeAll": "See all",
       "followedPeople": "People followed",
       "followedSince": "following since {{date}}",
       "activity12m": "12-month activity",
@@ -633,7 +610,9 @@
         "completed": "Completed",
         "onHold": "On hold",
         "planToWatch": "Plan to watch",
-        "dropped": "Dropped"
+        "dropped": "Dropped",
+        "notStarted": "Not started",
+        "unreleased": "Unreleased"
       },
       "activity": {
         "title": "Recent activity",
@@ -839,7 +818,7 @@
       "visibilityUpdateFailed": "Failed to update visibility",
       "perTitleOverrides": "Per-title overrides",
       "socialTitle": "Social",
-      "socialSubtitle": "Invite friends to your Remindarr instance. They'll get a limited signup link.",
+      "socialSubtitle": "Invite friends to your Remindarr instance. When they open your link, you follow each other.",
       "socialHint": "Manage invite codes on the Invite page",
       "passkeyNameLabel": "Passkey name",
       "data": {
@@ -914,11 +893,10 @@
   "discovery": {
     "title": "Discovery",
     "empty": "No recommendations yet. Follow people to see their recommendations!",
+    "emptyCta": "Find and track titles, then rate a few to improve recommendations.",
     "movie": "Movie",
-    "tv": "TV Show",
     "track": "Track",
     "dismiss": "Dismiss",
-    "tracked": "\"{{title}}\" added to your watchlist",
     "trackFailed": "Failed to track title",
     "dismissFailed": "Failed to dismiss recommendation",
     "loadFailed": "Failed to load recommendations",
@@ -934,10 +912,8 @@
     "friendCount_one": "{{count}} friend",
     "friendCount_other": "{{count}} friends",
     "direct": "Direct",
-    "noPoster": "N/A",
     "kicker": "Based on what you watch & who you follow",
     "forYou": "For you",
-    "activity": "Activity",
     "sessionCounts": "{{tracked}} tracked · {{dismissed}} dismissed",
     "moreForYou": {
       "kicker": "More for you",
@@ -948,9 +924,8 @@
       "kicker": "From people you follow",
       "title": "Friends are recommending"
     },
-    "hiddenCount_one": "{{count}} hidden — already tracked or dismissed",
-    "hiddenCount_other": "{{count}} hidden — already tracked or dismissed",
-    "allHandled": "All suggestions tracked or dismissed.",
+    "hiddenCount_one": "{{count}} hidden — already tracked, watched or dismissed",
+    "hiddenCount_other": "{{count}} hidden — already tracked, watched or dismissed",
     "hero": {
       "kicker": "Top pick for you",
       "tvSeries": "TV Series",
@@ -960,9 +935,7 @@
       "friends": "Friends",
       "recCount_one": "{{count}} rec",
       "recCount_other": "{{count}} recs",
-      "noFriendRecs": "None of your friends have recommended this yet.",
       "viewDetails": "View details",
-      "undoDismiss": "Undo dismiss",
       "notInterested": "Not interested"
     }
   },
@@ -978,14 +951,18 @@
     "redeeming": "Redeeming invitation...",
     "redeemSuccess": "You and @{{name}} are now following each other!",
     "statusPending": "Pending",
-    "statusUsed": "Used by @{{username}}",
+    "statusUsed": "Used by <profile>@{{username}}</profile>",
     "statusExpired": "Expired",
     "created_at": "Created",
     "expires_at": "Expires",
-    "usedBy": "Used by",
     "shareTitle": "Join me on Remindarr",
     "shareText": "Use my invite link to join Remindarr!",
-    "settingsLink": "Invite Friends"
+    "settingsLink": "Invite Friends",
+    "statusUsedDeleted": "Used by a deleted account",
+    "used_at": "Used",
+    "remove": "Remove",
+    "removing": "Removing...",
+    "removed": "Invitation removed"
   },
   "common": {
     "scrollLeft": "Scroll left",
@@ -1007,7 +984,10 @@
       "hoursAgo_other": "{{count}}h ago",
       "daysAgo_one": "{{count}}d ago",
       "daysAgo_other": "{{count}}d ago"
-    }
+    },
+    "share": "Share",
+    "linkCopied": "Link copied to clipboard",
+    "linkCopyFailed": "Failed to copy link"
   },
   "feed": {
     "title": "Calendar Feed",
@@ -1135,22 +1115,15 @@
     "snoozed": "Snoozed"
   },
   "stats": {
-    "title": "Stats",
     "loadError": "Failed to load stats. Please try again.",
     "moviesWatched": "Movies Watched",
     "episodesWatched": "Episodes Watched",
     "showsTracked": "Shows Tracked",
     "moviesTracked": "Movies Tracked",
     "watchTime": "Watch Time",
-    "total": "total",
+    "watchTimeSplit": "TV {{shows}} · Movies {{movies}}",
     "watchlistEta": "Watchlist ETA",
     "atCurrentPace": "at your current pace",
-    "tvWatchTime": "TV Watch Time",
-    "movieWatchTime": "Movie Watch Time",
-    "episodeCount_one": "{{count}} episode",
-    "episodeCount_other": "{{count}} episodes",
-    "movieCount_one": "{{count}} movie",
-    "movieCount_other": "{{count}} movies",
     "monthlyActivity": "Monthly Activity",
     "episodes": "Episodes",
     "movies": "Movies",

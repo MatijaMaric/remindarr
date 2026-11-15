@@ -251,12 +251,26 @@ describe("GET /search — type=PERSON", () => {
     ]);
   });
 
-  it("default search still excludes people", async () => {
+  it("default (All) search returns people alongside titles", async () => {
     mockMulti();
     (tmdbClient.fetchMovieDetails as any).mockResolvedValueOnce(
       makeTmdbMovieDetails({ id: 42 }),
     );
     const body = await (await app.request("/search?q=tom")).json();
+    expect(body.people.map((p: any) => p.name)).toEqual([
+      "Tom Hanks",
+      "Tom Holland",
+    ]);
+    expect(body.titles).toHaveLength(1);
+    expect(body.count).toBe(3);
+  });
+
+  it("Movies search leaves people out", async () => {
+    mockMulti();
+    (tmdbClient.fetchMovieDetails as any).mockResolvedValueOnce(
+      makeTmdbMovieDetails({ id: 42 }),
+    );
+    const body = await (await app.request("/search?q=tom&type=MOVIE")).json();
     expect(body.people).toBeUndefined();
     expect(body.titles).toHaveLength(1);
   });

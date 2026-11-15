@@ -249,26 +249,15 @@ export function StatsView() {
         <OverviewCard
           label={t("stats.watchTime")}
           value={formatTime(overview.watch_time_minutes)}
-          sub={t("stats.total")}
+          sub={t("stats.watchTimeSplit", {
+            shows: formatTime(overview.watch_time_minutes_shows),
+            movies: formatTime(overview.watch_time_minutes_movies),
+          })}
         />
         <OverviewCard
           label={t("stats.watchlistEta")}
           value={formatEta(pace?.watchlistEtaDays ?? null)}
           sub={t("stats.atCurrentPace")}
-        />
-      </div>
-
-      {/* Watch time breakdown */}
-      <div className="grid grid-cols-2 gap-4">
-        <OverviewCard
-          label={t("stats.tvWatchTime")}
-          value={formatTime(overview.watch_time_minutes_shows)}
-          sub={t("stats.episodeCount", { count: overview.watched_episodes })}
-        />
-        <OverviewCard
-          label={t("stats.movieWatchTime")}
-          value={formatTime(overview.watch_time_minutes_movies)}
-          sub={t("stats.movieCount", { count: overview.watched_movies })}
         />
       </div>
 
@@ -342,16 +331,6 @@ export function StatsView() {
           <ShowStatusGrid showsByStatus={shows_by_status} />
         </div>
       )}
-    </div>
-  );
-}
-
-export default function StatsPage() {
-  const { t } = useTranslation();
-  return (
-    <div className="space-y-8">
-      <h2 className="text-lg font-semibold">{t("stats.title")}</h2>
-      <StatsView />
     </div>
   );
 }

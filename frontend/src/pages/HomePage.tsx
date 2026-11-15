@@ -10,15 +10,13 @@ import { useAuth } from "../context/AuthContext";
 import * as api from "../api";
 import type {
   Episode,
-  Title,
   Recommendation,
   HomepageSection,
   FriendsLovedItem,
   StreakData,
 } from "../types";
-import { normalizeSearchTitle, DEFAULT_HOMEPAGE_LAYOUT } from "../types";
+import { DEFAULT_HOMEPAGE_LAYOUT } from "../types";
 import StreakCounter from "../components/profile/StreakCounter";
-import TitleList from "../components/TitleList";
 import { HomeAuthSkeleton } from "../components/SkeletonComponents";
 import {
   groupByShow,
@@ -101,16 +99,6 @@ export default function HomePage() {
     null,
   );
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const { data: anonData, isLoading: anonLoading } = useQuery({
-    queryKey: ["home", "anon"],
-    enabled: !authLoading && !user,
-    queryFn: ({ signal }) =>
-      api
-        .browseTitles({ category: "popular", page: 1 }, signal)
-        .then((res) => res.titles.map(normalizeSearchTitle))
-        .catch(() => [] as Title[]),
-  });
 
   // Trending snapshot — shared by the signed-in and signed-out home paths
   // (FR-011). Fails soft: a rejected fetch yields an empty section, never an
@@ -266,11 +254,6 @@ export default function HomePage() {
   const streakData = authData?.streakData ?? null;
   const movieData = authData?.movieData ?? { to_watch: [], upcoming: [] };
 
-  const popularTitlesPreview = useMemo(
-    () => (anonData ?? []).slice(0, 12),
-    [anonData],
-  );
-
   const unwatchedCards = useMemo(
     () => buildUnwatchedCards(unwatched),
     [unwatched],
@@ -318,10 +301,7 @@ export default function HomePage() {
     });
   }, [upcoming]);
 
-  if (
-    authLoading ||
-    (user ? authData === undefined && authDataLoading : anonLoading)
-  ) {
+  if (authLoading || (user && authData === undefined && authDataLoading)) {
     return <HomeAuthSkeleton />;
   }
 
@@ -360,16 +340,14 @@ export default function HomePage() {
           isLoading={trendingLoading}
         />
 
-        {/* Popular titles */}
-        <section>
-          <SectionHeader
-            kicker={t("home.kickers.browse")}
-            title={t("landing.popularNow")}
-            href="/browse"
-            linkLabel={`${t("landing.discoverMore")} →`}
-          />
-          <TitleList titles={popularTitlesPreview} />
-        </section>
+        <p className="text-center">
+          <Link
+            to="/browse"
+            className="text-sm font-medium text-primary-text hover:underline"
+          >
+            {t("landing.discoverMore")} →
+          </Link>
+        </p>
       </div>
     );
   }

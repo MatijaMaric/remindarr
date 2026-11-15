@@ -7,10 +7,8 @@ import {
   CalendarIcon,
   LayoutGridIcon,
   ListIcon,
-  CalendarDaysIcon,
   EyeIcon,
   EyeOffIcon,
-  AlignJustifyIcon,
 } from "lucide-react";
 import { Popover } from "@base-ui/react/popover";
 import { Calendar } from "../components/ui/calendar";
@@ -22,7 +20,6 @@ import {
   getCrowdedWeekSettings,
 } from "../api";
 import { getISOWeekKey } from "../lib/isoWeek";
-import TitleCard from "../components/TitleCard";
 import { DeckCardWrapper } from "../components/EpisodeShowCard";
 import type { Title, Episode } from "../types";
 import { useContentAdvisory } from "../hooks/useContentAdvisory";
@@ -47,9 +44,7 @@ export const typeFilters = [
   { label: "Shows", value: "SHOW" },
 ] as const;
 
-export type ViewMode = "grid" | "agenda" | "week";
-
-export type DensityMode = "compact" | "comfortable" | "spacious";
+export type ViewMode = "grid" | "agenda";
 
 export function formatMonth(date: Date): string {
   const y = date.getFullYear();
@@ -62,28 +57,6 @@ export function formatDateKey(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
-}
-
-/** Get the best hero image URL for a calendar item */
-export function getItemHeroUrl(item: CalendarItem): string | null {
-  if (item.type === "episode") {
-    return getEpisodeCardImageUrl(item.data);
-  }
-  return item.data.poster_url;
-}
-
-/** Pick the featured item from a list (best image, unwatched episodes first) */
-export function pickFeaturedItem(items: CalendarItem[]): CalendarItem | null {
-  if (items.length === 0) return null;
-  // Prefer unwatched episode with an image
-  const unwatchedEps = items.filter(
-    (i) => i.type === "episode" && !i.data.is_watched && getItemHeroUrl(i),
-  );
-  if (unwatchedEps.length > 0) return unwatchedEps[0];
-  // Then any item with an image
-  const withImage = items.filter((i) => getItemHeroUrl(i));
-  if (withImage.length > 0) return withImage[0];
-  return items[0];
 }
 
 /** Determine cell border color based on item types */
@@ -102,7 +75,30 @@ export function getCellBorderColor(items: CalendarItem[]): string {
   return "";
 }
 
-// ─── URL state helper ───────────────────────────────────────────────────────
+/**
+ * A tracked show's premiere date is also the air date of its first episode,
+ * so the API returns both. Keep the episode (it carries the watched state and
+ * episode link) and drop the show title on any day that show has an episode.
+ */
+export function dropPremiereDuplicates(
+  titles: Title[],
+  episodes: Episode[],
+): Title[] {
+  const showDays = new Set(
+    episodes.map((ep) => `${ep.title_id}|${ep.air_date}`),
+  );
+  return titles.filter(
+    (t) =>
+      t.object_type !== "SHOW" || !showDays.has(`${t.id}|${t.release_date}`),
+  );
+}
+
+/** The episode a show's day card stands for: its first unwatched one, else its first. */
+export function pickShowEpisode(showEps: Episode[]): Episode {
+  return showEps.find((ep) => !ep.is_watched) ?? showEps[0];
+}
+
+// ─── URL state helpers ──────────────────────────────────────────────────────
 
 export function useCalendarParam(
   searchParams: URLSearchParams,
@@ -131,6 +127,23 @@ export function useCalendarParam(
   return [value, setValue];
 }
 
+/** One Hide watched setting for every calendar view, kept in `?hideWatched=1`. */
+export function useHideWatched(
+  searchParams: URLSearchParams,
+  setSearchParams: ReturnType<typeof useSearchParams>[1],
+): [boolean, (hide: boolean) => void] {
+  const [value, setValue] = useCalendarParam(
+    searchParams,
+    setSearchParams,
+    "hideWatched",
+  );
+  const setHide = useCallback(
+    (hide: boolean) => setValue(hide ? "1" : ""),
+    [setValue],
+  );
+  return [value === "1", setHide];
+}
+
 // ─── View Toggle ────────────────────────────────────────────────────────────
 
 export function ViewToggle({
@@ -152,22 +165,9 @@ export function ViewToggle({
             ? "bg-primary text-primary-foreground"
             : "text-muted-foreground hover:text-foreground"
         }`}
-        title="Grid view"
+        title={t("calendar.gridView")}
       >
         <LayoutGridIcon className="size-4" />
-      </button>
-      <button
-        onClick={() => onViewModeChange("week")}
-        aria-label={t("calendar.weekView")}
-        aria-pressed={viewMode === "week"}
-        className={`p-1.5 rounded-sm transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-muted ${
-          viewMode === "week"
-            ? "bg-primary text-primary-foreground"
-            : "text-muted-foreground hover:text-foreground"
-        }`}
-        title="Week view"
-      >
-        <CalendarDaysIcon className="size-4" />
       </button>
       <button
         onClick={() => onViewModeChange("agenda")}
@@ -178,7 +178,7 @@ export function ViewToggle({
             ? "bg-primary text-primary-foreground"
             : "text-muted-foreground hover:text-foreground"
         }`}
-        title="Agenda view"
+        title={t("calendar.agendaView")}
       >
         <ListIcon className="size-4" />
       </button>
@@ -186,60 +186,17 @@ export function ViewToggle({
   );
 }
 
-// ─── Density Toggle ─────────────────────────────────────────────────────────
-
-export function DensityToggle({
-  density,
-  onDensityChange,
-}: {
-  density: DensityMode;
-  onDensityChange: (mode: DensityMode) => void;
-}) {
-  const { t } = useTranslation();
-  const options: { value: DensityMode; label: string }[] = [
-    { value: "compact", label: t("calendar.densityCompact") },
-    { value: "comfortable", label: t("calendar.densityComfortable") },
-    { value: "spacious", label: t("calendar.densitySpacious") },
-  ];
-  return (
-    <div
-      className="flex items-center bg-muted rounded-md p-0.5 gap-0.5"
-      title="Density"
-    >
-      <AlignJustifyIcon className="size-3.5 text-muted-foreground mx-1 flex-shrink-0" />
-      {options.map((opt) => (
-        <button
-          key={opt.value}
-          onClick={() => onDensityChange(opt.value)}
-          aria-label={opt.label}
-          aria-pressed={density === opt.value}
-          className={`px-2 py-1 rounded-sm text-[11px] font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-muted ${
-            density === opt.value
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {opt.label.charAt(0).toUpperCase()}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 // ─── Compact Day Header ─────────────────────────────────────────────────────
 
 const DayHeader = memo(function DayHeader({
-  items,
+  count,
   dateLabel,
   isToday,
 }: {
-  items: CalendarItem[];
+  count: number;
   dateLabel: string;
   isToday: boolean;
 }) {
-  const featured = pickFeaturedItem(items);
-  const posterUrl = featured ? featured.data.poster_url : null;
-
   return (
     <div
       className={`flex items-center gap-3 px-3 py-2.5 rounded-md ${
@@ -248,16 +205,6 @@ const DayHeader = memo(function DayHeader({
           : "bg-card/60 border-l-2 border-border"
       }`}
     >
-      {posterUrl && (
-        <img
-          src={posterUrl}
-          alt=""
-          className="w-10 h-15 rounded-sm object-cover flex-shrink-0"
-          loading="lazy"
-          width={40}
-          height={60}
-        />
-      )}
       <div className="flex-1 min-w-0">
         {isToday && (
           <span className="text-[11px] uppercase tracking-widest text-primary-text font-semibold">
@@ -271,7 +218,7 @@ const DayHeader = memo(function DayHeader({
         </h3>
       </div>
       <span className="text-xs text-muted-foreground flex-shrink-0">
-        {items.length} item{items.length !== 1 ? "s" : ""}
+        {count} item{count !== 1 ? "s" : ""}
       </span>
     </div>
   );
@@ -288,8 +235,6 @@ interface AgendaMonth {
 interface AgendaCalendarProps {
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
-  density?: DensityMode;
-  onDensityChange?: (mode: DensityMode) => void;
   searchParams: URLSearchParams;
   setSearchParams: ReturnType<typeof useSearchParams>[1];
 }
@@ -297,8 +242,6 @@ interface AgendaCalendarProps {
 function AgendaCalendarImpl({
   viewMode,
   onViewModeChange,
-  density = "comfortable",
-  onDensityChange,
   searchParams,
   setSearchParams,
 }: AgendaCalendarProps) {
@@ -309,7 +252,17 @@ function AgendaCalendarImpl({
     setSearchParams,
     "type",
   );
-  const [hideWatched, setHideWatched] = useState(true);
+  const [hideWatched, setHideWatched] = useHideWatched(
+    searchParams,
+    setSearchParams,
+  );
+  // Shared with the month grid so switching views keeps the month.
+  const [monthParam, setMonthParam] = useCalendarParam(
+    searchParams,
+    setSearchParams,
+    "month",
+    formatMonth(new Date()),
+  );
   const [months, setMonths] = useState<AgendaMonth[]>([]);
 
   const { data: crowdedWeekData } = useQuery({
@@ -322,28 +275,30 @@ function AgendaCalendarImpl({
     : true;
   const [loadingMore, setLoadingMore] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [activeDate, setActiveDate] = useState(() => new Date());
+  // Start on today, or on the 1st of the month the URL (month grid) points at.
+  const [startDate] = useState(() =>
+    monthParam === formatMonth(new Date())
+      ? new Date()
+      : new Date(monthParam + "-01T00:00:00"),
+  );
+  const [activeDate, setActiveDate] = useState(startDate);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const topRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const todayRef = useRef<HTMLDivElement>(null);
   const initialScrollDoneRef = useRef(false);
-  const scrollTargetRef = useRef(formatDateKey(new Date()));
+  const scrollTargetRef = useRef(formatDateKey(startDate));
 
   // Scroll-spy state for date sidebar
   const [activeDateKey, setActiveDateKey] = useState<string | null>(null);
   const dayRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const loadedMonthsRef = useRef(new Set<string>());
-  const [earliestMonth, setEarliestMonth] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  });
-  const [latestMonth, setLatestMonth] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  });
+  const [earliestMonth, setEarliestMonth] = useState(
+    () => new Date(startDate.getFullYear(), startDate.getMonth() - 1, 1),
+  );
+  const [latestMonth, setLatestMonth] = useState(
+    () => new Date(startDate.getFullYear(), startDate.getMonth() + 1, 1),
+  );
 
   const today = useMemo(() => formatDateKey(new Date()), []);
 
@@ -369,16 +324,16 @@ function AgendaCalendarImpl({
     [typeFilter],
   );
 
-  // Initial load
+  // Initial load: the month around the scroll target plus one either side
   useEffect(() => {
     loadedMonthsRef.current.clear();
     setMonths([]); // eslint-disable-line react-hooks/set-state-in-effect -- reset before async load
     setInitialLoading(true);
 
-    const now = new Date();
-    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const curr = new Date(now.getFullYear(), now.getMonth(), 1);
-    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const center = new Date(scrollTargetRef.current + "T00:00:00");
+    const prev = new Date(center.getFullYear(), center.getMonth() - 1, 1);
+    const curr = new Date(center.getFullYear(), center.getMonth(), 1);
+    const next = new Date(center.getFullYear(), center.getMonth() + 1, 1);
 
     setEarliestMonth(prev);
     setLatestMonth(next);
@@ -423,7 +378,14 @@ function AgendaCalendarImpl({
     });
   }, [initialLoading]);
 
-  // Infinite scroll down
+  // Keep ?month= on the month being read, so the grid opens on it.
+  useEffect(() => {
+    if (!initialScrollDoneRef.current) return;
+    const m = formatMonth(activeDate);
+    if (m !== monthParam) setMonthParam(m);
+  }, [activeDate, monthParam, setMonthParam]);
+
+  // ponytail: user-driven paging; each click loads exactly one month.
   const loadNextMonth = useCallback(async () => {
     if (loadingMore) return;
     setLoadingMore(true);
@@ -440,7 +402,6 @@ function AgendaCalendarImpl({
     setLoadingMore(false);
   }, [latestMonth, loadMonth, loadingMore]);
 
-  // Infinite scroll up
   const loadPrevMonth = useCallback(async () => {
     if (loadingMore) return;
     setLoadingMore(true);
@@ -456,34 +417,6 @@ function AgendaCalendarImpl({
     setEarliestMonth(prev);
     setLoadingMore(false);
   }, [earliestMonth, loadMonth, loadingMore]);
-
-  useEffect(() => {
-    const el = bottomRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && initialScrollDoneRef.current)
-          loadNextMonth();
-      },
-      { threshold: 0.1 },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [loadNextMonth]);
-
-  useEffect(() => {
-    const el = topRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && initialScrollDoneRef.current)
-          loadPrevMonth();
-      },
-      { threshold: 0.1 },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [loadPrevMonth]);
 
   // Scroll-spy for date sidebar
   useEffect(() => {
@@ -548,7 +481,7 @@ function AgendaCalendarImpl({
     const byDate = new Map<string, CalendarItem[]>();
 
     for (const m of months) {
-      for (const t of m.titles) {
+      for (const t of dropPremiereDuplicates(m.titles, m.episodes)) {
         if (!t.release_date) continue;
         if (actionFor(t.age_certification, t.id) === "hide") continue;
         const arr = byDate.get(t.release_date);
@@ -645,7 +578,6 @@ function AgendaCalendarImpl({
           dateKey: string;
           items: CalendarItem[];
           dateLabel: string;
-          dayEpisodes: Episode[];
           dayTitles: Title[];
           episodesByShow: Map<string, Episode[]>;
         }
@@ -674,7 +606,6 @@ function AgendaCalendarImpl({
         dateKey,
         items,
         dateLabel,
-        dayEpisodes,
         dayTitles,
         episodesByShow,
       });
@@ -709,6 +640,11 @@ function AgendaCalendarImpl({
     const el = dayRefs.current.get(dateKey);
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
+
+  const monthName = (d: Date) =>
+    d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const pageButtonClass =
+    "w-full px-3 py-2 rounded-md border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-default";
 
   return (
     <div ref={containerRef} className="flex gap-0 lg:gap-4">
@@ -813,12 +749,6 @@ function AgendaCalendarImpl({
                 onViewModeChange={onViewModeChange}
               />
             )}
-            {onDensityChange && (
-              <DensityToggle
-                density={density}
-                onDensityChange={onDensityChange}
-              />
-            )}
           </div>
           <div className="flex items-center gap-2">
             {typeFilters.map((f) => (
@@ -835,7 +765,7 @@ function AgendaCalendarImpl({
               </button>
             ))}
             <button
-              onClick={() => setHideWatched((v) => !v)}
+              onClick={() => setHideWatched(!hideWatched)}
               aria-label={t("calendar.hideWatched")}
               aria-pressed={hideWatched}
               className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
@@ -859,7 +789,21 @@ function AgendaCalendarImpl({
           <CalendarSkeleton />
         ) : (
           <>
-            <div ref={topRef} className="h-1" />
+            <button
+              onClick={loadPrevMonth}
+              disabled={loadingMore}
+              className={pageButtonClass}
+            >
+              {t("calendar.loadMonth", {
+                month: monthName(
+                  new Date(
+                    earliestMonth.getFullYear(),
+                    earliestMonth.getMonth() - 1,
+                    1,
+                  ),
+                ),
+              })}
+            </button>
 
             {condensedEntries.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-sm">
@@ -885,14 +829,8 @@ function AgendaCalendarImpl({
                       );
                     }
 
-                    const {
-                      dateKey,
-                      items,
-                      dateLabel,
-                      dayEpisodes,
-                      dayTitles,
-                      episodesByShow,
-                    } = entry;
+                    const { dateKey, dateLabel, dayTitles, episodesByShow } =
+                      entry;
                     const isDateToday = dateKey === today;
                     const entryWeekKey = getISOWeekKey(
                       new Date(dateKey + "T00:00:00"),
@@ -928,124 +866,153 @@ function AgendaCalendarImpl({
                         >
                           {/* Compact day header */}
                           <DayHeader
-                            items={items}
+                            count={episodesByShow.size + dayTitles.length}
                             dateLabel={dateLabel}
                             isToday={isDateToday}
                           />
 
-                          {/* All episode cards in a single row */}
-                          {dayEpisodes.length > 0 && (
+                          {/* One card per show: first unwatched episode, plus a count */}
+                          {episodesByShow.size > 0 && (
                             <ScrollableRow className="flex-wrap lg:flex-nowrap gap-3">
-                              {dayEpisodes.map((ep) => {
-                                const showEps = episodesByShow.get(
-                                  ep.title_id,
-                                ) ?? [ep];
-                                const imgUrl = getEpisodeCardImageUrl(ep);
-                                return (
-                                  <div
-                                    key={ep.id}
-                                    className="w-full sm:w-72 lg:w-80 flex-shrink-0"
-                                  >
-                                    <DeckCardWrapper
-                                      episodeCount={
-                                        showEps.length > 1 ? showEps.length : 1
-                                      }
+                              {[...episodesByShow.entries()].map(
+                                ([showId, showEps]) => {
+                                  const ep = pickShowEpisode(showEps);
+                                  const imgUrl = getEpisodeCardImageUrl(ep);
+                                  return (
+                                    <div
+                                      key={showId}
+                                      data-testid="agenda-show-card"
+                                      className="w-full sm:w-72 lg:w-80 flex-shrink-0"
                                     >
-                                      <div className="bg-card rounded-lg overflow-hidden flex sm:block [&_button]:min-h-10">
-                                        <Link
-                                          to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
-                                          aria-label={`${ep.show_title} ${formatEpisodeCode(ep)}`}
-                                          className="block relative w-16 shrink-0 sm:w-auto"
-                                        >
-                                          {imgUrl ? (
-                                            <img
-                                              src={imgUrl}
-                                              alt={
-                                                ep.name || formatEpisodeCode(ep)
-                                              }
-                                              className="w-full h-full object-cover sm:aspect-video sm:h-auto"
-                                              loading="lazy"
-                                            />
-                                          ) : (
-                                            <div className="w-full h-full sm:aspect-video bg-gradient-to-b from-muted to-background" />
-                                          )}
-                                        </Link>
-                                        <div
-                                          className={
-                                            density === "compact"
-                                              ? "p-2 flex-1 min-w-0"
-                                              : density === "spacious"
-                                                ? "p-4 flex-1 min-w-0"
-                                                : "p-3 flex-1 min-w-0"
-                                          }
-                                        >
-                                          <div className="flex items-center justify-between gap-2">
-                                            <Link
-                                              to={`/title/${ep.title_id}`}
-                                              className="hover:text-primary-text transition-colors min-w-0"
-                                            >
-                                              <h3 className="font-semibold text-foreground text-sm break-words">
-                                                {ep.show_title}
-                                              </h3>
-                                            </Link>
-                                            <WatchedToggleButton
-                                              watched={!!ep.is_watched}
-                                              onClick={() =>
-                                                toggleWatched(
-                                                  ep.id,
-                                                  !!ep.is_watched,
-                                                )
-                                              }
-                                              disabled={!isEpisodeReleased(ep)}
-                                              size="sm"
-                                            />
-                                          </div>
+                                      <DeckCardWrapper
+                                        episodeCount={showEps.length}
+                                      >
+                                        <div className="bg-card rounded-lg overflow-hidden flex sm:block [&_button]:min-h-10">
                                           <Link
                                             to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
-                                            className="hover:text-primary-text transition-colors"
+                                            aria-label={`${ep.show_title} ${formatEpisodeCode(ep)}`}
+                                            className="block relative w-16 shrink-0 sm:w-auto"
                                           >
-                                            <p className="text-xs mt-0.5">
-                                              <span className="text-primary-text font-medium">
-                                                {formatEpisodeCode(ep)}
-                                              </span>
-                                              {ep.name && (
-                                                <span className="text-muted-foreground">
-                                                  {" "}
-                                                  · {ep.name}
-                                                </span>
-                                              )}
-                                            </p>
+                                            {imgUrl ? (
+                                              <img
+                                                src={imgUrl}
+                                                alt={
+                                                  ep.name ||
+                                                  formatEpisodeCode(ep)
+                                                }
+                                                className="w-full h-full object-cover sm:aspect-video sm:h-auto"
+                                                loading="lazy"
+                                              />
+                                            ) : (
+                                              <div className="w-full h-full sm:aspect-video bg-gradient-to-b from-muted to-background" />
+                                            )}
                                           </Link>
-                                          {isEpisodeReleased(ep) && (
-                                            <div className="mt-2">
-                                              <WatchButtonGroup
-                                                offers={ep.offers ?? []}
-                                                variant="dropdown"
+                                          <div className="p-3 flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-2">
+                                              <Link
+                                                to={`/title/${ep.title_id}`}
+                                                className="hover:text-primary-text transition-colors min-w-0"
+                                              >
+                                                <h3 className="font-semibold text-foreground text-sm break-words">
+                                                  {ep.show_title}
+                                                </h3>
+                                              </Link>
+                                              <WatchedToggleButton
+                                                watched={!!ep.is_watched}
+                                                onClick={() =>
+                                                  toggleWatched(
+                                                    ep.id,
+                                                    !!ep.is_watched,
+                                                  )
+                                                }
+                                                disabled={
+                                                  !isEpisodeReleased(ep)
+                                                }
+                                                size="sm"
                                               />
                                             </div>
-                                          )}
+                                            <Link
+                                              to={`/title/${ep.title_id}/season/${ep.season_number}/episode/${ep.episode_number}`}
+                                              className="hover:text-primary-text transition-colors"
+                                            >
+                                              <p className="text-xs mt-0.5">
+                                                <span className="text-primary-text font-medium">
+                                                  {formatEpisodeCode(ep)}
+                                                </span>
+                                                {ep.name && (
+                                                  <span className="text-muted-foreground">
+                                                    {" "}
+                                                    · {ep.name}
+                                                  </span>
+                                                )}
+                                              </p>
+                                            </Link>
+                                            {showEps.length > 1 && (
+                                              <p className="text-xs text-muted-foreground mt-0.5">
+                                                {t("calendar.stats.episodes", {
+                                                  count: showEps.length,
+                                                })}
+                                              </p>
+                                            )}
+                                            {isEpisodeReleased(ep) && (
+                                              <div className="mt-2">
+                                                <WatchButtonGroup
+                                                  offers={ep.offers ?? []}
+                                                  variant="dropdown"
+                                                />
+                                              </div>
+                                            )}
+                                          </div>
                                         </div>
-                                      </div>
-                                    </DeckCardWrapper>
-                                  </div>
-                                );
-                              })}
+                                      </DeckCardWrapper>
+                                    </div>
+                                  );
+                                },
+                              )}
                             </ScrollableRow>
                           )}
 
-                          {/* Title cards */}
+                          {/* Movie and show releases as compact rows */}
                           {dayTitles.length > 0 && (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                              {dayTitles.map((t) => (
-                                <TitleCard
-                                  key={t.id}
-                                  title={t}
-                                  blurred={
-                                    actionFor(t.age_certification, t.id) ===
-                                    "blur"
-                                  }
-                                />
-                              ))}
+                            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                              {dayTitles.map((title) => {
+                                const blurred =
+                                  actionFor(
+                                    title.age_certification,
+                                    title.id,
+                                  ) === "blur";
+                                return (
+                                  <Link
+                                    key={title.id}
+                                    to={`/title/${title.id}`}
+                                    data-testid="agenda-title-row"
+                                    className="flex items-center gap-3 p-2 rounded-md bg-card border border-border hover:bg-muted transition-colors"
+                                  >
+                                    <div className="w-10 h-15 shrink-0 rounded-sm overflow-hidden bg-muted">
+                                      {title.poster_url && (
+                                        <img
+                                          src={title.poster_url}
+                                          alt=""
+                                          className={`w-full h-full object-cover${blurred ? " blur-md" : ""}`}
+                                          loading="lazy"
+                                          width={40}
+                                          height={60}
+                                        />
+                                      )}
+                                    </div>
+                                    <div className="min-w-0">
+                                      <div className="text-sm font-medium text-foreground truncate">
+                                        {title.title}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {title.object_type === "MOVIE"
+                                          ? t("calendar.movie")
+                                          : t("calendar.show")}
+                                      </div>
+                                    </div>
+                                  </Link>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
@@ -1056,12 +1023,21 @@ function AgendaCalendarImpl({
               </div>
             )}
 
-            <div ref={bottomRef} className="h-1" />
-            {loadingMore && (
-              <div className="text-center py-4 text-muted-foreground text-sm">
-                Loading more...
-              </div>
-            )}
+            <button
+              onClick={loadNextMonth}
+              disabled={loadingMore}
+              className={pageButtonClass}
+            >
+              {t("calendar.loadMonth", {
+                month: monthName(
+                  new Date(
+                    latestMonth.getFullYear(),
+                    latestMonth.getMonth() + 1,
+                    1,
+                  ),
+                ),
+              })}
+            </button>
           </>
         )}
       </div>

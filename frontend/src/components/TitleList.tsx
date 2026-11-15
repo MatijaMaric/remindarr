@@ -42,6 +42,7 @@ interface Props {
   showTags?: boolean;
   showProviderBadge?: boolean;
   showRating?: boolean;
+  showActionsMenu?: boolean;
   /** Limit grid display to N rows. Uses the largest breakpoint column count to calculate the slice size. */
   maxRows?: number;
   /** Optional link shown when maxRows truncates the list */
@@ -64,6 +65,7 @@ function TitleListImpl({
   showTags,
   showProviderBadge,
   showRating,
+  showActionsMenu,
   maxRows,
   viewAllHref,
   viewAllLabel,
@@ -149,6 +151,7 @@ function TitleListImpl({
       showTags,
       showProviderBadge,
       showRating,
+      showActionsMenu,
     }),
     [
       onTrackToggle,
@@ -161,6 +164,7 @@ function TitleListImpl({
       showTags,
       showProviderBadge,
       showRating,
+      showActionsMenu,
     ],
   );
 

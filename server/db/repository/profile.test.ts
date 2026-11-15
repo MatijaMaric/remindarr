@@ -184,10 +184,10 @@ describe("getUserPublicProfile progress metrics", () => {
   it("returns zero progress when no shows are tracked", async () => {
     const result = await getUserPublicProfile("testuser", true);
     expect(result).not.toBeNull();
-    expect(result!.stats.shows_completed).toBe(0);
-    expect(result!.stats.shows_total).toBe(0);
-    expect(result!.stats.total_watched_episodes).toBe(0);
-    expect(result!.stats.total_released_episodes).toBe(0);
+    expect(result!.overview.shows_completed).toBe(0);
+    expect(result!.overview.shows_total).toBe(0);
+    expect(result!.overview.total_watched_episodes).toBe(0);
+    expect(result!.overview.total_released_episodes).toBe(0);
   });
 
   it("counts shows_total correctly", async () => {
@@ -202,7 +202,7 @@ describe("getUserPublicProfile progress metrics", () => {
 
     const result = await getUserPublicProfile("testuser", true);
     expect(result).not.toBeNull();
-    expect(result!.stats.shows_total).toBe(2);
+    expect(result!.overview.shows_total).toBe(2);
   });
 
   it("counts shows_completed when all episodes watched and released", async () => {
@@ -245,8 +245,8 @@ describe("getUserPublicProfile progress metrics", () => {
 
     const result = await getUserPublicProfile("testuser", true);
     expect(result).not.toBeNull();
-    expect(result!.stats.shows_completed).toBe(1);
-    expect(result!.stats.shows_total).toBe(1);
+    expect(result!.overview.shows_completed).toBe(1);
+    expect(result!.overview.shows_total).toBe(1);
   });
 
   it("does not count show as completed when not all episodes are watched", async () => {
@@ -287,9 +287,9 @@ describe("getUserPublicProfile progress metrics", () => {
 
     const result = await getUserPublicProfile("testuser", true);
     expect(result).not.toBeNull();
-    expect(result!.stats.shows_completed).toBe(0);
-    expect(result!.stats.total_watched_episodes).toBe(1);
-    expect(result!.stats.total_released_episodes).toBe(2);
+    expect(result!.overview.shows_completed).toBe(0);
+    expect(result!.overview.total_watched_episodes).toBe(1);
+    expect(result!.overview.total_released_episodes).toBe(2);
   });
 
   it("aggregates episodes across multiple shows", async () => {
@@ -337,8 +337,8 @@ describe("getUserPublicProfile progress metrics", () => {
 
     const result = await getUserPublicProfile("testuser", true);
     expect(result).not.toBeNull();
-    expect(result!.stats.total_watched_episodes).toBe(1);
-    expect(result!.stats.total_released_episodes).toBe(3);
+    expect(result!.overview.total_watched_episodes).toBe(1);
+    expect(result!.overview.total_released_episodes).toBe(3);
   });
 
   it("does not count show as completed when unreleased episodes exist", async () => {
@@ -382,7 +382,7 @@ describe("getUserPublicProfile progress metrics", () => {
     const result = await getUserPublicProfile("testuser", true);
     expect(result).not.toBeNull();
     // total_episodes=2, watched=1, released=1 -> not completed (total != watched)
-    expect(result!.stats.shows_completed).toBe(0);
+    expect(result!.overview.shows_completed).toBe(0);
   });
 });
 

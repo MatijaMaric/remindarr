@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Pill } from "../components/design";
 
 export type BrowseCategory =
@@ -6,11 +7,12 @@ export type BrowseCategory =
   | "upcoming"
   | "top_rated";
 
-const CATEGORIES: { value: BrowseCategory; label: string }[] = [
-  { value: "popular", label: "Popular" },
-  { value: "upcoming", label: "Upcoming" },
-  { value: "top_rated", label: "Top Rated" },
-  { value: "new_releases", label: "Now Playing" },
+// Same keys as the list heading, so the pill and the heading always match.
+const CATEGORIES: BrowseCategory[] = [
+  "popular",
+  "upcoming",
+  "top_rated",
+  "new_releases",
 ];
 
 interface Props {
@@ -19,15 +21,16 @@ interface Props {
 }
 
 export default function CategoryBar({ category, onCategoryChange }: Props) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-wrap gap-2">
       {CATEGORIES.map((c) => (
         <Pill
-          key={c.value}
-          active={category === c.value}
-          onClick={() => onCategoryChange(c.value)}
+          key={c}
+          active={category === c}
+          onClick={() => onCategoryChange(c)}
         >
-          {c.label}
+          {t(`browse.categories.${c}`)}
         </Pill>
       ))}
     </div>

@@ -1,6 +1,6 @@
 import { eq, and, sql, count, desc, inArray } from "drizzle-orm";
 import { getDb } from "../schema";
-import { users, sessions, account, tracked } from "../schema";
+import { users, sessions, account } from "../schema";
 import { logger } from "../../logger";
 import { traceDbQuery } from "../../tracing";
 
@@ -630,18 +630,6 @@ export async function getAdminUserCount(
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .get();
 
-    return row?.cnt ?? 0;
-  });
-}
-
-export async function getUserTrackedCount(userId: string): Promise<number> {
-  return traceDbQuery("getUserTrackedCount", async () => {
-    const db = getDb();
-    const row = await db
-      .select({ cnt: count() })
-      .from(tracked)
-      .where(eq(tracked.userId, userId))
-      .get();
     return row?.cnt ?? 0;
   });
 }

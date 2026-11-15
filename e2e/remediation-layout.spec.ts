@@ -297,9 +297,14 @@ test("mobile agenda keeps multiple shows and episodes compact and actionable", a
 }) => {
   const review = new ReviewPage(page);
   await review.open("/calendar?view=agenda");
-  const episode = page.getByRole("link", { name: /S01E02.*Episode Two/ });
+  // One card per show per day: the show's first unwatched episode plus a count.
+  const episode = page.getByRole("link", {
+    name: "S01E01 · Pilot",
+    exact: true,
+  });
   await expect(episode).toBeVisible();
   await review.assertFits(episode);
+  await expect(page.getByText("2 Episodes", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Another Show", exact: true }),
   ).toBeVisible();
@@ -307,7 +312,7 @@ test("mobile agenda keeps multiple shows and episodes compact and actionable", a
     name: "Mark as watched",
     exact: true,
   });
-  await expect(watched).toHaveCount(3);
+  await expect(watched).toHaveCount(2);
   expect((await watched.first().boundingBox())!.height).toBeGreaterThanOrEqual(
     40,
   );

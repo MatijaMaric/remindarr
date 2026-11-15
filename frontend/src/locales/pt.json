@@ -24,10 +24,10 @@
       "ban": "Banir usuário",
       "unban": "Remover banimento",
       "delete": "Excluir usuário",
-      "banTitle": "Banir usuário",
+      "banTitle": "Banir {{username}}",
       "banReasonPlaceholder": "Motivo (opcional)",
       "banConfirm": "Banir usuário",
-      "deleteTitle": "Excluir usuário",
+      "deleteTitle": "Excluir {{username}}",
       "deleteConfirm": "Esta ação é permanente e não pode ser desfeita.",
       "deleteConfirmButton": "Excluir permanentemente",
       "prevPage": "Página anterior",
@@ -51,7 +51,21 @@
       "newPassword": "Nova palavra-passe (mínimo 8 caracteres)",
       "resetPasswordConfirm": "Definir palavra-passe",
       "resetPasswordDone": "Palavra-passe reposta. O utilizador terminou sessão em todo o lado.",
-      "resetPasswordFailed": "Não foi possível repor a palavra-passe"
+      "resetPasswordFailed": "Não foi possível repor a palavra-passe",
+      "roleAdmin": "Admin",
+      "roleUser": "Usuário",
+      "banned": "Banido",
+      "banReason": "Motivo: {{reason}}",
+      "promoteTitle": "Tornar {{username}} administrador?",
+      "promoteHelp": "Administradores podem gerenciar usuários e as configurações do servidor.",
+      "demoteTitle": "Remover os direitos de administrador de {{username}}?",
+      "demoteHelp": "A conta e os dados são mantidos, mas o acesso às configurações de administração é removido.",
+      "promoted": "{{username}} agora é administrador",
+      "demoted": "{{username}} não é mais administrador",
+      "roleFailed": "Não foi possível alterar a função",
+      "banFailed": "Não foi possível banir o usuário",
+      "unbanFailed": "Não foi possível remover o banimento",
+      "deleteFailed": "Não foi possível excluir o usuário"
     }
   },
   "legal": {
@@ -156,7 +170,6 @@
     }
   },
   "tracked": {
-    "title": "Títulos acompanhados ({{count}})",
     "empty": "Você ainda não acompanha nenhum título. Busque títulos e clique em \"Adicionar à minha lista\" para vê-los aqui.",
     "sortBy": "Ordenar títulos por",
     "filterTabs": "Filtrar por status",
@@ -175,19 +188,8 @@
     "kicker_one": "Sua biblioteca · {{count}} título",
     "kicker_many": "Sua biblioteca · {{count}} títulos",
     "kicker_other": "Sua biblioteca · {{count}} títulos",
-    "stats": {
-      "watching": "Assistindo agora",
-      "watchingSub": "de {{count}} acompanhados",
-      "completedSub": "séries e filmes",
-      "avgScore": "Nota média",
-      "avgScoreSub": "de {{count}} avaliados",
-      "noRatings": "ainda sem notas",
-      "total": "Total acompanhado",
-      "totalSub": "títulos na biblioteca"
-    },
     "tabs": {
-      "all": "Todos",
-      "planning": "Planejados"
+      "all": "Todos"
     },
     "view": {
       "select": "Selecionar",
@@ -205,7 +207,6 @@
       "show": "Série",
       "status": "Status",
       "progress": "Progresso",
-      "next": "Próximo",
       "rating": "Nota",
       "actions": "Ações"
     },
@@ -216,9 +217,9 @@
       "selectAll": "Selecionar todos os títulos",
       "select": "Selecionar {{title}}",
       "eta": "Previsão: {{eta}}",
+      "nextAir": "Próximo: {{date}}",
       "show": "Série",
-      "movie": "Filme",
-      "open": "Abrir"
+      "movie": "Filme"
     },
     "bulk": {
       "updated_one": "{{count}} título atualizado",
@@ -283,9 +284,6 @@
     "title": "Explorar",
     "kicker": {
       "search": "Busca",
-      "searchResults_one": "Busca · {{count}} resultado",
-      "searchResults_many": "Busca · {{count}} resultados",
-      "searchResults_other": "Busca · {{count}} resultados",
       "catalog": "Catálogo · descubra títulos",
       "catalogCount_one": "Catálogo · {{formatted}} título",
       "catalogCount_many": "Catálogo · {{formatted}} títulos",
@@ -293,15 +291,12 @@
     },
     "hideFilters": "Ocultar filtros",
     "showFilters": "Mostrar filtros",
-    "clearAllFilters": "Limpar todos os filtros",
-    "removeFilter": "Remover o filtro {{name}}",
-    "removeLanguageFilter": "Remover o filtro de idioma {{name}}",
-    "removeYearFilter": "Remover o filtro de anos",
-    "removeRatingFilter": "Remover o filtro de nota mínima"
+    "clearAllFilters": "Limpar todos os filtros"
   },
   "signup": {
     "title": "Criar uma conta",
     "username": "Nome de usuário",
+    "usernameHint": "Letras, números, pontos, hífens e sublinhados",
     "email": "E-mail",
     "displayName": "Nome de exibição",
     "password": "Senha",
@@ -324,7 +319,7 @@
     "signIn": "Entrar",
     "noAccount": "Não tem uma conta?",
     "signUp": "Cadastre-se",
-    "loginFailed": "Falha ao entrar: {{error}}",
+    "loginFailed": "Falha ao entrar. Tente novamente.",
     "signInWithPasskey": "Entrar com chave de acesso",
     "passkeyFailed": "Falha ao entrar com a chave de acesso",
     "recoveryTitle": "Esqueceu-se da palavra-passe?",
@@ -392,11 +387,8 @@
     "movies": "Filmes",
     "shows": "Séries",
     "people": "Pessoas",
-    "allGenres": "Todos os gêneros",
-    "allPlatforms": "Todas as plataformas",
     "allLanguages": "Todos os idiomas",
     "hideTracked": "Ocultar acompanhados",
-    "clearFilters": "Limpar filtros",
     "search": "Buscar...",
     "yearFrom": "A partir do ano",
     "yearTo": "Até o ano",
@@ -430,7 +422,8 @@
   },
   "releases": {
     "loading": "Carregando...",
-    "empty": "Nenhum lançamento encontrado."
+    "empty": "Nenhum lançamento encontrado.",
+    "loadMore": "Carregar mais"
   },
   "track": {
     "track": "Adicionar à minha lista",
@@ -546,13 +539,9 @@
     "hideWatched": "Ocultar assistidos",
     "showWatched": "Mostrar assistidos",
     "gridView": "Visualização em grade",
-    "weekView": "Visualização semanal",
     "agendaView": "Visualização de agenda",
     "close": "Fechar",
     "goToDay": "Ir para {{date}}",
-    "densityCompact": "Compacta",
-    "densityComfortable": "Confortável",
-    "densitySpacious": "Espaçosa",
     "loadError": "Não foi possível carregar o calendário. Tente novamente.",
     "stats": {
       "episodes_one": "{{count}} episódio",
@@ -560,36 +549,22 @@
       "episodes_other": "{{count}} episódios",
       "titles_one": "{{count}} título",
       "titles_many": "{{count}} títulos",
-      "titles_other": "{{count}} títulos",
-      "total_one": "{{count}} no total",
-      "total_many": "{{count}} no total",
-      "total_other": "{{count}} no total"
+      "titles_other": "{{count}} títulos"
     },
     "episodes": "Episódios",
     "releases": "Lançamentos",
     "noReleasesOnDay": "Nenhum lançamento acompanhado neste dia",
     "previousMonth": "Mês anterior",
     "nextMonth": "Próximo mês",
-    "month": "Mês",
-    "agenda": "Agenda",
-    "legend": {
-      "tracked": "Acompanhado · no ar",
-      "followed": "Seguido · episódio novo",
-      "premiere": "Estreia"
-    },
-    "episodesThisMonth_one": "{{count}} episódio este mês",
-    "episodesThisMonth_many": "{{count}} episódios este mês",
-    "episodesThisMonth_other": "{{count}} episódios este mês",
-    "previousWeek": "Semana anterior",
-    "nextWeek": "Próxima semana",
-    "thisWeek": "Esta semana"
+    "loadMonth": "Mostrar {{month}}",
+    "movie": "Filme",
+    "show": "Série"
   },
   "landing": {
     "tagline": "Acompanhe os filmes e séries que você ama",
     "subtitle": "Receba avisos de novos episódios, registre o que você assistiu e descubra o que está nos streamings.",
     "signIn": "Entrar",
     "signUp": "Criar conta",
-    "popularNow": "Em alta agora",
     "discoverMore": "Descobrir mais"
   },
   "userProfile": {
@@ -630,7 +605,6 @@
       "watchTimeShows": "Tempo em séries",
       "topGenres": "Gêneros favoritos",
       "friendsCount": "Amigos · {{count}}",
-      "seeAll": "Ver tudo",
       "followedPeople": "Pessoas seguidas",
       "followedSince": "seguindo desde {{date}}",
       "activity12m": "Atividade de 12 meses",
@@ -649,7 +623,9 @@
         "completed": "Concluída",
         "onHold": "Pausada",
         "planToWatch": "Quero assistir",
-        "dropped": "Abandonada"
+        "dropped": "Abandonada",
+        "notStarted": "Não iniciado",
+        "unreleased": "Não lançado"
       },
       "activity": {
         "title": "Atividade recente",
@@ -855,7 +831,7 @@
       "visibilityUpdateFailed": "Não foi possível atualizar a visibilidade",
       "perTitleOverrides": "Exceções por título",
       "socialTitle": "Social",
-      "socialSubtitle": "Convide amigos para a sua instância do Remindarr. Eles receberão um link de cadastro limitado.",
+      "socialSubtitle": "Convide amigos para a sua instância do Remindarr. Quando abrirem o seu link, vocês passam a se seguir.",
       "socialHint": "Gerencie os códigos de convite na página Convidar",
       "passkeyNameLabel": "Nome da chave",
       "data": {
@@ -930,11 +906,10 @@
   "discovery": {
     "title": "Descobrir",
     "empty": "Ainda não há recomendações. Siga outras pessoas para ver as recomendações delas!",
+    "emptyCta": "Encontre e acompanhe títulos e avalie alguns para melhorar as recomendações.",
     "movie": "Filme",
-    "tv": "Série",
     "track": "Acompanhar",
     "dismiss": "Descartar",
-    "tracked": "\"{{title}}\" foi adicionado à sua lista",
     "trackFailed": "Não foi possível acompanhar o título",
     "dismissFailed": "Não foi possível descartar a recomendação",
     "loadFailed": "Não foi possível carregar as recomendações",
@@ -951,10 +926,8 @@
     "friendCount_many": "{{count}} amigos",
     "friendCount_other": "{{count}} amigos",
     "direct": "Direta",
-    "noPoster": "N/D",
     "kicker": "Com base no que você assiste e em quem você segue",
     "forYou": "Para você",
-    "activity": "Atividade",
     "sessionCounts": "{{tracked}} acompanhados · {{dismissed}} descartados",
     "moreForYou": {
       "kicker": "Mais para você",
@@ -965,10 +938,9 @@
       "kicker": "Das pessoas que você segue",
       "title": "Seus amigos recomendam"
     },
-    "hiddenCount_one": "{{count}} oculto: já acompanhado ou descartado",
-    "hiddenCount_many": "{{count}} ocultos: já acompanhados ou descartados",
-    "hiddenCount_other": "{{count}} ocultos: já acompanhados ou descartados",
-    "allHandled": "Todas as sugestões foram acompanhadas ou descartadas.",
+    "hiddenCount_one": "{{count}} oculto: já acompanhado, assistido ou descartado",
+    "hiddenCount_many": "{{count}} ocultos: já acompanhados, assistidos ou descartados",
+    "hiddenCount_other": "{{count}} ocultos: já acompanhados, assistidos ou descartados",
     "hero": {
       "kicker": "Nossa melhor escolha para você",
       "tvSeries": "Série",
@@ -979,9 +951,7 @@
       "recCount_one": "{{count}} recomendação",
       "recCount_many": "{{count}} recomendações",
       "recCount_other": "{{count}} recomendações",
-      "noFriendRecs": "Nenhum amigo seu recomendou isto ainda.",
       "viewDetails": "Ver detalhes",
-      "undoDismiss": "Desfazer descarte",
       "notInterested": "Não tenho interesse"
     }
   },
@@ -997,14 +967,18 @@
     "redeeming": "Resgatando convite...",
     "redeemSuccess": "Agora você e @{{name}} seguem um ao outro!",
     "statusPending": "Pendente",
-    "statusUsed": "Usado por @{{username}}",
+    "statusUsed": "Usado por <profile>@{{username}}</profile>",
     "statusExpired": "Expirado",
     "created_at": "Criado",
     "expires_at": "Expira",
-    "usedBy": "Usado por",
     "shareTitle": "Venha para o Remindarr",
     "shareText": "Use meu link de convite para entrar no Remindarr!",
-    "settingsLink": "Convidar amigos"
+    "settingsLink": "Convidar amigos",
+    "statusUsedDeleted": "Usado por uma conta excluída",
+    "used_at": "Usado",
+    "remove": "Remover",
+    "removing": "Removendo...",
+    "removed": "Convite removido"
   },
   "common": {
     "scrollLeft": "Rolar para a esquerda",
@@ -1029,7 +1003,10 @@
       "daysAgo_one": "há {{count}} dia",
       "daysAgo_many": "há {{count}} dias",
       "daysAgo_other": "há {{count}} dias"
-    }
+    },
+    "share": "Compartilhar",
+    "linkCopied": "Link copiado para a área de transferência",
+    "linkCopyFailed": "Não foi possível copiar o link"
   },
   "feed": {
     "title": "Feed de calendário",
@@ -1160,24 +1137,15 @@
     "snoozed": "Adiado"
   },
   "stats": {
-    "title": "Estatísticas",
     "loadError": "Não foi possível carregar as estatísticas. Tente novamente.",
     "moviesWatched": "Filmes assistidos",
     "episodesWatched": "Episódios assistidos",
     "showsTracked": "Séries acompanhadas",
     "moviesTracked": "Filmes acompanhados",
     "watchTime": "Tempo assistido",
-    "total": "total",
+    "watchTimeSplit": "Séries {{shows}} · Filmes {{movies}}",
     "watchlistEta": "Previsão da lista",
     "atCurrentPace": "no seu ritmo atual",
-    "tvWatchTime": "Tempo em séries",
-    "movieWatchTime": "Tempo em filmes",
-    "episodeCount_one": "{{count}} episódio",
-    "episodeCount_many": "{{count}} episódios",
-    "episodeCount_other": "{{count}} episódios",
-    "movieCount_one": "{{count}} filme",
-    "movieCount_many": "{{count}} filmes",
-    "movieCount_other": "{{count}} filmes",
     "monthlyActivity": "Atividade mensal",
     "episodes": "Episódios",
     "movies": "Filmes",

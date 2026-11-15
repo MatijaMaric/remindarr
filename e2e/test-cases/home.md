@@ -154,12 +154,10 @@ return `null`; no real auth state is required.
 **Preconditions**:
 
 - `mockLoggedOut(page)` called (stubs `GET /api/auth/get-session` → `null`).
-- `GET **/api/browse**` returns a list containing at least one title (e.g. `MOCK_SEARCH_TITLE`
-  from `e2e/helpers.ts`) so the "Popular Right Now" grid has content.
 
 **Steps**:
 
-1. Call `mockLoggedOut(page)` and stub the browse endpoint.
+1. Call `mockLoggedOut(page)`.
 2. Navigate to `/`.
 3. Wait for the main content area to render.
 
@@ -167,8 +165,8 @@ return `null`; no real auth state is required.
 
 - The hero heading `getByRole("heading", { name: /track movies.*tv shows/i })` is visible.
 - A `getByRole("link", { name: /sign in/i })` link pointing to `/login` is present.
-- A `getByRole("link", { name: /create account/i })` link pointing to `/signup` is present.
-- The "Popular Right Now" section heading is visible.
+- A `getByRole("link", { name: /sign up/i })` link pointing to `/signup` is present.
+- A `getByRole("link", { name: /discover more/i })` link pointing to `/browse` is present.
 - The URL remains `/` (no redirect occurs).
 
 ---
