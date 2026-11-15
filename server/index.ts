@@ -12,13 +12,8 @@ import {
   createUser,
   getUserByWatchlistShareToken,
   getTrackedTitles,
-  getYearInReview,
 } from "./db/repository";
-import {
-  buildOgTags,
-  wrappedOgDescription,
-  wrappedOgImage,
-} from "./lib/og-tags";
+import { buildOgTags, wrappedShareOgTags } from "./lib/og-tags";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
 import { rateLimiter, MemoryRateLimitStore } from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
@@ -556,21 +551,10 @@ app.get("/share/watchlist/:token", async (c) => {
 
 // OG meta tags for shared Year in Review — must be before the SPA static fallback
 app.get("/share/wrapped/:token/:year", async (c) => {
-  const token = c.req.param("token");
-  const year = Number(c.req.param("year"));
-  let ogTags = "";
-  if (/^[a-f0-9]{32}$/.test(token) && Number.isInteger(year)) {
-    const user = await getUserByWatchlistShareToken(token);
-    if (user) {
-      const review = await getYearInReview(user.id, year);
-      const username = user.displayUsername ?? user.username;
-      ogTags = buildOgTags({
-        title: `${username}'s ${year} Wrapped — Remindarr`,
-        description: wrappedOgDescription(review),
-        image: wrappedOgImage(review),
-      });
-    }
-  }
+  const ogTags = await wrappedShareOgTags(
+    c.req.param("token"),
+    Number(c.req.param("year")),
+  );
   try {
     const indexHtml = await Bun.file("./frontend/dist/index.html").text();
     const injected = ogTags

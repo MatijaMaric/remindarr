@@ -139,7 +139,8 @@ app.get(
       return c.json({ error: "Not found" }, 404);
     }
     const username = user.displayUsername ?? user.username;
-    const review = await getYearInReview(user.id, year);
+    // `years` lists every year the owner was active; a one-year link must not reveal it.
+    const { years: _years, ...review } = await getYearInReview(user.id, year);
     return c.json({ username, ...review });
   },
 );

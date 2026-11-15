@@ -12,8 +12,6 @@ const review: SharedYearInReview = {
   movies_watched: 2,
   episodes_watched: 4,
   watch_time_minutes: 180,
-  watch_time_minutes_movies: 120,
-  watch_time_minutes_shows: 60,
   top_genres: [],
   top_providers: [],
   top_shows: [
@@ -23,7 +21,6 @@ const review: SharedYearInReview = {
   most_rewatched: null,
   first_watch: null,
   last_watch: null,
-  years: [2025],
 };
 
 const { default: SharedWrappedPage } = await import("./SharedWrappedPage");

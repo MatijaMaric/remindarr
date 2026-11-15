@@ -510,8 +510,6 @@ export interface YearInReview {
   movies_watched: number;
   episodes_watched: number;
   watch_time_minutes: number;
-  watch_time_minutes_movies: number;
-  watch_time_minutes_shows: number;
   watch_time_unknown_episodes?: number;
   top_genres: { genre: string; count: number }[];
   top_providers: { provider_id: number; name: string; count: number }[];
@@ -522,13 +520,14 @@ export interface YearInReview {
         episodes: number;
       })
     | null;
-  most_rewatched: (YearInReviewTitleRef & { plays: number }) | null;
+  most_rewatched: (YearInReviewTitleRef & { rewatches: number }) | null;
   first_watch: (YearInReviewTitleRef & { watched_at: string }) | null;
   last_watch: (YearInReviewTitleRef & { watched_at: string }) | null;
   years: number[];
 }
 
-export interface SharedYearInReview extends YearInReview {
+/** The public share omits `years` so a one-year link reveals only that year. */
+export interface SharedYearInReview extends Omit<YearInReview, "years"> {
   username: string;
 }
 
