@@ -17,7 +17,7 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import type { ReactNode } from "react";
-import i18n, { LANGUAGE_STORAGE_KEY } from "../../i18n";
+import "../../i18n";
 import * as api from "../../api";
 import * as AuthContextModule from "../../context/AuthContext";
 
@@ -104,10 +104,21 @@ describe("AccountTab", () => {
     const client = newTestClient();
     render(<AccountTab />, { wrapper: wrapper(client) });
 
-    // The UserSection renders immediately from AuthContext data — username appears in multiple inputs
     await waitFor(() => {
-      expect(screen.getAllByDisplayValue("testuser").length).toBeGreaterThan(0);
+      expect(screen.getByTestId("account-identity").textContent).toBe(
+        "@testuser · local · User",
+      );
     });
+  });
+
+  it("shows the display name once, editable, and no language picker (#1415)", async () => {
+    render(<AccountTab />, { wrapper: wrapper(newTestClient()) });
+
+    await screen.findByTestId("account-identity");
+    expect(screen.getAllByDisplayValue("Test User")).toHaveLength(1);
+    expect(screen.queryByText("Edit Profile")).toBeNull();
+    // Language moved to the Appearance tab.
+    expect(screen.queryByRole("group", { name: "Language" })).toBeNull();
   });
 
   it("renders profile visibility section after data loads", async () => {
@@ -117,6 +128,19 @@ describe("AccountTab", () => {
     await waitFor(() => {
       expect(screen.getByTestId("visibility-selector")).toBeDefined();
     });
+  });
+
+  it("labels the bulk title visibility buttons for what they do (#1415)", async () => {
+    (api.getTrackedTitles as any).mockResolvedValue({
+      titles: [{ id: "movie-1" }],
+      profile_visibility: "public",
+    });
+    render(<AccountTab />, { wrapper: wrapper(newTestClient()) });
+
+    expect(
+      await screen.findByText("Show or hide every tracked title at once:"),
+    ).toBeDefined();
+    expect(screen.queryByText("Choose which titles to show:")).toBeNull();
   });
 
   it("renders activity stream section", async () => {
@@ -211,76 +235,6 @@ describe("AccountTab", () => {
       expect(updateSpy).toHaveBeenCalledWith({
         kind_visibility: { tracked: "private", rating_title: "friends_only" },
       });
-    });
-  });
-
-  describe("language picker", () => {
-    afterEach(async () => {
-      localStorage.removeItem(LANGUAGE_STORAGE_KEY);
-      await i18n.changeLanguage("en");
-    });
-
-    it("lists every supported language and marks the active one", async () => {
-      render(<AccountTab />, { wrapper: wrapper(newTestClient()) });
-
-      const group = await screen.findByRole("group", { name: "Language" });
-      const buttons = Array.from(group.querySelectorAll("button"));
-      expect(buttons.map((b) => b.getAttribute("lang"))).toEqual([
-        "en",
-        "es",
-        "de",
-        "fr",
-        "pt",
-        "ja",
-      ]);
-      expect(
-        screen
-          .getByRole("button", { name: /English/ })
-          .getAttribute("aria-pressed"),
-      ).toBe("true");
-      expect(
-        screen
-          .getByRole("button", { name: /Deutsch/ })
-          .getAttribute("aria-pressed"),
-      ).toBe("false");
-    });
-
-    it("switches the UI language and saves it to the account", async () => {
-      const updateSpy = spyOn(api, "updateMyProfile").mockResolvedValue({
-        display_name: null,
-        bio: null,
-        country_code: null,
-        locale: "es",
-      });
-      spies.push(updateSpy);
-      render(<AccountTab />, { wrapper: wrapper(newTestClient()) });
-
-      fireEvent.click(await screen.findByRole("button", { name: /Español/ }));
-
-      await waitFor(() => {
-        expect(screen.getByRole("group", { name: "Idioma" })).toBeDefined();
-      });
-      expect(
-        screen
-          .getByRole("button", { name: /Español/ })
-          .getAttribute("aria-pressed"),
-      ).toBe("true");
-      expect(localStorage.getItem(LANGUAGE_STORAGE_KEY)).toBe("es");
-      expect(updateSpy).toHaveBeenCalledWith({ locale: "es" });
-    });
-
-    it("keeps the new language when saving to the account fails", async () => {
-      spies.push(
-        spyOn(api, "updateMyProfile").mockRejectedValue(new Error("offline")),
-      );
-      render(<AccountTab />, { wrapper: wrapper(newTestClient()) });
-
-      fireEvent.click(await screen.findByRole("button", { name: /Deutsch/ }));
-
-      await waitFor(() => {
-        expect(screen.getByRole("group", { name: "Sprache" })).toBeDefined();
-      });
-      expect(i18n.language).toBe("de");
     });
   });
 });

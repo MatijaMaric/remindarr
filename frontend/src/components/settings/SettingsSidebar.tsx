@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import { Card } from "@/components/ui/card";
 import { useTranslation } from "react-i18next";
 
 export interface SettingsTabDef {
@@ -11,12 +10,10 @@ export function SettingsSidebar({
   tabs,
   active,
   onSelect,
-  buildInfo,
 }: {
   tabs: SettingsTabDef[];
   active: string;
   onSelect: (value: string) => void;
-  buildInfo?: React.ReactNode;
 }) {
   const { t } = useTranslation();
   return (
@@ -86,16 +83,6 @@ export function SettingsSidebar({
             );
           })}
         </nav>
-        {buildInfo && (
-          <Card padding="none" className="mt-6 p-3.5 rounded-[10px]">
-            <div className="text-xs font-medium text-muted-foreground mb-2">
-              Build
-            </div>
-            <div className="font-mono text-xs text-foreground-secondary leading-relaxed">
-              {buildInfo}
-            </div>
-          </Card>
-        )}
       </aside>
     </>
   );

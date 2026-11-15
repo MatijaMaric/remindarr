@@ -94,6 +94,27 @@ describe("AdminTab", () => {
       expect(screen.getByText("Maintenance")).toBeDefined();
     });
   });
+
+  it("links to user management first and has no duplicate run-all button (#1415)", async () => {
+    render(<AdminTab />, { wrapper: wrapper(newTestClient()) });
+
+    await screen.findByText("Maintenance");
+    const links = screen.getAllByRole("link");
+    expect(links[0].getAttribute("href")).toBe("/admin/users");
+    expect(links[0].textContent).toContain("Manage users");
+    expect(screen.queryByRole("button", { name: /run all jobs/i })).toBeNull();
+    expect(screen.getByRole("button", { name: /flush cache/i })).toBeDefined();
+  });
+
+  it("titles the OIDC card while it loads", () => {
+    (api.getAdminSettings as any).mockImplementation(
+      () => new Promise(() => {}),
+    );
+    render(<AdminTab />, { wrapper: wrapper(newTestClient()) });
+
+    expect(screen.getByText("OpenID Connect")).toBeDefined();
+    expect(screen.queryByText("Admin settings")).toBeNull();
+  });
 });
 
 describe("BackgroundJobsSection bootstrap freshness badge", () => {

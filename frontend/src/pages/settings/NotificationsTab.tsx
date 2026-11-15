@@ -106,15 +106,9 @@ function PushNotificationsSection() {
         setErr(
           "Push subscription expired. Please re-enable push notifications.",
         );
-      } else if (webpushNotifier && !subscription) {
-        try {
-          await api.deleteNotifier(webpushNotifier.id);
-        } catch {
-          /* ignore */
-        }
-        setPushNotifier(null);
-        setHasSubscription(false);
       } else {
+        // No subscription in this browser does not mean push is off: it may be
+        // on another device. Never delete the notifier just for viewing (#1415).
         setPushNotifier(webpushNotifier);
         setHasSubscription(!!subscription);
       }
@@ -149,12 +143,19 @@ function PushNotificationsSection() {
       const { publicKey } = await api.getVapidPublicKey();
       const subscription = await subscribeToPush(publicKey);
 
-      const { notifier } = await api.createNotifier({
-        provider: "webpush",
-        config: subscription,
-        notify_time: "09:00",
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      });
+      // One webpush notifier per account: if push is on for another device,
+      // move it to this one (same as usePushSubscriptionSync).
+      const { notifier } = pushNotifier
+        ? await api.updateNotifier(pushNotifier.id, {
+            config: subscription,
+            enabled: true,
+          })
+        : await api.createNotifier({
+            provider: "webpush",
+            config: subscription,
+            notify_time: "09:00",
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          });
 
       const testResult = await api.testNotifier(notifier.id);
       if (
@@ -258,6 +259,8 @@ function PushNotificationsSection() {
   }
 
   const isEnabled = !!pushNotifier && pushNotifier.enabled && hasSubscription;
+  const onOtherDevice =
+    !!pushNotifier && pushNotifier.enabled && !hasSubscription;
   const isDenied = permissionState === "denied";
 
   return (
@@ -293,7 +296,9 @@ function PushNotificationsSection() {
               <div className="text-base font-bold text-foreground">
                 {isEnabled
                   ? "Push notifications are enabled"
-                  : "Get notified about new releases"}
+                  : onOtherDevice
+                    ? "Push notifications are on for another device"
+                    : "Get notified about new releases"}
               </div>
               {isEnabled && <SStatusPill kind="ok">Active</SStatusPill>}
             </div>
@@ -302,10 +307,17 @@ function PushNotificationsSection() {
                 ? "You'll receive notifications on this device"
                 : isDenied
                   ? "Notifications are blocked. Enable them in your browser settings."
-                  : "Receive native push notifications for new episodes and movies"}
+                  : onOtherDevice
+                    ? "Enable here to receive them on this device instead"
+                    : "Receive native push notifications for new episodes and movies"}
             </div>
           </div>
           <div className="flex gap-2 shrink-0">
+            {onOtherDevice && (
+              <SButton danger onClick={handleDisable} disabled={disabling}>
+                {disabling ? t("profile.disabling") : t("profile.disablePush")}
+              </SButton>
+            )}
             {isEnabled ? (
               <>
                 <SButton
@@ -463,8 +475,6 @@ function NotificationsSection() {
   const [formQuietStart, setFormQuietStart] = useState("");
   const [formQuietEnd, setFormQuietEnd] = useState("");
   const [formQuietDays, setFormQuietDays] = useState<number[]>([]);
-  const [formLeavingSoon, setFormLeavingSoon] = useState(true);
-  const [formFriendActivity, setFormFriendActivity] = useState(false);
   const [formAchievements, setFormAchievements] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -508,8 +518,6 @@ function NotificationsSection() {
     setFormQuietStart("");
     setFormQuietEnd("");
     setFormQuietDays([]);
-    setFormLeavingSoon(true);
-    setFormFriendActivity(false);
     setFormAchievements(false);
     setShowForm(false);
     setEditingId(null);
@@ -545,8 +553,6 @@ function NotificationsSection() {
             .filter((d) => d >= 0 && d <= 6)
         : [],
     );
-    setFormLeavingSoon(n.leaving_soon_alerts_enabled !== false);
-    setFormFriendActivity(n.friend_activity_alerts_enabled === true);
     setFormAchievements(n.achievements_enabled === true);
     setShowForm(true);
     setMsg("");
@@ -584,8 +590,6 @@ function NotificationsSection() {
         quiet_hours_start: formQuietStart || null,
         quiet_hours_end: formQuietEnd || null,
         quiet_hours_days: formQuietDays.length > 0 ? formQuietDays : undefined,
-        leaving_soon_alerts_enabled: formLeavingSoon,
-        friend_activity_alerts_enabled: formFriendActivity,
         achievements_enabled: formAchievements,
       };
       if (editingId) {
@@ -1117,18 +1121,6 @@ function NotificationsSection() {
               sub="Fires when a tracked title lands on a provider you have"
               on={formStreamingAlerts}
               onChange={setFormStreamingAlerts}
-            />
-            <SSwitch
-              label="Leaving soon alerts"
-              sub="Fires when a tracked title is departing a streaming provider"
-              on={formLeavingSoon}
-              onChange={setFormLeavingSoon}
-            />
-            <SSwitch
-              label="Friend activity alerts"
-              sub="Fires when someone you follow rates a title 4★ or higher"
-              on={formFriendActivity}
-              onChange={setFormFriendActivity}
             />
             <SSwitch
               label="Achievement notifications"

@@ -61,20 +61,11 @@ test.describe("Settings — Account tab", () => {
     // Page heading visible
     await expect(sap.heading()).toBeVisible();
 
-    // Username field readable (read-only input)
-    await expect(page.locator('input[value="testuser"]').first()).toBeVisible();
-
-    // Auth provider field
-    await expect(page.locator('input[value="local"]').first()).toBeVisible();
-
-    // Role is the translated label (profile.user), not the raw role id.
-    await expect(page.getByRole("textbox", { name: "Role" })).toHaveValue(
-      "User",
+    // Identity line on the Profile card: username, sign-in method and the
+    // translated role label (profile.user), not the raw role id.
+    await expect(page.getByTestId("account-identity")).toHaveText(
+      "@testuser · local · User",
     );
-
-    // Breadcrumb — the amber-highlighted tab name in the breadcrumb area
-    await expect(page.getByText("/settings")).toBeVisible();
-    await expect(page.getByText("Account").first()).toBeVisible();
   });
 
   test("TC-02: Unauthenticated user redirected to /login", async ({ page }) => {

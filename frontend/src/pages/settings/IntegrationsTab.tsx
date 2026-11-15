@@ -858,7 +858,7 @@ function CsvImportSection() {
     if (file) void handleFile(file);
   }
 
-  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+  function handleDrop(e: React.DragEvent<HTMLLabelElement>) {
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files?.[0];
@@ -892,9 +892,10 @@ function CsvImportSection() {
           ))}
         </div>
 
-        <div
+        {/* One picker: click, keyboard (the sr-only input stays focusable) or drop. */}
+        <label
           className={cn(
-            "p-10 text-center border-2 border-dashed rounded-lg transition-colors cursor-pointer",
+            "block p-10 text-center border-2 border-dashed rounded-lg transition-colors cursor-pointer focus-within:ring-2 focus-within:ring-primary",
             dragOver
               ? "border-primary bg-primary-soft"
               : "border-border hover:border-input bg-fill-subtle",
@@ -906,13 +907,12 @@ function CsvImportSection() {
           }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
         >
           <div className="w-11 h-11 mx-auto mb-3 rounded-[10px] bg-muted text-primary-text font-mono text-xl flex items-center justify-center">
             ↓
           </div>
           <div className="text-sm font-semibold text-foreground mb-1">
-            {t("import.dropHint")}
+            {importing ? t("import.importing") : t("import.dropHint")}
           </div>
           <div className="text-[11px] text-muted-foreground font-mono">
             .csv
@@ -922,28 +922,10 @@ function CsvImportSection() {
             type="file"
             accept=".csv,text/csv"
             onChange={handleInputChange}
-            className="hidden"
+            className="sr-only"
             disabled={importing}
           />
-        </div>
-
-        <div>
-          <label
-            className={cn(
-              "inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer",
-              importing && "opacity-50 pointer-events-none",
-            )}
-          >
-            {importing ? t("import.importing") : t("import.chooseFile")}
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              onChange={handleInputChange}
-              className="hidden"
-              disabled={importing}
-            />
-          </label>
-        </div>
+        </label>
       </div>
     </SCard>
   );

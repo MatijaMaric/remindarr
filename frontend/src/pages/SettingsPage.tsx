@@ -64,9 +64,6 @@ export default function SettingsPage() {
     (value) => value !== "admin" || user.is_admin,
   ).map((value) => ({ value, label: t(`settings.tabs.${value}`) }));
 
-  const breadcrumbLabel =
-    TABS.find((x) => x.value === activeTab)?.label ?? activeTab;
-
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
@@ -80,34 +77,8 @@ export default function SettingsPage() {
         </h1>
       </div>
 
-      {/* Breadcrumb */}
-      <nav
-        aria-label={t("settings.breadcrumb")}
-        className="pb-4 font-mono text-xs text-muted-foreground tracking-wide"
-      >
-        <span>/settings</span>
-        <span className="mx-2 text-muted-foreground" aria-hidden="true">
-          ›
-        </span>
-        <span className="text-primary-text" aria-current="location">
-          {breadcrumbLabel}
-        </span>
-      </nav>
-
       <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)] gap-4 lg:gap-9">
-        <SettingsSidebar
-          tabs={TABS}
-          active={activeTab}
-          onSelect={setTab}
-          buildInfo={
-            <div className="space-y-0.5">
-              <div>{t("settings.buildInfo")}</div>
-              <div className="text-muted-foreground">
-                TMDB · {navigator.language || "en"}
-              </div>
-            </div>
-          }
-        />
+        <SettingsSidebar tabs={TABS} active={activeTab} onSelect={setTab} />
 
         <div className="min-w-0">
           <Suspense fallback={<SettingsTabSkeleton />}>

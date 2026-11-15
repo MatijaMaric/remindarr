@@ -3,7 +3,6 @@ import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { SUPPORTED_LANGUAGES, setLanguage, currentLanguage } from "../../i18n";
 import { useAuth } from "../../context/AuthContext";
 import * as api from "../../api";
 import type {
@@ -93,9 +92,16 @@ function ProfileEditForm({ profile }: { profile: api.MyProfile }) {
 
   return (
     <SCard
-      title={t("profile.editProfile")}
+      title={t("profile.title")}
       subtitle={t("settings.account.editProfileSubtitle")}
     >
+      <p
+        data-testid="account-identity"
+        className="mb-4 text-xs text-muted-foreground font-mono"
+      >
+        @{user?.username} · {user?.auth_provider ?? "local"} ·{" "}
+        {user?.is_admin ? t("profile.admin") : t("profile.user")}
+      </p>
       <form onSubmit={handleSave} className="space-y-3.5 max-w-[640px]">
         {msg && <SMessage kind="success">{msg}</SMessage>}
         {saveErr && <SMessage kind="error">{saveErr}</SMessage>}
@@ -208,46 +214,8 @@ function UserSection() {
           ? t("settings.account.strength.weak")
           : "";
 
-  const initials = (user?.username ?? "??").slice(0, 2).toUpperCase();
-
   return (
     <>
-      <SCard
-        title={t("profile.title")}
-        subtitle={t("settings.account.profileSubtitle")}
-      >
-        <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[96px_1fr] gap-6 items-start">
-          <div
-            aria-hidden="true"
-            className="w-20 sm:w-24 h-20 sm:h-24 rounded-full flex items-center justify-center font-extrabold text-[28px] text-primary-foreground"
-            style={{ background: "oklch(0.72 0.12 250)" }}
-          >
-            {initials}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 min-w-0">
-            <SFormRow label={t("profile.username")}>
-              <SInput value={user?.username ?? ""} mono readOnly />
-            </SFormRow>
-            <SFormRow label={t("settings.account.authProvider")}>
-              <SInput value={user?.auth_provider ?? "local"} mono readOnly />
-            </SFormRow>
-            <SFormRow label={t("profile.displayName")}>
-              <SInput
-                value={user?.display_name ?? user?.username ?? ""}
-                readOnly
-              />
-            </SFormRow>
-            <SFormRow label={t("profile.role")}>
-              <SInput
-                value={user?.is_admin ? t("profile.admin") : t("profile.user")}
-                mono
-                readOnly
-              />
-            </SFormRow>
-          </div>
-        </div>
-      </SCard>
-
       {user && user.auth_provider === "local" && (
         <SCard
           title={t("profile.changePassword")}
@@ -307,69 +275,7 @@ function UserSection() {
           </form>
         </SCard>
       )}
-
-      <LanguageSection />
     </>
-  );
-}
-
-function LanguageSection() {
-  const { t } = useTranslation();
-  const active = currentLanguage();
-
-  async function handleSelect(code: string) {
-    if (code === active) return;
-    await setLanguage(code);
-    // Remember the choice on the account too, so server-generated content
-    // can follow it. Best-effort: the UI switch already happened locally.
-    api.updateMyProfile({ locale: code }).catch(() => undefined);
-  }
-
-  return (
-    <SCard
-      title={t("profile.language")}
-      subtitle={t("settings.account.languageSubtitle")}
-    >
-      <div
-        role="group"
-        aria-label={t("profile.language")}
-        className="flex gap-1.5 flex-wrap"
-      >
-        {SUPPORTED_LANGUAGES.map((lang) => {
-          const selected = lang.code === active;
-          return (
-            <button
-              key={lang.code}
-              type="button"
-              lang={lang.code}
-              aria-pressed={selected}
-              onClick={() => void handleSelect(lang.code)}
-              className={cn(
-                "px-3.5 py-1.5 rounded-md text-[13px] font-semibold transition-colors cursor-pointer border flex items-center gap-1.5",
-                selected
-                  ? "bg-primary text-primary-foreground border-transparent"
-                  : "bg-muted text-foreground-secondary border-border hover:bg-muted-hover",
-              )}
-            >
-              <span
-                className={cn(
-                  "font-mono text-[11px]",
-                  selected
-                    ? "text-primary-foreground/60"
-                    : "text-muted-foreground",
-                )}
-              >
-                {lang.code}
-              </span>
-              {lang.label}
-            </button>
-          );
-        })}
-      </div>
-      <p className="text-xs text-muted-foreground mt-3">
-        {t("settings.account.languageHint")}
-      </p>
-    </SCard>
   );
 }
 
@@ -1064,8 +970,8 @@ function AccountDataSection() {
 export default function AccountTab() {
   return (
     <>
-      <UserSection />
       <ProfileEditSection />
+      <UserSection />
       <PasskeySection />
       <ProfileVisibilitySection />
       <ActivityStreamSection />

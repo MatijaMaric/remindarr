@@ -199,7 +199,6 @@ const defaults: Record<string, (...args: unknown[]) => Promise<unknown>> = {
   getAdminConfig: async () => ({ config: [], secrets: [] }),
   getAdminLogs: async () => ({ logs: [] }),
   flushCache: async () => ({}),
-  runAllJobs: async () => ({}),
   triggerBackup: async () => ({}),
   getJobs: async () => ({ jobs: [], recent: [] }),
   triggerJob: async () => ({}),

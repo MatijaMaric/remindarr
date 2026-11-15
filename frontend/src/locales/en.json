@@ -131,8 +131,7 @@
     "traktHint": "Export your watchlist from trakt.tv — go to Settings, then Data Export.",
     "tvtimeHint": "From a TV Time export ZIP, upload movies_history.csv or tracking-prod-records-series.csv.",
     "dropHint": "Drag and drop a CSV file here, or click to choose a file",
-    "importing": "Importing...",
-    "chooseFile": "Choose CSV file"
+    "importing": "Importing..."
   },
   "home": {
     "welcomeTitle": "Welcome to Remindarr",
@@ -326,9 +325,7 @@
   },
   "profile": {
     "title": "Profile",
-    "username": "Username",
     "displayName": "Display Name",
-    "role": "Role",
     "admin": "Admin",
     "user": "User",
     "changePassword": "Change Password",
@@ -374,7 +371,6 @@
     "renamingPasskey": "Renaming...",
     "noPasskeys": "No passkeys registered. Add one to enable passwordless sign-in.",
     "passkeyUnnamed": "Unnamed passkey",
-    "editProfile": "Edit Profile",
     "bio": "Bio",
     "bioPlaceholder": "A short bio about yourself...",
     "country": "Country",
@@ -725,11 +721,7 @@
       "reduceMotion": "Reduce motion",
       "reduceMotionDesc": "Disables transitions and hero parallax effects.",
       "highContrast": "High-contrast text",
-      "highContrastDesc": "Uses brighter text colors for better readability.",
-      "hideSpoilers": "Hide episode spoilers",
-      "hideSpoilersDesc": "Blurs episode descriptions and titles for unwatched episodes.",
-      "autoplayTrailers": "Auto-play trailers",
-      "autoplayTrailersDesc": "Plays title trailers in the hero banner automatically."
+      "highContrastDesc": "Uses brighter text colors for better readability."
     },
     "advisory": {
       "title": "Content advisory",
@@ -799,13 +791,11 @@
     "titleVisible": "Visible on profile",
     "titleHidden": "Hidden from profile",
     "noTrackedTitles": "No tracked titles to manage.",
-    "perTitleVisibility": "Choose which titles to show:",
+    "perTitleVisibility": "Show or hide every tracked title at once:",
     "showTitle": "Show on profile",
     "hideTitle": "Hide from profile",
     "account": {
       "editProfileSubtitle": "Your display name, bio, and country appear on your public profile.",
-      "profileSubtitle": "Your account identity. Username is used on public profile pages and friend activity.",
-      "authProvider": "Auth provider",
       "passwordSubtitle": "Use at least 6 characters. We recommend a long passphrase.",
       "passwordChangeFailed": "Password change failed",
       "strengthLabel": "strength: {{strength}}",
@@ -865,8 +855,6 @@
         "private": "Only me"
       }
     },
-    "breadcrumb": "Breadcrumb",
-    "buildInfo": "Remindarr · self-hosted",
     "sections": "Sections",
     "sectionsLabel": "Settings sections",
     "saving": "Saving...",

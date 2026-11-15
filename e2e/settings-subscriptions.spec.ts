@@ -68,9 +68,6 @@ test.describe("Settings — Subscriptions tab", () => {
 
     // Only show titles toggle card
     await expect(ssp.onlyMineToggle()).toBeVisible();
-
-    // Breadcrumb shows "subscriptions"
-    await expect(page.getByText("subscriptions").first()).toBeVisible();
   });
 
   test("TC-02: Unauthenticated user redirected to /login", async ({ page }) => {
