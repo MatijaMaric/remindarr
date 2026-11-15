@@ -619,16 +619,125 @@ describe("GET /details/person/:personId", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns stub person when TMDB fetch fails", async () => {
+  it("returns 404 when TMDB has no such person (no made-up stub)", async () => {
     (tmdbClient.fetchPersonDetails as any).mockRejectedValueOnce(
-      new Error("Not found"),
+      new Error('TMDB API error 404: {"status_code":34}'),
     );
     const res = await app.request("/details/person/999");
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(404);
     const body = await res.json();
-    expect(body.person.id).toBe(999);
-    expect(body.person.name).toBe("Person 999");
-    expect(body.person.combined_credits).toEqual({ cast: [], crew: [] });
+    expect(body.person).toBeUndefined();
+  });
+
+  it("returns 503 when TMDB fails for any other reason", async () => {
+    (tmdbClient.fetchPersonDetails as any).mockRejectedValueOnce(
+      new Error("TMDB API error 401: invalid key"),
+    );
+    const res = await app.request("/details/person/999");
+    expect(res.status).toBe(503);
+  });
+
+  it("sends only the fields the page reads, plus episode_count and in_library", async () => {
+    const userId = await repository.createUser("viewer", "hash");
+    await upsertTitles([
+      makeParsedTitle({ id: "tv-2710", objectType: "SHOW", tmdbId: "2710" }),
+    ]);
+    await repository.trackTitle("tv-2710", userId);
+    (tmdbClient.fetchPersonDetails as any).mockResolvedValue({
+      id: 518,
+      name: "Danny DeVito",
+      biography: "Bio",
+      birthday: "1944-11-17",
+      deathday: null,
+      place_of_birth: "Asbury Park",
+      known_for_department: "Acting",
+      profile_path: "/p.jpg",
+      also_known_as: ["Daniel Michael DeVito"],
+      popularity: 9,
+      external_ids: {
+        imdb_id: "nm0000362",
+        twitter_id: "DannyDeVito",
+        freebase_id: "/m/x",
+        wikidata_id: "Q1",
+      },
+      combined_credits: {
+        cast: [
+          {
+            id: 2710,
+            media_type: "tv",
+            name: "It's Always Sunny in Philadelphia",
+            character: "Frank Reynolds",
+            first_air_date: "2005-08-04",
+            poster_path: "/s.jpg",
+            vote_average: 8.5,
+            vote_count: 1465,
+            popularity: 50,
+            episode_count: 180,
+            overview: "long text",
+            backdrop_path: "/b.jpg",
+            genre_ids: [35],
+            credit_id: "abc",
+          },
+        ],
+        crew: [
+          {
+            id: 9,
+            media_type: "movie",
+            title: "Matilda",
+            job: "Director",
+            department: "Directing",
+            release_date: "1996-08-02",
+            poster_path: null,
+            vote_average: 7,
+            vote_count: 4000,
+            popularity: 20,
+            overview: "long text",
+          },
+        ],
+      },
+    });
+    const authed = new Hono<AppEnv>();
+    authed.use("*", async (c, next) => {
+      c.set("user", { id: userId } as any);
+      await next();
+    });
+    authed.route("/details", detailsApp);
+
+    const body = await (await authed.request("/details/person/518")).json();
+    expect(body.person.also_known_as).toBeUndefined();
+    expect(body.person.external_ids).toEqual({
+      imdb_id: "nm0000362",
+      instagram_id: null,
+      twitter_id: "DannyDeVito",
+      facebook_id: null,
+    });
+    expect(body.person.combined_credits.cast[0]).toEqual({
+      id: 2710,
+      media_type: "tv",
+      name: "It's Always Sunny in Philadelphia",
+      character: "Frank Reynolds",
+      first_air_date: "2005-08-04",
+      poster_path: "/s.jpg",
+      vote_count: 1465,
+      popularity: 50,
+      episode_count: 180,
+      in_library: true,
+    });
+    expect(body.person.combined_credits.crew[0]).toEqual({
+      id: 9,
+      media_type: "movie",
+      title: "Matilda",
+      job: "Director",
+      release_date: "1996-08-02",
+      poster_path: null,
+      vote_count: 4000,
+      popularity: 20,
+      in_library: false,
+    });
+
+    // Signed out: nothing is in the library.
+    const anon = await (await app.request("/details/person/518")).json();
+    expect(anon.person.combined_credits.cast[0].in_library).toBe(false);
   });
 });
 
