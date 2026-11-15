@@ -90,22 +90,28 @@
     "settings": "設定",
     "discovery": "おすすめ",
     "stats": "統計",
-    "wrapped": "年間まとめ",
-    "search": "検索"
+    "wrapped": "年間まとめ"
   },
   "bottomNav": {
     "home": "ホーム",
-    "watch": "ホーム",
-    "upcoming": "近日公開",
     "browse": "探す",
     "calendar": "カレンダー",
     "tracked": "ウォッチリスト",
-    "discovery": "おすすめ",
     "more": "その他",
     "moreOptions": "その他のナビゲーション",
-    "profile": "プロフィール",
     "signIn": "ログイン",
     "unreadRecommendations_other": "未読のおすすめ {{count}} 件"
+  },
+  "more": {
+    "discover": "見つける",
+    "account": "アカウント",
+    "session": "セッション",
+    "dashboard": "ダッシュボード",
+    "dashboardSub": "次に見る・新着",
+    "reelsSub": "エピソードと映画をフルスクリーンで",
+    "discoverySub": "あなたへのおすすめと提案",
+    "statsSub": "視聴履歴",
+    "wrappedSub": "あなたの1年を振り返る"
   },
   "shortcuts": {
     "title": "キーボードショートカット",

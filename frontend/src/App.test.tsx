@@ -5,6 +5,7 @@ import {
   cleanup,
   fireEvent,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -157,6 +158,26 @@ describe("App search trigger", () => {
         name: "Search titles or paste IMDB link",
       }),
     ).toBeNull();
+  });
+});
+
+describe("App nav Discovery link", () => {
+  it("shows the unread recommendations count", async () => {
+    apiMock.getUnreadRecommendationCount.mockImplementation(async () => ({
+      count: 4,
+    }));
+    renderApp("/login", loggedInAuth);
+    const nav = screen.getByRole("navigation", { name: "Main navigation" });
+    const link = await within(nav).findByRole("link", {
+      name: /^Discovery\W+4 unread recommendations$/,
+    });
+    expect(link.getAttribute("href")).toBe("/discovery");
+  });
+
+  it("shows no count when there is nothing unread", () => {
+    renderApp("/login", loggedInAuth);
+    const nav = screen.getByRole("navigation", { name: "Main navigation" });
+    expect(within(nav).getByRole("link", { name: "Discovery" })).toBeDefined();
   });
 });
 

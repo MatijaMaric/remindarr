@@ -85,28 +85,34 @@
     "browse": "Browse",
     "tracked": "Tracked",
     "calendar": "Calendar",
-    "logout": "Logout",
+    "logout": "Sign out",
     "signIn": "Sign In",
     "settings": "Settings",
     "discovery": "Discovery",
     "stats": "Stats",
-    "wrapped": "Year in Review",
-    "search": "Search"
+    "wrapped": "Year in Review"
   },
   "bottomNav": {
     "home": "Home",
-    "watch": "Home",
-    "upcoming": "Upcoming",
     "browse": "Browse",
     "calendar": "Calendar",
     "tracked": "Tracked",
-    "discovery": "Discovery",
     "more": "More",
     "moreOptions": "More navigation options",
-    "profile": "Profile",
     "signIn": "Sign In",
     "unreadRecommendations_one": "{{count}} unread recommendation",
     "unreadRecommendations_other": "{{count}} unread recommendations"
+  },
+  "more": {
+    "discover": "Discover",
+    "account": "Account",
+    "session": "Session",
+    "dashboard": "Dashboard",
+    "dashboardSub": "Up next and new releases",
+    "reelsSub": "Full-screen episodes and movies",
+    "discoverySub": "Recommendations and suggestions for you",
+    "statsSub": "Your watch history",
+    "wrappedSub": "Your annual Wrapped"
   },
   "shortcuts": {
     "title": "Keyboard Shortcuts",

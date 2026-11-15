@@ -90,24 +90,30 @@
     "settings": "Paramètres",
     "discovery": "Découvrir",
     "stats": "Statistiques",
-    "wrapped": "Bilan de l'année",
-    "search": "Rechercher"
+    "wrapped": "Bilan de l'année"
   },
   "bottomNav": {
     "home": "Accueil",
-    "watch": "Accueil",
-    "upcoming": "À venir",
     "browse": "Explorer",
     "calendar": "Calendrier",
     "tracked": "Suivis",
-    "discovery": "Découvrir",
     "more": "Plus",
     "moreOptions": "Plus d'options de navigation",
-    "profile": "Profil",
     "signIn": "Se connecter",
     "unreadRecommendations_one": "{{count}} recommandation non lue",
     "unreadRecommendations_many": "{{count}} recommandations non lues",
     "unreadRecommendations_other": "{{count}} recommandations non lues"
+  },
+  "more": {
+    "discover": "Découvrir",
+    "account": "Compte",
+    "session": "Session",
+    "dashboard": "Tableau de bord",
+    "dashboardSub": "À suivre et nouveautés",
+    "reelsSub": "Épisodes et films en plein écran",
+    "discoverySub": "Recommandations et suggestions pour vous",
+    "statsSub": "Votre historique de visionnage",
+    "wrappedSub": "Votre bilan annuel"
   },
   "shortcuts": {
     "title": "Raccourcis clavier",
