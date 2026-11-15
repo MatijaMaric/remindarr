@@ -121,7 +121,7 @@ describe("episode runtime policy", () => {
     expect((await getStatsOverview(userId)).watch_time_minutes_shows).toBe(45);
     expect(
       (await computeYearInReview(userId, new Date().getUTCFullYear()))
-        .watch_time_minutes_shows,
+        .watch_time_minutes,
     ).toBe(45);
     expect((await getUserPace(userId)).minutesPerDay).toBe(1.5);
     expect((await getTrackedTitles(userId))[0].remaining_runtime_minutes).toBe(
