@@ -182,12 +182,13 @@ export default function EpisodeDetailPage() {
   const stillUrl = mkStillUrl(tmdb?.still_path, "w780");
   const released = isReleased(tmdb?.air_date);
 
-  // Merge guest_stars and credits.cast, deduplicating by id
+  // Main cast first, then guest stars, deduplicating by id. Guests first
+  // filled the 20-card row and hid the series regulars.
   const allCast: CastMember[] = [];
   const seenIds = new Set<number>();
   for (const c of [
-    ...(tmdb?.guest_stars || []),
     ...(tmdb?.credits?.cast || []),
+    ...(tmdb?.guest_stars || []),
   ]) {
     if (!seenIds.has(c.id)) {
       seenIds.add(c.id);
@@ -233,13 +234,13 @@ export default function EpisodeDetailPage() {
           <img
             src={stillUrl}
             alt={episodeLabel}
-            className="w-full"
+            className="w-full sm:max-h-72 object-cover"
             width={780}
             height={439}
             loading="eager"
           />
         ) : (
-          <div className="w-full aspect-video bg-muted flex items-center justify-center">
+          <div className="w-full aspect-video sm:aspect-auto sm:h-72 bg-muted flex items-center justify-center">
             <span className="text-muted-foreground text-sm">
               {t("episodes.noPreview", "No preview available")}
             </span>
@@ -320,7 +321,7 @@ export default function EpisodeDetailPage() {
           <ShareButton title={`${title.title} — ${episodeLabel}`} />
         </div>
 
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
           {tmdb?.air_date && <span>{formatDate(tmdb.air_date)}</span>}
           {tmdb?.runtime && (
             <>
@@ -341,22 +342,38 @@ export default function EpisodeDetailPage() {
               )}
             </>
           ) : null}
+          {/* Same row as the metadata so the watched state is not a second
+              control under the toggle next to the title. */}
+          {episodeStatus?.is_watched && watchHistoryEntries.length > 0 && (
+            <>
+              <span className="text-muted-foreground">·</span>
+              <button
+                onClick={() => setEditHistoryEntry(watchHistoryEntries[0].id)}
+                className="text-success hover:text-success transition-colors underline-offset-2 hover:underline cursor-pointer"
+              >
+                {t("episodes.watchedOn", "Watched {{date}}", {
+                  date: formatDate(
+                    watchHistoryEntries[0].watchedAt.replace(" ", "T"),
+                    { utcAssumed: true },
+                  ),
+                })}
+              </button>
+            </>
+          )}
         </div>
-
-        {episodeStatus?.is_watched && watchHistoryEntries.length > 0 && (
-          <button
-            onClick={() => setEditHistoryEntry(watchHistoryEntries[0].id)}
-            className="text-xs text-success hover:text-success transition-colors underline-offset-2 hover:underline cursor-pointer"
-          >
-            {t("episodes.watchedOn", "Watched {{date}}", {
-              date: formatDate(
-                watchHistoryEntries[0].watchedAt.replace(" ", "T"),
-                { utcAssumed: true },
-              ),
-            })}
-          </button>
-        )}
       </div>
+
+      {/* Overview */}
+      {tmdb?.overview && (
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold text-foreground">
+            {t("episodes.overview", "Overview")}
+          </h2>
+          <p className="text-foreground-secondary leading-relaxed select-text">
+            {tmdb.overview}
+          </p>
+        </section>
+      )}
 
       {/* Rating */}
       {released && episodeStatus && (
@@ -380,18 +397,6 @@ export default function EpisodeDetailPage() {
           statusReady={!user || statusFetched}
         />
       </SectionErrorBoundary>
-
-      {/* Overview */}
-      {tmdb?.overview && (
-        <section className="space-y-2">
-          <h2 className="text-lg font-semibold text-foreground">
-            {t("episodes.overview", "Overview")}
-          </h2>
-          <p className="text-foreground-secondary leading-relaxed select-text">
-            {tmdb.overview}
-          </p>
-        </section>
-      )}
 
       {/* Key Crew */}
       {(directors.length > 0 || writers.length > 0) && (

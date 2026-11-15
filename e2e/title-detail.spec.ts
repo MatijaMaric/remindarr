@@ -280,7 +280,6 @@ for (const theme of ["dark", "oled", "midnight", "moss", "plum", "light"]) {
       const labels = [
         page.getByText("Your rating", { exact: true }),
         page.getByText("2025", { exact: true }),
-        page.getByText("— not available").first(),
         page.getByText("N/A", { exact: true }),
       ];
       for (const label of labels) {

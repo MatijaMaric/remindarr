@@ -89,11 +89,9 @@ function TmdbProviderChip({
 function ProviderRow({
   label,
   children,
-  isEmpty,
 }: {
   label: string;
   children: React.ReactNode;
-  isEmpty: boolean;
 }) {
   return (
     <div className="flex items-start gap-3.5">
@@ -101,13 +99,7 @@ function ProviderRow({
         {label}
       </div>
       <div className="flex flex-wrap gap-2 items-center min-h-8">
-        {isEmpty ? (
-          <span className="text-xs text-muted-foreground italic">
-            — not available
-          </span>
-        ) : (
-          children
-        )}
+        {children}
       </div>
     </div>
   );
@@ -178,10 +170,11 @@ export default function ProvidersSection({
               !hasOffers && hasProviders && watchProviders
                 ? (watchProviders[tmdbKey] ?? [])
                 : [];
-            const isEmpty =
-              groupOffers.length === 0 && tmdbProviders.length === 0;
+            // Rows with nothing to offer are hidden rather than listed as empty.
+            if (groupOffers.length === 0 && tmdbProviders.length === 0)
+              return null;
             return (
-              <ProviderRow key={type} label={label} isEmpty={isEmpty}>
+              <ProviderRow key={type} label={label}>
                 {groupOffers.map((offer) => (
                   <OfferChip key={offer.id} offer={offer} />
                 ))}

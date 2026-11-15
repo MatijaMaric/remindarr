@@ -139,6 +139,59 @@ afterEach(async () => {
 });
 
 describe("EpisodeDetailPage", () => {
+  it("lists the main cast before guest stars (#1405)", async () => {
+    const guests = Array.from({ length: 20 }, (_, i) => ({
+      id: 100 + i,
+      name: `Guest ${i}`,
+      character: "Guest",
+      profile_path: null,
+      order: i,
+    }));
+    apiMock.getEpisodeDetails.mockImplementation(() =>
+      Promise.resolve({
+        ...EPISODE_DETAILS_DEFAULT,
+        tmdb: {
+          ...EPISODE_DETAILS_DEFAULT.tmdb,
+          guest_stars: guests,
+          credits: {
+            cast: [
+              {
+                id: 1,
+                name: "Lead Actor",
+                character: "Lead",
+                profile_path: null,
+                order: 0,
+              },
+            ],
+            crew: [],
+          },
+        },
+      }),
+    );
+    render(<EpisodeDetailPage />, { wrapper: Wrapper });
+    await waitFor(() => expect(screen.getByText("Lead Actor")).toBeDefined());
+    const castSection = screen
+      .getByRole("heading", { name: "Cast" })
+      .closest("section")!;
+    expect(castSection.textContent!.indexOf("Lead Actor")).toBeLessThan(
+      castSection.textContent!.indexOf("Guest 0"),
+    );
+  });
+
+  it("shows the overview before the discussion", async () => {
+    render(<EpisodeDetailPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Discussion" })).toBeDefined(),
+    );
+    const headings = screen
+      .getAllByRole("heading", { level: 2 })
+      .map((h) => h.textContent);
+    expect(headings.indexOf("Overview")).toBeGreaterThanOrEqual(0);
+    expect(headings.indexOf("Overview")).toBeLessThan(
+      headings.indexOf("Discussion"),
+    );
+  });
+
   it("renders episode with watched icon when authenticated", async () => {
     render(<EpisodeDetailPage />, { wrapper: Wrapper });
 

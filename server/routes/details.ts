@@ -1,6 +1,11 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { getTitleById, upsertTitles, upsertEpisodes } from "../db/repository";
+import {
+  getTitleById,
+  upsertTitles,
+  upsertEpisodes,
+  isPinnedTitle,
+} from "../db/repository";
 import { CONFIG } from "../config";
 import {
   fetchMovieDetails,
@@ -23,6 +28,11 @@ import {
   parseDiscoverTv,
 } from "../tmdb/parser";
 import type { AppEnv } from "../types";
+import type {
+  TmdbMovieFullDetails,
+  TmdbShowFullDetails,
+  TmdbSeasonDetails,
+} from "../tmdb/types";
 import { logger } from "../logger";
 import { ok, err } from "./response";
 import { setPublicCacheIfAnon } from "./cache-headers";
@@ -70,6 +80,56 @@ function parseTitleId(
   return null;
 }
 
+// The detail pages only read the configured country's providers (and, for
+// movie release dates, that country with a US fallback). TMDB returns every
+// country, which was two thirds of the show response.
+function onlyCountryProviders<
+  T extends TmdbMovieFullDetails | TmdbShowFullDetails,
+>(tmdb: T): T {
+  const all = tmdb["watch/providers"]?.results;
+  if (!all) return tmdb;
+  const results = all[country] ? { [country]: all[country] } : {};
+  return { ...tmdb, "watch/providers": { results } };
+}
+
+function trimMovieDetails(tmdb: TmdbMovieFullDetails): TmdbMovieFullDetails {
+  const trimmed = onlyCountryProviders(tmdb);
+  return {
+    ...trimmed,
+    // The page shows directors and writers only; the full crew can be 800+ people.
+    credits: trimmed.credits && {
+      ...trimmed.credits,
+      crew: (trimmed.credits.crew ?? []).filter(
+        (c) => c.job === "Director" || c.department === "Writing",
+      ),
+    },
+    release_dates: trimmed.release_dates && {
+      results: (trimmed.release_dates.results ?? []).filter(
+        (r) => r.iso_3166_1 === country || r.iso_3166_1 === "US",
+      ),
+    },
+  };
+}
+
+// The season page never renders per-episode guest stars or crew; the episode
+// page fetches its own credits.
+function trimSeasonDetails(tmdb: TmdbSeasonDetails): TmdbSeasonDetails {
+  return {
+    ...tmdb,
+    episodes: tmdb.episodes.map((ep) => ({ ...ep, guest_stars: [], crew: [] })),
+  };
+}
+
+async function pinnedFlag(userId: string | undefined, titleId: string) {
+  if (!userId) return undefined;
+  try {
+    return await isPinnedTitle(userId, titleId);
+  } catch (e) {
+    log.error("Pinned lookup failed", { titleId, err: e });
+    return undefined;
+  }
+}
+
 async function getOrFetchTitle(titleId: string, userId?: string) {
   let title = await getTitleById(titleId, userId);
   if (title) return title;
@@ -101,14 +161,17 @@ app.get("/movie/:id", zValidator("param", titleIdParam), async (c) => {
   let tmdb = null;
   if (title.tmdb_id && CONFIG.TMDB_API_KEY) {
     try {
-      tmdb = await fetchMovieFullDetails(title.tmdb_id);
+      const full = await fetchMovieFullDetails(title.tmdb_id);
+      tmdb = full && trimMovieDetails(full);
     } catch (e) {
       log.error("TMDB movie fetch failed", { tmdbId: title.tmdb_id, err: e });
     }
   }
 
+  const isPinned = await pinnedFlag(user?.id, title.id);
+
   setPublicCacheIfAnon(c, 3600);
-  return ok(c, { title, tmdb, country });
+  return ok(c, { title: { ...title, is_pinned: isPinned }, tmdb, country });
 });
 
 app.get("/show/:id", zValidator("param", titleIdParam), async (c) => {
@@ -120,7 +183,8 @@ app.get("/show/:id", zValidator("param", titleIdParam), async (c) => {
   let tmdb = null;
   if (title.tmdb_id && CONFIG.TMDB_API_KEY) {
     try {
-      tmdb = await fetchShowFullDetails(title.tmdb_id);
+      const full = await fetchShowFullDetails(title.tmdb_id);
+      tmdb = full && onlyCountryProviders(full);
     } catch (e) {
       log.error("TMDB show fetch failed", { tmdbId: title.tmdb_id, err: e });
     }
@@ -156,8 +220,14 @@ app.get("/show/:id", zValidator("param", titleIdParam), async (c) => {
     }
   }
 
+  const isPinned = await pinnedFlag(user?.id, titleId);
+
   setPublicCacheIfAnon(c, 3600);
-  return ok(c, { title: { ...title, eta_days: etaDays }, tmdb, country });
+  return ok(c, {
+    title: { ...title, eta_days: etaDays, is_pinned: isPinned },
+    tmdb,
+    country,
+  });
 });
 
 app.get(
@@ -186,7 +256,7 @@ app.get(
       ]);
 
       if (seasonResult.status === "fulfilled") {
-        tmdb = seasonResult.value;
+        tmdb = seasonResult.value && trimSeasonDetails(seasonResult.value);
         try {
           if (tmdb)
             await upsertEpisodes(

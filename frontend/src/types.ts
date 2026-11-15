@@ -77,6 +77,8 @@ export interface Title {
   offers: Offer[];
   /** Formats the current user owns; only present on title detail. */
   owned_formats?: OwnedFormat[];
+  /** Whether the current user pinned this title; only present on title detail. */
+  is_pinned?: boolean;
   tracked_at?: string;
   notes?: string;
   tags?: string[];
