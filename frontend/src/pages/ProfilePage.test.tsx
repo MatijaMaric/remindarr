@@ -157,21 +157,34 @@ describe("PushNotificationsSection", () => {
     expect(screen.getByText("Enable")).toBeDefined();
   });
 
-  it("auto-cleans up stale DB notifier when browser has no subscription", async () => {
-    // Notifier exists in DB but no browser subscription
+  it("keeps the notifier when push is on for another device and moves it here on enable (#1415)", async () => {
+    // Notifier exists in DB but this browser has no subscription
     apiMock.getNotifiers.mockImplementation(() =>
       Promise.resolve({ notifiers: [makeWebpushNotifier({ enabled: true })] }),
     );
     mockGetExistingSubscription.mockImplementation(() => Promise.resolve(null));
+    apiMock.updateNotifier.mockImplementation(() =>
+      Promise.resolve({ notifier: makeWebpushNotifier() }),
+    );
 
     render(<SettingsPage />, { wrapper: Wrapper });
 
     await waitFor(() => {
-      expect(apiMock.deleteNotifier).toHaveBeenCalledWith("n1");
+      expect(
+        screen.getByText("Push notifications are on for another device"),
+      ).toBeDefined();
     });
+    expect(apiMock.deleteNotifier).not.toHaveBeenCalled();
 
-    // Should show Enable button
-    expect(screen.getByText("Enable")).toBeDefined();
+    fireEvent.click(screen.getByText("Enable"));
+
+    await waitFor(() => {
+      expect(apiMock.updateNotifier).toHaveBeenCalledWith(
+        "n1",
+        expect.objectContaining({ enabled: true }),
+      );
+    });
+    expect(apiMock.createNotifier).not.toHaveBeenCalled();
   });
 
   it("auto-recovers when test reveals expired subscription", async () => {
