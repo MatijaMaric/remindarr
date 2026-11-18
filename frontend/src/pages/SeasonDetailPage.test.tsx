@@ -19,6 +19,7 @@ function newTestClient() {
 }
 import * as sonner from "sonner";
 import { apiMock, resetApiMock } from "../test-utils/apiMock";
+import { ApiError } from "../lib/api-error";
 import i18n from "../i18n";
 
 let mockUser: any = {
@@ -560,7 +561,7 @@ describe("SeasonDetailPage", () => {
       expect(i18n.t("season.episodeCount", { count: 1 })).toBe("1 EPISODE");
 
       apiMock.getSeasonDetails.mockImplementation(() =>
-        Promise.reject(new Error("missing")),
+        Promise.reject(new ApiError("missing", 404)),
       );
       render(<SeasonDetailPage />, { wrapper: Wrapper });
       await waitFor(() => {
@@ -609,5 +610,58 @@ describe("SeasonDetailPage", () => {
     } finally {
       await i18n.changeLanguage("en");
     }
+  });
+});
+
+describe("load failures (#1444)", () => {
+  it("shows not-found for a 404 with no retry button", async () => {
+    apiMock.getSeasonDetails.mockImplementation(() =>
+      Promise.reject(new ApiError("Not found", 404)),
+    );
+    render(<SeasonDetailPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getByText("Season not found")).toBeDefined(),
+    );
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  });
+
+  it("shows load-failed for a 500 and retry refetches the page", async () => {
+    let calls = 0;
+    const ok = apiMock.getSeasonDetails.getMockImplementation()!;
+    apiMock.getSeasonDetails.mockImplementation((...args: any[]) =>
+      ++calls === 1
+        ? Promise.reject(new ApiError("Server error", 500))
+        : (ok as any)(...args),
+    );
+    render(<SeasonDetailPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getByText("Couldn't load this season.")).toBeDefined(),
+    );
+    expect(screen.queryByText("Season not found")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
+    expect(calls).toBe(2);
+  });
+
+  it("tells a signed-in user when watched status fails and retries it", async () => {
+    let calls = 0;
+    apiMock.getSeasonEpisodeStatus.mockImplementation(() =>
+      ++calls === 1
+        ? Promise.reject(new ApiError("Server error", 500))
+        : defaultSeasonEpisodeStatus(),
+    );
+    render(<SeasonDetailPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(
+        screen.getByText("Couldn't load your watched progress."),
+      ).toBeDefined(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByText("Couldn't load your watched progress."),
+      ).toBeNull(),
+    );
+    expect(screen.getByText(/1 of 3 watched/)).toBeDefined();
   });
 });

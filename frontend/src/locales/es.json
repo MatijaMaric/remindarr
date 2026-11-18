@@ -490,6 +490,7 @@
     "nextEpisode": "Episodio siguiente, {{code}}",
     "episode": "Episodio {{number}}",
     "notFound": "Episodio no encontrado",
+    "loadFailed": "No se pudo cargar este episodio.",
     "votes_one": "{{count}} voto",
     "votes_many": "{{count}} votos",
     "votes_other": "{{count}} votos",
@@ -523,6 +524,8 @@
   },
   "season": {
     "notFound": "Temporada no encontrada",
+    "loadFailed": "No se pudo cargar esta temporada.",
+    "statusLoadFailed": "No se pudo cargar tu progreso.",
     "episodes": "Episodios",
     "episodeCount_one": "{{count}} episodio",
     "episodeCount_many": "{{count}} episodios",

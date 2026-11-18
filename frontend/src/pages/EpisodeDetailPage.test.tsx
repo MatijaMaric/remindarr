@@ -19,6 +19,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { apiMock, resetApiMock } from "../test-utils/apiMock";
+import { ApiError } from "../lib/api-error";
 
 function newTestClient() {
   return new QueryClient({
@@ -470,7 +471,7 @@ describe("EpisodeDetailPage", () => {
       expect(i18n.t("episodes.votes", { count: 1 })).toBe("1 BALLOT");
 
       apiMock.getEpisodeDetails.mockImplementation(() =>
-        Promise.reject(new Error("missing")),
+        Promise.reject(new ApiError("missing", 404)),
       );
       render(<EpisodeDetailPage />, { wrapper: Wrapper });
       await waitFor(() => {
@@ -557,5 +558,36 @@ describe("EpisodeDetailPage", () => {
     } finally {
       await i18n.changeLanguage("en");
     }
+  });
+});
+
+describe("load failures (#1444)", () => {
+  it("shows not-found for a 404 with no retry button", async () => {
+    apiMock.getEpisodeDetails.mockImplementation(() =>
+      Promise.reject(new ApiError("Not found", 404)),
+    );
+    render(<EpisodeDetailPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getByText("Episode not found")).toBeDefined(),
+    );
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+  });
+
+  it("shows load-failed for a 500 and retry refetches the page", async () => {
+    let calls = 0;
+    const ok = apiMock.getEpisodeDetails.getMockImplementation()!;
+    apiMock.getEpisodeDetails.mockImplementation((...args: any[]) =>
+      ++calls === 1
+        ? Promise.reject(new ApiError("Server error", 500))
+        : (ok as any)(...args),
+    );
+    render(<EpisodeDetailPage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getByText("Couldn't load this episode.")).toBeDefined(),
+    );
+    expect(screen.queryByText("Episode not found")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(screen.getByText("Pilot")).toBeDefined());
+    expect(calls).toBe(2);
   });
 });

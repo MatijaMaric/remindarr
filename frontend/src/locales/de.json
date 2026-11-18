@@ -482,6 +482,7 @@
     "nextEpisode": "Nächste Episode, {{code}}",
     "episode": "Episode {{number}}",
     "notFound": "Episode nicht gefunden",
+    "loadFailed": "Diese Episode konnte nicht geladen werden.",
     "votes_one": "{{count}} Stimme",
     "votes_other": "{{count}} Stimmen",
     "watchedOn": "Gesehen am {{date}}",
@@ -514,6 +515,8 @@
   },
   "season": {
     "notFound": "Staffel nicht gefunden",
+    "loadFailed": "Diese Staffel konnte nicht geladen werden.",
+    "statusLoadFailed": "Dein Fortschritt konnte nicht geladen werden.",
     "episodes": "Episoden",
     "episodeCount_one": "{{count}} Episode",
     "episodeCount_other": "{{count}} Episoden",
