@@ -32,6 +32,8 @@ let cleanupTimer: ReturnType<typeof setInterval> | null = null;
 // claimed again until it does.
 let processing = false;
 const unsettled = new Set<string>();
+// Bumped by stopWorker so an in-flight tick stops claiming new jobs.
+let generation = 0;
 
 export function registerHandler(name: string, handler: JobHandler) {
   handlers.set(name, handler);
@@ -70,14 +72,20 @@ async function withTimeout<T>(
 export async function processJobs(budgetMs = NAME_BUDGET_MS) {
   if (processing) return;
   processing = true;
+  const gen = generation;
   try {
     for (const [name, handler] of handlers) {
       const start = performance.now();
       while (
+        gen === generation &&
         !unsettled.has(name) &&
         performance.now() - start < budgetMs &&
         (await runNext(name, handler))
-      );
+      ) {
+        // Yield to the event loop between jobs so timers and HTTP callbacks
+        // are not starved by a long drain of microtask-only handlers.
+        await new Promise((r) => setImmediate(r));
+      }
     }
   } finally {
     processing = false;
@@ -101,9 +109,15 @@ async function runNext(name: string, handler: JobHandler): Promise<boolean> {
   try {
     const exec = () => {
       unsettled.add(name);
-      const run = Promise.resolve()
-        .then(() => handler(job))
-        .finally(() => unsettled.delete(name));
+      let run: Promise<void>;
+      try {
+        // Call synchronously (before the timeout is armed), as before #1442.
+        run = Promise.resolve(handler(job));
+      } catch (err) {
+        unsettled.delete(name);
+        throw err;
+      }
+      run = run.finally(() => unsettled.delete(name));
       return withTimeout(run, CONFIG.JOB_HANDLER_TIMEOUT_MS, name);
     };
     if (cronExpr) {
@@ -158,6 +172,7 @@ export function startWorker() {
 }
 
 export function stopWorker() {
+  generation++;
   if (pollTimer) clearInterval(pollTimer);
   if (cronTimer) clearInterval(cronTimer);
   if (cleanupTimer) clearInterval(cleanupTimer);
