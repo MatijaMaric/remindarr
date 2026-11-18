@@ -563,4 +563,44 @@ describe("scheduled() bootstrap KV timestamp", () => {
     expect(pruneSpy).toHaveBeenCalledTimes(1);
     pruneSpy.mockRestore();
   });
+
+  it("prunes notification_log only on the daily tick, without blocking later cleanup (#1441)", async () => {
+    const rateSpy = spyOn(rateLimitModule, "pruneRateLimits").mockResolvedValue(
+      undefined,
+    );
+    const pruneLogSpy = spyOn(repository, "pruneOldRows").mockRejectedValue(
+      new Error("D1 down"),
+    );
+    const fakeEnv = {
+      DB: {} as D1Database,
+      TMDB_COUNTRY: "HR",
+      TMDB_LANGUAGE: "hr-HR",
+      LOG_LEVEL: "info",
+    } as unknown as Parameters<typeof handler.scheduled>[1];
+    const fakeCtx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    } as unknown as ExecutionContext;
+
+    try {
+      await handler.scheduled(
+        { cron: "*/5 * * * *", type: "scheduled", scheduledTime: Date.now() },
+        fakeEnv,
+        fakeCtx,
+      );
+      expect(pruneLogSpy).not.toHaveBeenCalled();
+
+      await handler.scheduled(
+        { cron: "0 0 * * *", type: "scheduled", scheduledTime: Date.now() },
+        fakeEnv,
+        fakeCtx,
+      );
+      expect(pruneLogSpy).toHaveBeenCalledTimes(1);
+      // deleteExpiredSessions is stubbed in beforeEach; it runs after the prune.
+      expect(repository.deleteExpiredSessions).toHaveBeenCalled();
+    } finally {
+      pruneLogSpy.mockRestore();
+      rateSpy.mockRestore();
+    }
+  });
 });
