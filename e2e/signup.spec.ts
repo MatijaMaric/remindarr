@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { isAuthGetSession, mockLoggedIn } from "./helpers";
+import {
+  isAuthGetSession,
+  mockLoggedIn,
+  MOCK_SESSION,
+  stubAuthenticatedShell,
+} from "./helpers";
 import { SignupPage } from "./pages/signup-page";
 
 /**
@@ -39,6 +44,34 @@ async function stubHomepageApis(page: import("@playwright/test").Page) {
   );
 }
 
+/**
+ * Stateful get-session mock mirroring the real backend: signed out until the
+ * sign-up call succeeds, signed in afterwards. Since #1429 SignupPage only
+ * redirects from an effect once AuthContext has a `user`, which it reads from
+ * get-session after sign-up (AuthContext.changeSession -> refreshSession).
+ * Returns a setter the sign-up route handler calls on success.
+ */
+async function mockSessionAfterSignup(
+  page: import("@playwright/test").Page,
+  user: { id: string; username: string; email: string; name: string },
+): Promise<() => void> {
+  let signedIn = false;
+  await stubAuthenticatedShell(page);
+  await page.route(isAuthGetSession, (route) =>
+    route.fulfill({
+      json: signedIn
+        ? {
+            session: { ...MOCK_SESSION.session, userId: user.id },
+            user: { ...MOCK_SESSION.user, ...user, display_name: user.name },
+          }
+        : null,
+    }),
+  );
+  return () => {
+    signedIn = true;
+  };
+}
+
 // Run signup tests serially: TC-01 and TC-02 hit the real auth backend, and
 // the dev server's default rate limit (20/min) is easily exceeded by 11
 // parallel workers all making auth requests concurrently.
@@ -58,21 +91,24 @@ test.describe("Signup", () => {
     const suffix = Date.now();
     const username = `tc01_${suffix}`;
 
-    // Mock get-session to always return null (not logged in) so the signup
-    // form stays visible. The navigate('/') in handleSubmit fires directly
-    // after the signup call resolves — it doesn't wait for a session update.
-    await page.route(isAuthGetSession, (route) =>
-      route.fulfill({ json: null }),
-    );
+    // Signed out until sign-up succeeds, then signed in — the redirect to "/"
+    // is driven by the session becoming signed in, not by handleSubmit.
+    const markSignedIn = await mockSessionAfterSignup(page, {
+      id: "mock-id",
+      username,
+      email: `${username}@example.com`,
+      name: "Test User One",
+    });
 
     // Stub home-page API calls so "load" fires promptly after the redirect.
     await stubHomepageApis(page);
 
     // Capture what the UI sends to the signup endpoint and return a mock
-    // success so the navigate('/') fires.
+    // success; from then on get-session reports the new user.
     let capturedBody: Record<string, unknown> | undefined;
     await page.route("**/api/auth/sign-up/email", async (route) => {
       capturedBody = route.request().postDataJSON() as Record<string, unknown>;
+      markSignedIn();
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -98,7 +134,7 @@ test.describe("Signup", () => {
     });
     await signup.submit();
 
-    // The form navigates to "/" immediately after a successful mock signup.
+    // Once the session is signed in, the page redirects to "/".
     await page.waitForURL((url) => url.pathname === "/", {
       timeout: 15_000,
       waitUntil: "domcontentloaded",
@@ -118,9 +154,12 @@ test.describe("Signup", () => {
     const suffix = Date.now() + 2;
     const username = `tc02_${suffix}`;
 
-    await page.route(isAuthGetSession, (route) =>
-      route.fulfill({ json: null }),
-    );
+    const markSignedIn = await mockSessionAfterSignup(page, {
+      id: "mock-id-2",
+      username,
+      email: `${username}@example.com`,
+      name: username,
+    });
 
     // Stub home-page API calls so "load" fires promptly after the redirect.
     await stubHomepageApis(page);
@@ -130,6 +169,7 @@ test.describe("Signup", () => {
     let capturedBody: Record<string, unknown> | undefined;
     await page.route("**/api/auth/sign-up/email", async (route) => {
       capturedBody = route.request().postDataJSON() as Record<string, unknown>;
+      markSignedIn();
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -271,31 +311,36 @@ test.describe("Signup", () => {
   });
 
   // ── TC-06: Password too short ─────────────────────────────────────────────
-  test("TC-06: shows error banner when password is too short", async ({
+  test("TC-06: too-short password is blocked before reaching the server", async ({
     page,
   }) => {
     const signup = new SignupPage(page);
 
-    await page.route("**/api/auth/sign-up/email", (route) =>
-      route.fulfill({
+    // Since #1429 the password field has minLength=8, so a 7-character
+    // password is rejected by the browser and no sign-up request is sent.
+    let requestMade = false;
+    await page.route("**/api/auth/sign-up/email", (route) => {
+      requestMade = true;
+      return route.fulfill({
         status: 422,
-        contentType: "application/json",
-        body: JSON.stringify({
-          message: "Password must be at least 8 characters.",
-        }),
-      }),
-    );
+        json: { message: "Password must be at least 8 characters." },
+      });
+    });
 
     await signup.gotoSignup();
     await signup.fillForm({
       username: "shortpwuser",
       email: "shortpw@example.com",
-      password: "abc1234", // 7 characters — no HTML5 minlength, reaches server
+      password: "abc1234", // 7 characters
     });
     await signup.submit();
 
-    await expect(signup.errorBanner).toBeVisible({ timeout: 5_000 });
-    await expect(signup.errorBanner).toContainText("8");
+    await expect(signup.passwordField).toHaveJSProperty(
+      "validity.tooShort",
+      true,
+    );
+    await expect(signup.passwordField).toBeFocused();
+    expect(requestMade).toBe(false);
     await expect(page).toHaveURL(/\/signup/);
   });
 

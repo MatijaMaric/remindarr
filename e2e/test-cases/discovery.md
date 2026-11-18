@@ -159,8 +159,9 @@ guarantees a stable payload for assertion.
   visible.
 - The kicker text `"Based on what you watch & who you follow"` is visible above the
   heading.
-- Two tab pills are visible: `getByRole("button", { name: "For you" })` and
-  `getByRole("button", { name: /Activity/i })`. The `"For you"` pill is active.
+- There is no tab toggle (the Activity tab was removed in #1421): no
+  `getByRole("button", { name: /^Activity/ })` exists.
+- The "Friends are recommending" row shows the `"Friend Rec Movie"` card link.
 - The hero card section is rendered with the heading `"Suggested Movie"` (an `<h2>` inside
   the `DiscoveryHero` component).
 - A `"Track"` button and a `"View details"` link are visible inside the hero card.
@@ -229,17 +230,19 @@ database with a tracked title.
 **Expected**:
 
 - `getByText("Because you loved Inception")` section heading is visible.
-- Inside that section, `getByText("Suggested Movie")` card is visible.
+- Inside that section, the `"Rail Only Movie"` card link is visible. (Rows drop titles
+  already shown in the hero or "Suggested next" (#1421), so the fixture's Inception group
+  carries a title of its own.)
 - The "Friends are recommending" section is absent (no friend recs in the fixture).
 
 ---
 
-## TC-04: Activity tab shows incoming friend recommendations
+## TC-04: Friends are recommending row shows incoming friend recommendations
 
 **Priority**: P1
 **Backend**: Mock
 
-**Why mock**: The Activity tab renders the `recommendations` array. Mocking it lets us
+**Why mock**: The "Friends are recommending" row renders the `recommendations` array. Mocking it lets us
 assert specific sender names and message text without a real follow/recommend flow.
 
 **Preconditions**:
@@ -249,28 +252,25 @@ assert specific sender names and message text without a real follow/recommend fl
   `"alice"` for `"Friend Rec Movie"` with message `"You will love this!"`).
 - `GET **/api/recommendations/count` → `{ count: 1 }`.
 - `GET **/api/suggestions**` → `{ "flat": [], "groups": [] }` (no algo suggestions, so the
-  "For you" tab shows empty state; we immediately switch to Activity).
+  friends row is the only content).
 
 **Steps**:
 
 1. Apply route mocks.
 2. Navigate to `/discovery`.
 3. Wait for `getByRole("heading", { name: "For you" })` to be visible.
-4. Click `getByRole("button", { name: /Activity/i })`.
-5. Wait for `getByText("Friend Rec Movie")` to be visible.
+4. Wait for the "Friends are recommending" section (`<h2>`) to be visible.
 
-**Expected**:
+**Expected** (all scoped to that section):
 
-- The `"Activity"` pill is now active.
-- `getByText("Alice")` (sender display name) is visible in the recommendation card.
-- `getByText("Friend Rec Movie")` is visible as the title link.
-- `getByText(/"You will love this!"/)` message is visible (displayed as an italic quote).
+- The sender's avatar dot (`getByTitle("Alice")`) and the `"— @alice"` attribution are visible.
+- `"Friend Rec Movie"` is visible as the title link.
+- `"You will love this!"` message is visible (displayed as an italic quote).
 - A `"Track"` button and a `"Dismiss"` button are visible on the card.
-- The unread badge on the `"Activity"` tab shows `"1"` (because `count: 1`).
 
 ---
 
-## TC-05: Activity tab shows unread count badge
+## TC-05: Discovery nav link shows unread count badge
 
 **Priority**: P1
 **Backend**: Mock
@@ -293,8 +293,9 @@ with a specific count value lets us assert the badge renders correctly.
 
 **Expected**:
 
-- The `"Activity"` pill has a badge showing `"3"` (rendered as a small rounded span
-  adjacent to the pill label).
+- The Discovery link in the desktop top nav has accessible name containing
+  `"3 unread recommendations"` and its `unread-badge` shows `"3"`. (Since #1421/#1434 the
+  count lives on the nav link and the More page, not on an Activity tab.)
 
 ---
 

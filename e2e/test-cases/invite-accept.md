@@ -115,10 +115,10 @@ pending status badge and copy/share actions.
 
 - The `POST /api/invitations` request was made.
 - A success toast (Sonner) appears briefly.
-- The invitation card for `"ABCD1234"` is visible.
-- The status badge on the card reads `"Pending"` (pending clock icon).
-- The card shows the code `"ABCD1234"` in a monospace `<code>` element.
-- A `"Share"` (or copy) button and a `"Revoke"` button are visible in the card actions.
+- The invitation card appears: its status badge reads `"Pending"` (pending clock icon).
+- The card does **not** print the code `"ABCD1234"` (#1428); clicking `"Share"` hands out
+  the full `/invite?code=ABCD1234` link (asserted by stubbing `navigator.share`).
+- A `"Share"` button and a `"Revoke"` button are visible in the card actions.
 - The empty-state message is no longer visible.
 
 ---
@@ -155,7 +155,7 @@ inviter's name without needing a real invitation in the DB.
 **Expected**:
 
 - While redeeming, a loading message (e.g. `"Redeeming..."`) is briefly visible.
-- After success, a green banner is visible containing the inviter's name `"Bob"` (the
+- After success, an in-page banner (inside `<main>`; the matching toast renders outside it) is visible containing the inviter's name `"Bob"` (the
   `t("invite.redeemSuccess", { name: "Bob" })` message).
 - A success toast also appears.
 - The URL is updated to `/invite` (the `?code=` param is removed via `setSearchParams({},
@@ -220,7 +220,7 @@ from the pending state).
 **Steps**:
 
 1. Apply all shared route mocks.
-2. Navigate to `/invite` and wait for the invitation card with code `"ABCD1234"` to appear.
+2. Navigate to `/invite` and wait for the pending invitation card (its `"Pending"` badge) to appear.
 3. Click the `getByRole("button", { name: /revoke/i })` within the invitation card.
 4. Wait for the list to update.
 
@@ -228,7 +228,7 @@ from the pending state).
 
 - The `DELETE /api/invitations/inv-001` request was made.
 - A success toast appears.
-- The invitation card for `"ABCD1234"` is no longer visible.
+- The pending invitation card (badge and `"Share"` button) is no longer present.
 - The empty-state message reappears.
 
 ---
@@ -287,5 +287,4 @@ a green card with a `"Used by Alice"` label and a link to `@alice`'s profile pag
 - A link with text `"@alice"` is present and its `href` equals `/user/alice`.
 - No `"Revoke"` or `"Share"` button is visible (pending-only actions are hidden for used
   invitations).
-- The card has a green tinted background/border (CSS classes `bg-green-900/20`,
-  `border-green-900/40`).
+- The code `"EFGH5678"` is not printed on the card (#1428).

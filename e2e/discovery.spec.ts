@@ -102,6 +102,29 @@ const SUGGESTIONS_RESPONSE = {
           isTracked: false,
           matchScore: 92,
         },
+        {
+          // Rows drop titles already shown in the hero / More for you (#1421),
+          // so the row needs a title of its own to render.
+          id: "movie-42003",
+          objectType: "MOVIE",
+          title: "Rail Only Movie",
+          originalTitle: "Rail Only Movie",
+          releaseYear: 2022,
+          releaseDate: "2022-03-04",
+          runtimeMinutes: 100,
+          shortDescription: "Only in the Because you loved row",
+          genres: ["Drama"],
+          imdbId: "tt4200300",
+          tmdbId: 42003,
+          posterUrl: null,
+          ageCertification: "PG",
+          originalLanguage: "en",
+          tmdbUrl: "https://www.themoviedb.org/movie/42003",
+          offers: [],
+          scores: { imdbScore: 7.0, imdbVotes: 3000, tmdbScore: 7.1 },
+          isTracked: false,
+          matchScore: 85,
+        },
       ],
       hiddenCount: 0,
     },
@@ -134,7 +157,7 @@ test.describe("Discovery", () => {
     "Running on chromium only",
   );
 
-  test("TC-01: page loads with heading, tabs, and hero card visible", async ({
+  test("TC-01: page loads with heading, hero card, and friends row visible", async ({
     page,
   }) => {
     const dp = new DiscoveryPage(page);
@@ -146,8 +169,13 @@ test.describe("Discovery", () => {
     await expect(
       page.getByText("Based on what you watch & who you follow"),
     ).toBeVisible();
-    await expect(dp.forYouTab()).toBeVisible();
-    await expect(dp.activityTab()).toBeVisible();
+    // No tab toggle since #1421 — friend picks sit in their own row instead.
+    await expect(page.getByRole("button", { name: /^Activity/ })).toHaveCount(
+      0,
+    );
+    await expect(
+      dp.friendsRow().getByRole("link", { name: "Friend Rec Movie" }),
+    ).toBeVisible();
     await expect(dp.heroTitle("Suggested Movie")).toBeVisible();
     await expect(dp.trackButton()).toBeVisible();
     await expect(dp.viewDetailsLink()).toBeVisible();
@@ -174,7 +202,7 @@ test.describe("Discovery", () => {
     ).not.toBeVisible();
   });
 
-  test("TC-03: For you tab shows algo sections (Because you… rails)", async ({
+  test("TC-03: page shows algo sections (Because you… rails)", async ({
     page,
   }) => {
     const dp = new DiscoveryPage(page);
@@ -199,10 +227,13 @@ test.describe("Discovery", () => {
       page.getByRole("heading", { name: "Because you loved Inception" }),
     ).toBeVisible();
     await expect(page.getByText("Suggested Movie").first()).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Rail Only Movie" }),
+    ).toBeVisible();
     await expect(page.getByText("Friends are recommending")).not.toBeVisible();
   });
 
-  test("TC-04: Activity tab shows incoming friend recommendations", async ({
+  test("TC-04: Friends are recommending row shows incoming friend recommendations", async ({
     page,
   }) => {
     const dp = new DiscoveryPage(page);
@@ -219,17 +250,23 @@ test.describe("Discovery", () => {
     );
     await dp.goto();
     await dp.waitForVisible(dp.heading());
-    await dp.activityTab().click();
-    await dp.waitForVisible(page.getByText("Friend Rec Movie"));
+    const row = dp.friendsRow();
+    await dp.waitForVisible(row);
 
-    await expect(page.getByText("Alice")).toBeVisible();
-    await expect(page.getByText("Friend Rec Movie")).toBeVisible();
-    await expect(page.getByText(/You will love this!/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: "Track" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Dismiss" })).toBeVisible();
+    // Sender avatar (initial dot, named via title) and "— @alice" attribution
+    await expect(row.getByTitle("Alice")).toBeVisible();
+    await expect(row.getByText(/@alice/)).toBeVisible();
+    await expect(
+      row.getByRole("link", { name: "Friend Rec Movie" }),
+    ).toBeVisible();
+    await expect(row.getByText(/You will love this!/i)).toBeVisible();
+    await expect(row.getByRole("button", { name: "Track" })).toBeVisible();
+    await expect(row.getByRole("button", { name: "Dismiss" })).toBeVisible();
   });
 
-  test("TC-05: Activity tab shows unread count badge", async ({ page }) => {
+  test("TC-05: Discovery nav link shows unread count badge", async ({
+    page,
+  }) => {
     const dp = new DiscoveryPage(page);
     await page.route("**/api/**", (route) => route.fulfill({ json: {} }));
     await mockLoggedIn(page);
@@ -245,12 +282,12 @@ test.describe("Discovery", () => {
     await dp.goto();
     await dp.waitForVisible(dp.heading());
 
-    // Unread count badge is rendered inside the Activity tab pill as a <span>
-    // The badge text is injected directly, so look for the count in the tab area
-    const activityPill = page.getByRole("button", { name: /Activity/i });
-    await expect(activityPill).toBeVisible();
-    // The pill contains the count as inline text — check the full content
-    await expect(activityPill).toContainText("3");
+    // Since #1421/#1434 the unread count lives on the Discovery nav link
+    // (visible badge + screen-reader text), not on an Activity tab.
+    const navLink = dp.discoveryNavLink();
+    await expect(navLink).toBeVisible();
+    await expect(navLink).toHaveAccessibleName(/3 unread recommendations/);
+    await expect(navLink.getByTestId("unread-badge")).toHaveText("3");
   });
 
   test("TC-06: empty state — no suggestions and no recommendations", async ({

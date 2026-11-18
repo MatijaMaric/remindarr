@@ -14,6 +14,11 @@ export class SettingsAccountPage extends BasePage {
     return this.page.getByRole("heading", { level: 1 });
   }
 
+  /** The profile form's Display name field (the only one since #1435). */
+  displayNameInput() {
+    return this.page.getByLabel(/display name/i);
+  }
+
   visibilitySelector() {
     return this.page.locator('[data-testid="visibility-selector"]');
   }

@@ -206,10 +206,14 @@ page component even mounts.
 4. Identify the role-toggle button in `regularuser`'s row:
    `getByRole("button", { name: /promote/i })` (aria-label is the translation of
    `admin.users.promote`).
-5. Click the promote button.
-6. Wait for the refetch to complete.
+5. Click the promote button. A confirmation dialog (`alertdialog`) titled
+   `"Make regularuser an admin?"` opens (#1428); no PUT has been sent yet.
+6. Click `"Promote to admin"` inside the dialog.
+7. Wait for the refetch to complete.
 
 **Expected**:
+
+- Exactly one `PUT …/user-2/role` was sent, after confirming; the dialog closes.
 
 - The `regularuser` row now displays an `"Admin"` badge (amber styling).
 - The role-toggle button aria-label changes to the `"Demote"` translation.

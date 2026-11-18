@@ -38,6 +38,11 @@ and the user record is persisted in the database. A mock cannot exercise any of 
 - The authenticated session is active (subsequent calls to `/api/auth/get-session`
   return a user object with `username: "testuser_01"`).
 
+> **Automation note**: the spec mocks sign-up. Since #1429 the redirect is driven only by
+> AuthContext's `user` becoming set (SignupPage's effect), which happens when get-session
+> returns a user after sign-up. The get-session mock must therefore be stateful: `null`
+> before the sign-up call, signed in after it (`mockSessionAfterSignup` in the spec).
+
 ---
 
 ## TC-02: Happy path — display name omitted (defaults to username)
@@ -169,39 +174,30 @@ replicated with a `page.route()` stub. No real DB state is required.
 
 ---
 
-## TC-06: Password too short — error banner
+## TC-06: Password too short — blocked by HTML5 validation
 
 **Priority**: P1
-**Backend**: Mock
+**Backend**: Mock (only to detect a stray request)
 
-**Why mock**: Better-auth enforces the 8-character minimum server-side. We mock the
-response to keep the test fast and hermetic, without a real DB write.
+**Why**: Since #1429 the password field has `minLength={8}`, so a sub-8-character password
+is rejected by the browser and never reaches better-auth.
 
 **Preconditions**:
 
-- `page.route()` intercepts `POST /api/auth/sign-up/email` and returns an error response
-  indicating the password is too short (the exact message better-auth sends for a
-  sub-8-character password).
-
-> **Note**: The 7-character password `"abc1234"` satisfies HTML5 validation (no
-> `minlength` attribute on the password field), so the form will submit and reach the
-> API — the rejection is purely server-side.
+- `page.route()` intercepts `POST /api/auth/sign-up/email` and records whether it was hit.
 
 **Steps**:
 
-1. Set up route intercept as described in preconditions.
-2. Navigate to `/signup`.
-3. `getByLabel("Username")` → fill `shortpwuser`.
-4. `getByLabel("Email")` → fill `shortpw@example.com`.
-5. `getByLabel("Password")` → fill `abc1234` (7 characters).
-6. `getByRole("button", { name: /create account/i })` → click.
-7. Wait for the error banner to appear.
+1. Navigate to `/signup`.
+2. `getByLabel("Username")` → fill `shortpwuser`.
+3. `getByLabel("Email")` → fill `shortpw@example.com`.
+4. `getByLabel("Password")` → fill `abc1234` (7 characters).
+5. Click the `"Sign Up"` button.
 
 **Expected**:
 
-- A red/error banner is visible above the form.
-- The banner contains a message referencing the password requirement (e.g. "Password must
-  be at least 8 characters" or whatever better-auth returns).
+- The password field reports `validity.tooShort === true` and is focused.
+- No sign-up request was sent.
 - The URL remains `/signup`.
 
 ---

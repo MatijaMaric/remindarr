@@ -49,6 +49,16 @@ export class AdminUsersPage extends BasePage {
     return this.userRow(username).getByRole("button", { name: /delete user/i });
   }
 
+  /** Promote / demote confirmation dialog (added in #1428). */
+  roleDialog() {
+    return this.page.getByRole("alertdialog");
+  }
+
+  /** Confirm button inside the role dialog; shares its label with the row button. */
+  confirmRoleButton(name: RegExp) {
+    return this.roleDialog().getByRole("button", { name });
+  }
+
   /** Confirmation dialog delete button */
   confirmDeleteButton() {
     return this.page.getByRole("button", { name: /delete permanently/i });

@@ -67,7 +67,6 @@ the exact fields without a seeded database.
 - An input labelled `"Display name"` showing `"Test User"` or `"testuser"` is visible.
 - A read-only input labelled `"Auth provider"` with value `"local"` is visible.
 - A read-only input labelled `"Role"` with value `"user"` is visible.
-- The breadcrumb area shows `/settings › account`.
 
 ---
 
@@ -124,7 +123,8 @@ the request body and success message without hitting a real database.
 1. Set up all route intercepts.
 2. Call `mockLoggedIn(page)`.
 3. Navigate to `/settings`.
-4. Locate the "Edit profile" card and clear the Display name field.
+4. Locate the Display name field — since #1435 the read-only profile card is folded into
+   the profile form, so there is exactly one `getByLabel(/display name/i)` — and clear it.
 5. Type `"Updated Name"` into the Display name field.
 6. Click the Save button in the Edit profile card.
 7. Wait for a success message to appear.

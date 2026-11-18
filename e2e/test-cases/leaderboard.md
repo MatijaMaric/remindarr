@@ -155,9 +155,10 @@ session's user id. A mocked session and mocked leaderboard response are sufficie
 **Expected**:
 
 - The current user's podium card has a visually distinct highlight (amber border/background).
-  Assert by checking that the card container has an amber highlight class or `aria` attribute
-  distinguishable from the other cards — use `getByText("@testuser").locator("..")` to
-  reach the card's parent and assert it has `class` containing `amber` or equivalent.
+  Each card is a profile link; locate it by display name (`LeaderboardPage.userCard("Test User")`)
+  and assert it has the `border-primary-border` highlight class (there is no semantic marker).
+  Don't locate by `@handle`: since #1420 the handle is hidden when it only repeats the name
+  (e.g. `"Alice"` / `"alice"`).
 - The other podium cards (Alice, Bob) do not carry the same highlight styling.
 - If the current user appears in the ranked list (rank 4+), that row is similarly
   highlighted compared to adjacent rows.

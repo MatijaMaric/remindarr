@@ -189,6 +189,7 @@ test.describe("Admin users page", () => {
     // Stateful handler: after PUT /role, GET returns promoted user
     let regularUserRole = "user";
     let regularUserIsAdmin = 0;
+    let putCalled = 0;
 
     await page.route("**/api/admin/users**", (route) => {
       const url = route.request().url();
@@ -197,6 +198,7 @@ test.describe("Admin users page", () => {
       if (method === "PUT" && url.includes("/user-2/role")) {
         regularUserRole = "admin";
         regularUserIsAdmin = 1;
+        putCalled++;
         return route.fulfill({ json: { message: "Role updated" } });
       }
 
@@ -221,8 +223,16 @@ test.describe("Admin users page", () => {
     await aup.gotoAdminUsers();
     await aup.waitForVisible(page.getByText("regularuser").first());
 
-    // Click promote button
+    // Click promote button — opens a confirmation dialog, no request yet
     await aup.promoteButton("regularuser").click();
+    await expect(
+      aup.roleDialog().getByText("Make regularuser an admin?"),
+    ).toBeVisible();
+    expect(putCalled).toBe(0);
+
+    await aup.confirmRoleButton(/promote to admin/i).click();
+    await expect(aup.roleDialog()).not.toBeVisible();
+    await expect.poll(() => putCalled).toBe(1);
 
     // After refetch, "Admin" badge appears in regularuser's row (last = sm:table-cell, visible)
     await expect(

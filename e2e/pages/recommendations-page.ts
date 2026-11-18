@@ -18,9 +18,17 @@ export class RecommendationsPage extends BasePage {
     return this.page.getByRole("heading", { name: "For you" });
   }
 
-  activityTab() {
-    // Button text includes an optional unread count badge, e.g. "Activity 1"
-    return this.page.getByRole("button", { name: /^Activity/ });
+  /**
+   * "Friends are recommending" row on /discovery — where received
+   * recommendations are listed since the Activity tab was removed (#1421).
+   */
+  friendsRow() {
+    return this.page.locator("section").filter({
+      has: this.page.getByRole("heading", {
+        name: "Friends are recommending",
+        level: 2,
+      }),
+    });
   }
 
   /** Recommend button on a title detail page. */
