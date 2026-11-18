@@ -57,6 +57,34 @@ export async function getUserRating(
   });
 }
 
+// D1 caps bound parameters per query; chunk like getOffersForTitles.
+const USER_RATINGS_TITLEIDS_CHUNK_SIZE = 100;
+
+export async function getUserRatingsForTitles(
+  userId: string,
+  titleIds: string[],
+): Promise<Map<string, RatingValue>> {
+  return traceDbQuery("getUserRatingsForTitles", async () => {
+    const result = new Map<string, RatingValue>();
+    if (titleIds.length === 0) return result;
+    const db = getDb();
+    for (
+      let i = 0;
+      i < titleIds.length;
+      i += USER_RATINGS_TITLEIDS_CHUNK_SIZE
+    ) {
+      const chunk = titleIds.slice(i, i + USER_RATINGS_TITLEIDS_CHUNK_SIZE);
+      const rows = await db
+        .select({ titleId: ratings.titleId, rating: ratings.rating })
+        .from(ratings)
+        .where(and(eq(ratings.userId, userId), inArray(ratings.titleId, chunk)))
+        .all();
+      for (const r of rows) result.set(r.titleId, r.rating as RatingValue);
+    }
+    return result;
+  });
+}
+
 export async function getRatedTitleIds(userId: string): Promise<Set<string>> {
   return traceDbQuery("getRatedTitleIds", async () => {
     const db = getDb();

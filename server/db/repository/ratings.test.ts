@@ -12,6 +12,7 @@ import {
   rateTitle,
   unrateTitle,
   getUserRating,
+  getUserRatingsForTitles,
   getTitleRatings,
   getFriendsRatings,
   rateEpisode,
@@ -116,6 +117,40 @@ describe("getUserRating", () => {
 
   it("returns null when no rating exists", async () => {
     expect(await getUserRating(userA, "movie-1")).toBeNull();
+  });
+});
+
+describe("getUserRatingsForTitles", () => {
+  it("returns an empty map for an empty id list", async () => {
+    await rateTitle(userA, "movie-1", "LOVE");
+    expect((await getUserRatingsForTitles(userA, [])).size).toBe(0);
+  });
+
+  it("returns only rated titles and only the given user's ratings", async () => {
+    await rateTitle(userA, "movie-1", "LOVE");
+    await rateTitle(userB, "movie-2", "HATE");
+    await rateTitle(userB, "movie-1", "DISLIKE");
+
+    const map = await getUserRatingsForTitles(userA, [
+      "movie-1",
+      "movie-2",
+      "show-1",
+    ]);
+    expect([...map.entries()]).toEqual([["movie-1", "LOVE"]]);
+  });
+
+  it("handles more ids than one chunk", async () => {
+    const ids = Array.from({ length: 250 }, (_, i) => `bulk-${i}`);
+    await upsertTitles(ids.map((id) => makeParsedTitle({ id, title: id })));
+    await rateTitle(userA, "bulk-0", "LIKE");
+    await rateTitle(userA, "bulk-150", "LOVE");
+    await rateTitle(userA, "bulk-249", "HATE");
+
+    const map = await getUserRatingsForTitles(userA, ids);
+    expect(map.size).toBe(3);
+    expect(map.get("bulk-0")).toBe("LIKE");
+    expect(map.get("bulk-150")).toBe("LOVE");
+    expect(map.get("bulk-249")).toBe("HATE");
   });
 });
 

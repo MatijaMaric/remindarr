@@ -7,6 +7,7 @@ import {
   getSessionWithUser,
   trackTitle,
   upsertTitles,
+  rateTitle,
 } from "../db/repository";
 import { makeParsedTitle, makeParsedOffer } from "../test-utils/fixtures";
 import { requireAuth } from "../middleware/auth";
@@ -118,6 +119,36 @@ afterAll(() => {
 });
 
 describe("GET /overlap/:friendUsername — happy path", () => {
+  it("returns each user's rating for intersection titles", async () => {
+    await setProfileVisibility(bobId, "public");
+    await insertTitle("title-1");
+    await insertTitle("title-2");
+    await insertTitle("title-3");
+    for (const id of ["title-1", "title-2", "title-3"]) {
+      await trackTitle(id, aliceId);
+      await trackTitle(id, bobId);
+    }
+    await rateTitle(aliceId, "title-1", "LOVE");
+    await rateTitle(bobId, "title-1", "HATE");
+    await rateTitle(bobId, "title-2", "LIKE");
+    // Charlie's rating must not leak into either side
+    await rateTitle(charlieId, "title-3", "LOVE");
+
+    const res = await app.request("/overlap/bob", {
+      headers: authHeaders(aliceToken),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const byId = Object.fromEntries(
+      body.titles.map((t: any) => [t.id, [t.viewer_rating, t.friend_rating]]),
+    );
+    expect(byId).toEqual({
+      "title-1": ["LOVE", "HATE"],
+      "title-2": [null, "LIKE"],
+      "title-3": [null, null],
+    });
+  });
+
   it("returns 200 with intersection for a mutual friend", async () => {
     // Setup: make bob public, alice and bob both track title-1
     await setProfileVisibility(bobId, "public");

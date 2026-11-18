@@ -238,6 +238,7 @@ export {
   rateTitle,
   unrateTitle,
   getUserRating,
+  getUserRatingsForTitles,
   getTitleRatings,
   getFriendsRatings,
   rateEpisode,
