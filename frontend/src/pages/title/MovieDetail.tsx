@@ -59,15 +59,27 @@ export default function MovieDetail({ data }: { data: MovieDetailsResponse }) {
   const watchHistory = historyData?.pages.flatMap((p) => p.history) ?? [];
   const playCount = historyData?.pages[0]?.playCount ?? 0;
 
+  // Keep the cached title in step, so remounting from cache (e.g. Back
+  // before the save settles) shows the new state (#1443).
+  function setCachedWatched(isWatched: boolean) {
+    qc.setQueryData<MovieDetailsResponse>(["title-detail", title.id], (old) =>
+      old ? { ...old, title: { ...old.title, is_watched: isWatched } } : old,
+    );
+  }
+
   const toggleMutation = useMutation({
     mutationFn: (currentlyWatched: boolean) =>
       currentlyWatched ? api.unwatchMovie(title.id) : api.watchMovie(title.id),
     onMutate: (currentlyWatched) => {
       setWatched(!currentlyWatched);
+      setCachedWatched(!currentlyWatched);
       return { prev: currentlyWatched };
     },
     onError: (_err, _vars, context) => {
-      if (context) setWatched(context.prev);
+      if (context) {
+        setWatched(context.prev);
+        setCachedWatched(context.prev);
+      }
       toast.error("Could not save watched status. Please retry.");
     },
     onSettled: () => {

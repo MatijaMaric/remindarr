@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
 import type { ComponentProps } from "react";
@@ -55,9 +61,11 @@ const title: Title = {
 function renderMovie({
   signedIn,
   pinned,
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
 }: {
   signedIn: boolean;
   pinned?: boolean;
+  client?: QueryClient;
 }) {
   const data = {
     title: { ...title, is_pinned: pinned },
@@ -80,11 +88,7 @@ function renderMovie({
     subscriptions: null,
   } as ComponentProps<typeof AuthContext>["value"];
   return render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={client}>
       <AuthContext value={auth}>
         <MemoryRouter>
           <MovieDetail data={data} />
@@ -95,6 +99,31 @@ function renderMovie({
 }
 
 describe("MovieDetail", () => {
+  it("writes the optimistic watched state into the title cache (#1443)", async () => {
+    // A remount from cache (Back before the save settles) must not show
+    // the pre-toggle state.
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    client.setQueryData(["title-detail", "movie-603"], {
+      title: { ...title, is_watched: false },
+    });
+    let reject!: (e: Error) => void;
+    apiMock.watchMovie.mockImplementation(
+      () => new Promise((_, r) => (reject = r)),
+    );
+    renderMovie({ signedIn: false, client });
+    const cached = () =>
+      client.getQueryData<MovieDetailsResponse>(["title-detail", "movie-603"])
+        ?.title.is_watched;
+
+    fireEvent.click(screen.getByRole("button", { name: "Mark as watched" }));
+    await waitFor(() => expect(cached()).toBe(true));
+
+    reject(new Error("boom"));
+    await waitFor(() => expect(cached()).toBe(false));
+  });
+
   it("does not request watch history when signed out (#1405)", async () => {
     // Signed out, the request 401s, the 401 resets the session and every
     // query refetches — an endless request loop.
