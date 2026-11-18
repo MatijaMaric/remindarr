@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, afterAll } from "bun:test";
+import { describe, it, expect, beforeEach, afterAll, spyOn } from "bun:test";
+import * as ratingsRepo from "../db/repository/ratings";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import {
@@ -7,6 +8,7 @@ import {
   getSessionWithUser,
   trackTitle,
   upsertTitles,
+  rateTitle,
 } from "../db/repository";
 import { makeParsedTitle, makeParsedOffer } from "../test-utils/fixtures";
 import { requireAuth } from "../middleware/auth";
@@ -118,6 +120,48 @@ afterAll(() => {
 });
 
 describe("GET /overlap/:friendUsername — happy path", () => {
+  it("returns each user's rating for intersection titles", async () => {
+    await setProfileVisibility(bobId, "public");
+    await insertTitle("title-1");
+    await insertTitle("title-2");
+    await insertTitle("title-3");
+    for (const id of ["title-1", "title-2", "title-3"]) {
+      await trackTitle(id, aliceId);
+      await trackTitle(id, bobId);
+    }
+    // Scores: title-3 = 8, title-1 = 5, title-2 = 3 (sort differs from id order)
+    await rateTitle(aliceId, "title-3", "LOVE");
+    await rateTitle(bobId, "title-3", "LOVE");
+    await rateTitle(aliceId, "title-1", "LOVE");
+    await rateTitle(bobId, "title-1", "HATE");
+    await rateTitle(bobId, "title-2", "LIKE");
+    // Charlie's rating must not leak into either side
+    await rateTitle(charlieId, "title-2", "LOVE");
+
+    const batchSpy = spyOn(ratingsRepo, "getUserRatingsForTitles");
+    const singleSpy = spyOn(ratingsRepo, "getUserRating");
+    try {
+      const res = await app.request("/overlap/bob", {
+        headers: authHeaders(aliceToken),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(
+        body.titles.map((t: any) => [t.id, t.viewer_rating, t.friend_rating]),
+      ).toEqual([
+        ["title-3", "LOVE", "LOVE"],
+        ["title-1", "LOVE", "HATE"],
+        ["title-2", null, "LIKE"],
+      ]);
+      // One batched lookup per user, no per-title reads (#1438)
+      expect(batchSpy).toHaveBeenCalledTimes(2);
+      expect(singleSpy).not.toHaveBeenCalled();
+    } finally {
+      batchSpy.mockRestore();
+      singleSpy.mockRestore();
+    }
+  });
+
   it("returns 200 with intersection for a mutual friend", async () => {
     // Setup: make bob public, alice and bob both track title-1
     await setProfileVisibility(bobId, "public");

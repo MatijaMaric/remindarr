@@ -7,7 +7,7 @@ import {
   getPublicTrackedTitleIds,
   getOffersForTitles,
   areMutualFollowers,
-  getUserRating,
+  getUserRatingsForTitles,
 } from "../db/repository";
 import { getGenresForTitles } from "../db/repository/titles";
 import { getDb } from "../db/schema";
@@ -235,21 +235,10 @@ app.get(
     }
 
     // 8. Ratings for both users across intersection
-    const [viewerRatings, friendRatings] = await Promise.all([
-      Promise.all(
-        intersectionIds.map((id) =>
-          getUserRating(viewerId, id).then((r) => [id, r] as const),
-        ),
-      ),
-      Promise.all(
-        intersectionIds.map((id) =>
-          getUserRating(friendId, id).then((r) => [id, r] as const),
-        ),
-      ),
+    const [viewerRatingMap, friendRatingMap] = await Promise.all([
+      getUserRatingsForTitles(viewerId, intersectionIds),
+      getUserRatingsForTitles(friendId, intersectionIds),
     ]);
-
-    const viewerRatingMap = new Map(viewerRatings);
-    const friendRatingMap = new Map(friendRatings);
 
     const ratingScore = (r: string | null): number => {
       if (r === "LOVE") return 4;
