@@ -409,6 +409,13 @@ import {
   insertPersonCreditAlerts,
   listPersonCreditAlerts,
 } from "../db/repository/person-follows";
+import { getDb, notifiers } from "../db/schema";
+import { eq } from "drizzle-orm";
+import {
+  upsertAchievementDef,
+  upsertUserAchievement,
+} from "../db/repository/achievements";
+import { ACHIEVEMENTS } from "../achievements/definitions";
 
 // Suppress Sentry withMonitor calls from worker.ts
 const withMonitorSpy = spyOn(Sentry, "withMonitor").mockImplementation(((
@@ -517,6 +524,72 @@ describe("New credits in Bun digests", () => {
     await processJobs();
 
     expect(await listPersonCreditAlerts(id)).toHaveLength(1);
+  });
+});
+
+describe("achievements do not leak between a user's notifiers (#1440)", () => {
+  beforeEach(async () => {
+    setupTestDb();
+    await registerNotificationJobs();
+    recordDeliverySpy.mockResolvedValue(undefined);
+    markNotifierSentSpy.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    getProviderSpy.mockClear();
+    buildContentSpy.mockClear();
+  });
+
+  it("does not send the badge to a notifier with achievements off", async () => {
+    const uid = await createUser("badgeuser", "hash");
+    buildContentSpy.mockResolvedValue({ episodes: [], movies: [], date: "x" });
+    const send = mock(async () => {});
+    getProviderSpy.mockReturnValue({
+      name: "discord",
+      send,
+      validateConfig: () => ({ valid: true }),
+    });
+    const { time } = nowUtc();
+    const onId = await createNotifier(
+      uid,
+      "discord",
+      "On",
+      { webhookUrl: "https://discord.com/on" },
+      time,
+      "UTC",
+    );
+    await createNotifier(
+      uid,
+      "discord",
+      "Off",
+      { webhookUrl: "https://discord.com/off" },
+      time,
+      "UTC",
+    );
+    await getDb()
+      .update(notifiers)
+      .set({ achievementsEnabled: 1 })
+      .where(eq(notifiers.id, onId))
+      .run();
+    await upsertAchievementDef(ACHIEVEMENTS[0]);
+    await upsertUserAchievement(
+      uid,
+      ACHIEVEMENTS[0].key,
+      1,
+      new Date().toISOString(),
+    );
+
+    enqueueJob("send-notifications");
+    await processJobs();
+
+    // Only the achievements-on notifier has anything to send.
+    expect(send).toHaveBeenCalledTimes(1);
+    const [config, content] = send.mock.calls[0] as unknown as [
+      { webhookUrl: string },
+      { achievementsEarned?: unknown[] },
+    ];
+    expect(config.webhookUrl).toBe("https://discord.com/on");
+    expect(content.achievementsEarned).toHaveLength(1);
   });
 });
 

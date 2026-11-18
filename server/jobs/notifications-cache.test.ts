@@ -20,6 +20,7 @@ import {
   afterAll,
   afterEach,
   spyOn,
+  mock,
 } from "bun:test";
 
 import * as contentModule from "../notifications/content";
@@ -35,7 +36,13 @@ const getProviderSpy = spyOn(registryModule, "getProvider");
 
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createUser, createNotifier, getDueNotifiers } from "../db/repository";
-import { getDb, jobs } from "../db/schema";
+import { getDb, jobs, notifiers } from "../db/schema";
+import { eq } from "drizzle-orm";
+import {
+  upsertAchievementDef,
+  upsertUserAchievement,
+} from "../db/repository/achievements";
+import { ACHIEVEMENTS } from "../achievements/definitions";
 import { processPendingJobs } from "./processor";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -228,5 +235,66 @@ describe("notification content caching (N+1 fix)", () => {
     const calledUserIds = buildContentSpy.mock.calls.map((c) => c[0] as string);
     expect(calledUserIds).toContain(userId);
     expect(calledUserIds).toContain(userId2);
+  });
+});
+
+describe("achievements do not leak between a user's notifiers (#1440)", () => {
+  it("does not send the badge to a notifier with achievements off", async () => {
+    const { time: testTime, date: testDate } = nowUtc();
+    buildContentSpy.mockResolvedValue({
+      episodes: [],
+      movies: [],
+      date: testDate,
+    });
+    const send = mock(async () => {});
+    getProviderSpy.mockReturnValue({
+      name: "discord",
+      send,
+      validateConfig: () => ({ valid: true }),
+    });
+
+    const onId = await createNotifier(
+      userId,
+      "discord",
+      "On",
+      { webhookUrl: "https://discord.com/on" },
+      testTime,
+      "UTC",
+    );
+    await createNotifier(
+      userId,
+      "discord",
+      "Off",
+      { webhookUrl: "https://discord.com/off" },
+      testTime,
+      "UTC",
+    );
+    await getDb()
+      .update(notifiers)
+      .set({ achievementsEnabled: 1 })
+      .where(eq(notifiers.id, onId))
+      .run();
+    await upsertAchievementDef(ACHIEVEMENTS[0]);
+    await upsertUserAchievement(
+      userId,
+      ACHIEVEMENTS[0].key,
+      1,
+      new Date().toISOString(),
+    );
+
+    await insertSendNotificationsJob();
+    await processPendingJobs();
+
+    // Only the achievements-on notifier has anything to send.
+    expect(send).toHaveBeenCalledTimes(1);
+    const [config, content] = send.mock.calls[0] as unknown as [
+      { webhookUrl: string },
+      { achievementsEarned?: unknown[] },
+    ];
+    expect(config.webhookUrl).toBe("https://discord.com/on");
+    expect(content.achievementsEarned).toHaveLength(1);
+
+    getProviderSpy.mockClear();
+    buildContentSpy.mockClear();
   });
 });

@@ -165,7 +165,7 @@ export async function attachPersonCredits(
   content: NotificationContent,
 ): Promise<{ content: NotificationContent; pending: PersonCreditAlert[] }> {
   const pending = await listPersonCreditAlerts(notifierId);
-  if (pending.length === 0) return { content, pending };
+  if (pending.length === 0) return { content: { ...content }, pending };
   return {
     content: {
       ...content,
