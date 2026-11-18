@@ -79,7 +79,7 @@ Use the platform interface, not Bun-specific APIs, in shared code.
 
 ## Key patterns (server-wide)
 
-- Rate limiting: Bun uses network peers, with forwarded chains accepted only from `TRUSTED_PROXIES`; Workers use the platform client IP and atomic D1 counters. Store errors fail closed.
+- Rate limiting: Bun uses network peers, with forwarded chains accepted only from `TRUSTED_PROXIES`; Workers use the platform client IP and atomic D1 counters. Store errors fail closed (503) unless the limiter sets `failOpenReads`, which lets GET/HEAD through and logs `failOpen` with the warn. Read scopes (`global`, `search`, `browse`, `details`, `ratings`, `episode-comments`, `suggestions`, `suggestion-dismiss`, `writes`) opt in; `auth` opts in only for `isSafeAuthRead` paths (`get-session`, `custom/providers`); `import`, `account-export` and `sync` stay closed for every method.
 - Auth middleware is composable: `optionalAuth` → `requireAuth` → `requireAdmin` (all in `server/middleware/auth.ts`)
 - OIDC settings have env-var precedence over DB (admin UI editable but env overrides)
 - All DB writes use transactions for consistency

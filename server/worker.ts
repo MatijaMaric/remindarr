@@ -61,6 +61,7 @@ import {
   rateLimiter,
   SqlRateLimitStore,
   pruneRateLimits,
+  isSafeAuthRead,
 } from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
 import titlesRoutes from "./routes/titles";
@@ -406,6 +407,7 @@ function createApp(env: Env) {
     rateLimiter({
       store: rateLimitStore,
       scope: "global",
+      failOpenReads: true,
       limit: CONFIG.GLOBAL_RATE_LIMIT_PER_MINUTE,
       windowMs: 60_000,
     }),
@@ -420,6 +422,7 @@ function createApp(env: Env) {
     rateLimiter({
       store: rateLimitStore,
       scope: "auth",
+      failOpenReads: isSafeAuthRead,
       limit: CONFIG.AUTH_RATE_LIMIT_PER_MINUTE,
       windowMs: 60_000,
     }),
@@ -446,6 +449,7 @@ function createApp(env: Env) {
   const searchRateLimiter = rateLimiter({
     store: rateLimitStore,
     scope: "search",
+    failOpenReads: true,
     limit: 30,
     windowMs: 60_000,
   });
@@ -456,6 +460,7 @@ function createApp(env: Env) {
   const browseRateLimiter = rateLimiter({
     store: rateLimitStore,
     scope: "browse",
+    failOpenReads: true,
     limit: 30,
     windowMs: 60_000,
   });
@@ -490,6 +495,7 @@ function createApp(env: Env) {
   const ratingsRateLimiter = rateLimiter({
     store: rateLimitStore,
     scope: "ratings",
+    failOpenReads: true,
     limit: 60,
     windowMs: 60_000,
   });
@@ -500,6 +506,7 @@ function createApp(env: Env) {
   const episodeCommentsRateLimiter = rateLimiter({
     store: rateLimitStore,
     scope: "episode-comments",
+    failOpenReads: true,
     limit: 60,
     windowMs: 60_000,
   });
@@ -520,6 +527,7 @@ function createApp(env: Env) {
   const suggestionsRateLimiter = rateLimiter({
     store: rateLimitStore,
     scope: "suggestions",
+    failOpenReads: true,
     limit: 20,
     windowMs: 60_000,
   });
@@ -528,6 +536,7 @@ function createApp(env: Env) {
   const dismissRateLimiter = rateLimiter({
     store: rateLimitStore,
     scope: "suggestion-dismiss",
+    failOpenReads: true,
     limit: 60,
     windowMs: 60_000,
   });
@@ -545,6 +554,7 @@ function createApp(env: Env) {
   const writeRateLimiter = rateLimiter({
     store: rateLimitStore,
     scope: "writes",
+    failOpenReads: true,
     limit: 60,
     windowMs: 60_000,
   });
@@ -661,6 +671,7 @@ function createApp(env: Env) {
   const detailsRateLimiter = rateLimiter({
     store: rateLimitStore,
     scope: "details",
+    failOpenReads: true,
     limit: 60,
     windowMs: 60_000,
   });

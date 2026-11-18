@@ -51,6 +51,12 @@ import { sql, eq, and, asc } from "drizzle-orm";
 
 const log = logger.child({ module: "details" });
 
+// tmdbRequest throws "TMDB API error <status>: ..." for non-2xx replies. A 404
+// is a bad id from the client, so it logs at warn, not error.
+function isTmdbNotFound(e: unknown): boolean {
+  return e instanceof Error && e.message.startsWith("TMDB API error 404");
+}
+
 const titleIdParam = z.object({
   id: z.string().regex(/^(movie|tv)-\d+$/, "id must match movie-N or tv-N"),
 });
@@ -285,11 +291,14 @@ app.get(
           });
         }
       } else {
-        log.error("TMDB season fetch failed", {
-          tmdbId: title.tmdb_id,
-          season: seasonNumber,
-          err: seasonResult.reason,
-        });
+        log[isTmdbNotFound(seasonResult.reason) ? "warn" : "error"](
+          "TMDB season fetch failed",
+          {
+            tmdbId: title.tmdb_id,
+            season: seasonNumber,
+            err: seasonResult.reason,
+          },
+        );
       }
 
       if (showResult.status === "fulfilled" && showResult.value?.seasons) {
@@ -492,9 +501,11 @@ app.get("/person/:personId", zValidator("param", personIdParam), async (c) => {
   try {
     person = await fetchPersonDetails(personId);
   } catch (e) {
-    log.error("TMDB person fetch failed", { personId, err: e });
-    // tmdbRequest throws "TMDB API error <status>: ..." for non-2xx replies.
-    if (e instanceof Error && e.message.startsWith("TMDB API error 404")) {
+    log[isTmdbNotFound(e) ? "warn" : "error"]("TMDB person fetch failed", {
+      personId,
+      err: e,
+    });
+    if (isTmdbNotFound(e)) {
       return err(c, "Person not found", 404);
     }
     return err(c, "Failed to fetch person", 503);

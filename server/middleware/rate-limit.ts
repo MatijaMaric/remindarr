@@ -126,6 +126,21 @@ interface RateLimitOptions {
   windowMs: number;
   /** Defaults to the client address established by the runtime adapter. */
   keyGenerator?: (c: Context<AppEnv>) => string;
+  /**
+   * When the store throws, let GET/HEAD requests through if this is true (or
+   * returns true). Other methods, and scopes that do not opt in, fail closed.
+   */
+  failOpenReads?: boolean | ((c: Context<AppEnv>) => boolean);
+}
+
+// Auth reads that test no credential: session lookup and the provider list.
+const SAFE_AUTH_READ_PATHS = new Set([
+  "/api/auth/get-session",
+  "/api/auth/custom/providers",
+]);
+
+export function isSafeAuthRead(c: Context<AppEnv>): boolean {
+  return SAFE_AUTH_READ_PATHS.has(c.req.path);
 }
 
 export function rateLimiter(options: RateLimitOptions) {
@@ -149,12 +164,21 @@ export function rateLimiter(options: RateLimitOptions) {
         now,
       ));
     } catch (err) {
+      const isRead = c.req.method === "GET" || c.req.method === "HEAD";
+      const failOpen =
+        isRead &&
+        (typeof options.failOpenReads === "function"
+          ? options.failOpenReads(c)
+          : options.failOpenReads === true);
       log.warn("Rate limit store error", {
         scope,
         ip,
         path: routePath(c) || "<unmatched>",
+        method: c.req.method,
+        failOpen,
         error: err instanceof Error ? err.message : String(err),
       });
+      if (failOpen) return next();
       c.header("Retry-After", "60");
       return c.json({ error: "Rate limiting unavailable; please retry" }, 503);
     }

@@ -15,7 +15,11 @@ import {
 } from "./db/repository";
 import { buildOgTags, wrappedShareOgTags } from "./lib/og-tags";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
-import { rateLimiter, MemoryRateLimitStore } from "./middleware/rate-limit";
+import {
+  rateLimiter,
+  MemoryRateLimitStore,
+  isSafeAuthRead,
+} from "./middleware/rate-limit";
 import syncRoutes from "./routes/sync";
 import titlesRoutes from "./routes/titles";
 import searchRoutes from "./routes/search";
@@ -260,6 +264,7 @@ app.use(
   rateLimiter({
     store: rateLimitStore,
     scope: "global",
+    failOpenReads: true,
     limit: CONFIG.GLOBAL_RATE_LIMIT_PER_MINUTE,
     windowMs: 60_000,
   }),
@@ -279,6 +284,7 @@ app.use(
   rateLimiter({
     store: rateLimitStore,
     scope: "auth",
+    failOpenReads: isSafeAuthRead,
     limit: CONFIG.AUTH_RATE_LIMIT_PER_MINUTE,
     windowMs: 60_000,
   }),
@@ -301,6 +307,7 @@ app.route("/api/titles", titlesRoutes);
 const searchRateLimiter = rateLimiter({
   store: rateLimitStore,
   scope: "search",
+  failOpenReads: true,
   limit: 30,
   windowMs: 60_000,
 });
@@ -311,6 +318,7 @@ app.route("/api/search", searchRoutes);
 const browseRateLimiter = rateLimiter({
   store: rateLimitStore,
   scope: "browse",
+  failOpenReads: true,
   limit: 30,
   windowMs: 60_000,
 });
@@ -346,6 +354,7 @@ app.route("/api/social", socialRoutes);
 const writeRateLimiter = rateLimiter({
   store: rateLimitStore,
   scope: "writes",
+  failOpenReads: true,
   limit: 60,
   windowMs: 60_000,
 });
@@ -374,6 +383,7 @@ app.route("/api/recommendations", recommendationsRoutes);
 const suggestionsRateLimiter = rateLimiter({
   store: rateLimitStore,
   scope: "suggestions",
+  failOpenReads: true,
   limit: 20,
   windowMs: 60_000,
 });
@@ -382,6 +392,7 @@ const suggestionsRateLimiter = rateLimiter({
 const dismissRateLimiter = rateLimiter({
   store: rateLimitStore,
   scope: "suggestion-dismiss",
+  failOpenReads: true,
   limit: 60,
   windowMs: 60_000,
 });
@@ -495,6 +506,7 @@ app.route("/api/jobs", jobsRoutes);
 const detailsRateLimiter = rateLimiter({
   store: rateLimitStore,
   scope: "details",
+  failOpenReads: true,
   limit: 60,
   windowMs: 60_000,
 });

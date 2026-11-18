@@ -10,6 +10,7 @@ import {
 import { Hono } from "hono";
 import type { AppEnv } from "../types";
 import { CONFIG } from "../config";
+import { Logger } from "../logger";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { upsertTitles } from "../db/repository";
 import * as repository from "../db/repository";
@@ -368,6 +369,36 @@ describe("GET /details/show/:id/season/:season", () => {
     const body = await res.json();
     expect(body.seasons).toEqual([]);
   });
+
+  for (const [reason, level] of [
+    ['TMDB API error 404: {"status_code":34}', "warn"],
+    ["TMDB API error 500: boom", "error"],
+  ] as const) {
+    it(`logs a season fetch failure (${reason.slice(0, 18)}) at ${level}`, async () => {
+      await upsertTitles([
+        makeParsedTitle({
+          id: "tv-555",
+          objectType: "SHOW",
+          title: "Season Show",
+          tmdbId: "555",
+        }),
+      ]);
+      getSpy("fetchSeasonDetails").mockRejectedValueOnce(new Error(reason));
+      const warn = spyOn(Logger.prototype, "warn");
+      const error = spyOn(Logger.prototype, "error");
+      try {
+        const res = await app.request("/details/show/tv-555/season/1");
+        expect(res.status).toBe(200);
+        const logged = (spy: typeof warn) =>
+          spy.mock.calls.some((c) => c[0] === "TMDB season fetch failed");
+        expect(logged(warn)).toBe(level === "warn");
+        expect(logged(error)).toBe(level === "error");
+      } finally {
+        warn.mockRestore();
+        error.mockRestore();
+      }
+    });
+  }
 });
 
 describe("GET /details/show/:id/season/:season/episode/:episode", () => {
@@ -623,18 +654,37 @@ describe("GET /details/person/:personId", () => {
     (tmdbClient.fetchPersonDetails as any).mockRejectedValueOnce(
       new Error('TMDB API error 404: {"status_code":34}'),
     );
-    const res = await app.request("/details/person/999");
-    expect(res.status).toBe(404);
-    const body = await res.json();
-    expect(body.person).toBeUndefined();
+    const warn = spyOn(Logger.prototype, "warn");
+    const error = spyOn(Logger.prototype, "error");
+    try {
+      const res = await app.request("/details/person/999");
+      expect(res.status).toBe(404);
+      const body = await res.json();
+      expect(body.person).toBeUndefined();
+      const logged = (spy: typeof warn) =>
+        spy.mock.calls.some((c) => c[0] === "TMDB person fetch failed");
+      expect(logged(warn)).toBe(true);
+      expect(logged(error)).toBe(false);
+    } finally {
+      warn.mockRestore();
+      error.mockRestore();
+    }
   });
 
   it("returns 503 when TMDB fails for any other reason", async () => {
     (tmdbClient.fetchPersonDetails as any).mockRejectedValueOnce(
       new Error("TMDB API error 401: invalid key"),
     );
-    const res = await app.request("/details/person/999");
-    expect(res.status).toBe(503);
+    const error = spyOn(Logger.prototype, "error");
+    try {
+      const res = await app.request("/details/person/999");
+      expect(res.status).toBe(503);
+      expect(
+        error.mock.calls.some((c) => c[0] === "TMDB person fetch failed"),
+      ).toBe(true);
+    } finally {
+      error.mockRestore();
+    }
   });
 
   it("sends only the fields the page reads, plus episode_count and in_library", async () => {
