@@ -161,3 +161,90 @@ describe("worker error logging includes stack traces", () => {
     consoleErrorSpy.mockRestore();
   });
 });
+
+describe("worker drain and in-flight guards (#1442)", () => {
+  function deferred() {
+    let resolve!: () => void;
+    const promise = new Promise<void>((r) => (resolve = r));
+    return { promise, resolve };
+  }
+
+  it("drains all pending jobs of one name within a single tick", async () => {
+    let calls = 0;
+    registerHandler("drain-job", async () => {
+      calls++;
+    });
+    for (let i = 0; i < 20; i++) enqueueJob("drain-job");
+
+    await processJobs();
+
+    expect(calls).toBe(20);
+    expect(getJobStats()["drain-job"].completed).toBe(20);
+  });
+
+  it("stops claiming a name once its per-tick budget is spent", async () => {
+    registerHandler("budget-job", async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    for (let i = 0; i < 10; i++) enqueueJob("budget-job");
+
+    await processJobs(30);
+
+    const stats = getJobStats()["budget-job"];
+    expect(stats.completed).toBeGreaterThanOrEqual(1);
+    expect(stats.completed).toBeLessThan(10);
+    expect(stats.pending).toBe(10 - stats.completed);
+  });
+
+  it("does not start a tick while the previous one is still running", async () => {
+    const gate = deferred();
+    const started = deferred();
+    let calls = 0;
+    registerHandler("overlap-job", async () => {
+      calls++;
+      started.resolve();
+      await gate.promise;
+    });
+    enqueueJob("overlap-job");
+    enqueueJob("overlap-job");
+
+    const first = processJobs();
+    await started.promise;
+    await processJobs(); // overlapping tick returns without claiming
+    expect(calls).toBe(1);
+    expect(getJobStats()["overlap-job"].running).toBe(1);
+    expect(getJobStats()["overlap-job"].pending).toBe(1);
+
+    gate.resolve();
+    await first;
+    expect(calls).toBe(2);
+  });
+
+  it("skips a name whose timed-out handler has not settled yet", async () => {
+    const original = CONFIG.JOB_HANDLER_TIMEOUT_MS;
+    CONFIG.JOB_HANDLER_TIMEOUT_MS = 30;
+    const gate = deferred();
+    let calls = 0;
+    try {
+      registerHandler("unsettled-job", async () => {
+        calls++;
+        if (calls === 1) await gate.promise;
+      });
+      enqueueJob("unsettled-job", undefined, { maxAttempts: 1 });
+      enqueueJob("unsettled-job", undefined, { maxAttempts: 1 });
+
+      await processJobs(); // first job times out; its handler is still running
+      await processJobs(); // name still unsettled: second job is not claimed
+      expect(calls).toBe(1);
+      expect(getJobStats()["unsettled-job"].pending).toBe(1);
+
+      gate.resolve();
+      await gate.promise;
+      await processJobs();
+      expect(calls).toBe(2);
+      expect(getJobStats()["unsettled-job"].completed).toBe(1);
+    } finally {
+      CONFIG.JOB_HANDLER_TIMEOUT_MS = original;
+    }
+  });
+});
