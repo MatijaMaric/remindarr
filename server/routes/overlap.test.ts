@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, afterAll } from "bun:test";
+import { describe, it, expect, beforeEach, afterAll, spyOn } from "bun:test";
+import * as ratingsRepo from "../db/repository/ratings";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import {
@@ -128,25 +129,37 @@ describe("GET /overlap/:friendUsername — happy path", () => {
       await trackTitle(id, aliceId);
       await trackTitle(id, bobId);
     }
+    // Scores: title-3 = 8, title-1 = 5, title-2 = 3 (sort differs from id order)
+    await rateTitle(aliceId, "title-3", "LOVE");
+    await rateTitle(bobId, "title-3", "LOVE");
     await rateTitle(aliceId, "title-1", "LOVE");
     await rateTitle(bobId, "title-1", "HATE");
     await rateTitle(bobId, "title-2", "LIKE");
     // Charlie's rating must not leak into either side
-    await rateTitle(charlieId, "title-3", "LOVE");
+    await rateTitle(charlieId, "title-2", "LOVE");
 
-    const res = await app.request("/overlap/bob", {
-      headers: authHeaders(aliceToken),
-    });
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    const byId = Object.fromEntries(
-      body.titles.map((t: any) => [t.id, [t.viewer_rating, t.friend_rating]]),
-    );
-    expect(byId).toEqual({
-      "title-1": ["LOVE", "HATE"],
-      "title-2": [null, "LIKE"],
-      "title-3": [null, null],
-    });
+    const batchSpy = spyOn(ratingsRepo, "getUserRatingsForTitles");
+    const singleSpy = spyOn(ratingsRepo, "getUserRating");
+    try {
+      const res = await app.request("/overlap/bob", {
+        headers: authHeaders(aliceToken),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(
+        body.titles.map((t: any) => [t.id, t.viewer_rating, t.friend_rating]),
+      ).toEqual([
+        ["title-3", "LOVE", "LOVE"],
+        ["title-1", "LOVE", "HATE"],
+        ["title-2", null, "LIKE"],
+      ]);
+      // One batched lookup per user, no per-title reads (#1438)
+      expect(batchSpy).toHaveBeenCalledTimes(2);
+      expect(singleSpy).not.toHaveBeenCalled();
+    } finally {
+      batchSpy.mockRestore();
+      singleSpy.mockRestore();
+    }
   });
 
   it("returns 200 with intersection for a mutual friend", async () => {

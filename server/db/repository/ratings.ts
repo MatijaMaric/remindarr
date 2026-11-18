@@ -57,8 +57,8 @@ export async function getUserRating(
   });
 }
 
-// D1 caps bound parameters per query; chunk like getOffersForTitles.
-const USER_RATINGS_TITLEIDS_CHUNK_SIZE = 100;
+// D1 allows at most 100 bound parameters per query; userId takes one.
+export const USER_RATINGS_TITLEIDS_CHUNK_SIZE = 99;
 
 export async function getUserRatingsForTitles(
   userId: string,

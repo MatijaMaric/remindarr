@@ -13,6 +13,7 @@ import {
   unrateTitle,
   getUserRating,
   getUserRatingsForTitles,
+  USER_RATINGS_TITLEIDS_CHUNK_SIZE,
   getTitleRatings,
   getFriendsRatings,
   rateEpisode,
@@ -130,13 +131,16 @@ describe("getUserRatingsForTitles", () => {
     await rateTitle(userA, "movie-1", "LOVE");
     await rateTitle(userB, "movie-2", "HATE");
     await rateTitle(userB, "movie-1", "DISLIKE");
+    // Rated but not requested: must not come back
+    await rateTitle(userA, "show-1", "LIKE");
 
-    const map = await getUserRatingsForTitles(userA, [
-      "movie-1",
-      "movie-2",
-      "show-1",
-    ]);
+    const map = await getUserRatingsForTitles(userA, ["movie-1", "movie-2"]);
     expect([...map.entries()]).toEqual([["movie-1", "LOVE"]]);
+  });
+
+  it("keeps each chunk within D1's 100 bound-parameter limit", () => {
+    // ids per chunk + the userId parameter
+    expect(USER_RATINGS_TITLEIDS_CHUNK_SIZE + 1).toBeLessThanOrEqual(100);
   });
 
   it("handles more ids than one chunk", async () => {
