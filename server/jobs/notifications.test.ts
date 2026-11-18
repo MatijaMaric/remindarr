@@ -7,6 +7,7 @@ import {
   afterEach,
   mock,
   spyOn,
+  setSystemTime,
 } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import {
@@ -528,6 +529,10 @@ describe("New credits in Bun digests", () => {
 });
 
 describe("achievements do not leak between a user's notifiers (#1440)", () => {
+  afterEach(() => {
+    setSystemTime();
+  });
+
   beforeEach(async () => {
     setupTestDb();
     await registerNotificationJobs();
@@ -541,6 +546,8 @@ describe("achievements do not leak between a user's notifiers (#1440)", () => {
   });
 
   it("does not send the badge to a notifier with achievements off", async () => {
+    // Freeze the clock so setup and the job agree on the due minute.
+    setSystemTime(new Date("2026-06-01T12:00:00Z"));
     const uid = await createUser("badgeuser", "hash");
     buildContentSpy.mockResolvedValue({ episodes: [], movies: [], date: "x" });
     const send = mock(async () => {});
@@ -579,8 +586,25 @@ describe("achievements do not leak between a user's notifiers (#1440)", () => {
       new Date().toISOString(),
     );
 
-    enqueueJob("send-notifications");
-    await processJobs();
+    // getDueNotifiers has no ORDER BY; force the achievements-on notifier to
+    // run first, since that is the order that exposed the leak.
+    const realGetDue = repositoryModule.getDueNotifiers;
+    const dueSpy = spyOn(
+      repositoryModule,
+      "getDueNotifiers",
+    ).mockImplementation(async (times) => {
+      const due = await realGetDue(times);
+      expect(due.map((n) => n.name).sort()).toEqual(["Off", "On"]);
+      return due.sort(
+        (a, b) => Number(b.name === "On") - Number(a.name === "On"),
+      );
+    });
+    try {
+      enqueueJob("send-notifications");
+      await processJobs();
+    } finally {
+      dueSpy.mockRestore();
+    }
 
     // Only the achievements-on notifier has anything to send.
     expect(send).toHaveBeenCalledTimes(1);
