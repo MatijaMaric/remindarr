@@ -1,6 +1,6 @@
 import { invalidateLibrary } from "../lib/invalidateLibrary";
 import FirstSetup from "../components/FirstSetup";
-import { useState, useMemo, useRef, useCallback } from "react";
+import { Fragment, useState, useMemo, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { Maximize2 } from "lucide-react";
@@ -364,7 +364,7 @@ export default function HomePage() {
     switch (sectionId) {
       case "unwatched":
         return unwatched.length > 0 ? (
-          <>
+          <Fragment key="unwatched">
             <div className="-mt-6">
               <HeroBanner
                 episodes={unwatched}
@@ -376,7 +376,7 @@ export default function HomePage() {
                 }
               />
             </div>
-            <section key="unwatched">
+            <section>
               <SectionHeader
                 kicker={t("home.unwatched")}
                 title={t("home.upNext.title")}
@@ -422,7 +422,7 @@ export default function HomePage() {
                 ))}
               </FullBleedCarousel>
             </section>
-          </>
+          </Fragment>
         ) : null;
 
       case "recommendations":

@@ -1,4 +1,12 @@
-import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  spyOn,
+  afterEach,
+  beforeEach,
+} from "bun:test";
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -601,6 +609,34 @@ describe("HomePage — one row per kind of content", () => {
       }),
     );
   }
+
+  // Keep this first among the tests that render Up Next: React reports a
+  // missing key only once per process, so a later test would never see it.
+  it("keys the Up Next section so React does not warn about list children", async () => {
+    signedInUser();
+    apiMock.getUpcomingEpisodes.mockImplementation(() =>
+      Promise.resolve({
+        today: [],
+        upcoming: [],
+        unwatched: [makeEpisode({ show_title: "Half Show" })],
+      }),
+    );
+    const errorSpy = spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      render(<HomePage />, { wrapper: Wrapper });
+
+      await waitFor(() => {
+        expect(screen.getByRole("heading", { name: "Up Next" })).toBeDefined();
+      });
+      const keyWarnings = errorSpy.mock.calls.filter((args) =>
+        String(args[0]).includes('unique "key" prop'),
+      );
+      expect(keyWarnings).toHaveLength(0);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
 
   it("shows unwatched shows once, in a row titled Up Next", async () => {
     signedInUser();
