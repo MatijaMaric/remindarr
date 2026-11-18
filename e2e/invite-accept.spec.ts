@@ -104,23 +104,24 @@ test.describe("Invite / Accept flow", () => {
       }
     });
 
+    await ip.captureShares();
     await ip.gotoInvite();
     await ip.waitForVisible(ip.createButton());
 
     await ip.createButton().click();
 
-    // Wait for invitation card to appear
-    await expect(page.getByText("ABCD1234")).toBeVisible({ timeout: 10000 });
+    // Wait for the invitation card: status badge shows "Pending"
+    await expect(page.getByText("Pending")).toBeVisible({ timeout: 10000 });
 
     expect(postCalled).toBe(1);
 
-    // Status badge shows "Pending"
-    await expect(page.getByText("Pending")).toBeVisible();
-
-    // Code in monospace element
-    await expect(
-      page.locator("code").filter({ hasText: "ABCD1234" }),
-    ).toBeVisible();
+    // The card does not print the raw code (#1428) …
+    await expect(page.getByText("ABCD1234")).toHaveCount(0);
+    // … Share hands out the full invite link carrying it instead.
+    await ip.shareButton().click();
+    await expect
+      .poll(() => ip.sharedUrls())
+      .toEqual([expect.stringMatching(/\/invite\?code=ABCD1234$/)]);
 
     // Revoke button visible (pending-only)
     await expect(page.getByRole("button", { name: /revoke/i })).toBeVisible();
@@ -153,11 +154,15 @@ test.describe("Invite / Accept flow", () => {
       timeout: 10000,
     });
 
-    // Green success banner rendered
-    await expect(ip.redeemBanner()).toBeVisible();
+    // Success banner rendered in the page (not just the toast)
+    await expect(ip.redeemBanner()).toHaveText(
+      "You and @Bob are now following each other!",
+    );
 
     // No error banner
-    await expect(ip.errorBanner()).not.toBeVisible();
+    await expect(
+      ip.errorBanner(/expired|invalid|not found|failed/i),
+    ).toHaveCount(0);
 
     // Code removed from URL
     await page.waitForURL("**/invite", { waitUntil: "commit" });
@@ -186,10 +191,10 @@ test.describe("Invite / Accept flow", () => {
       timeout: 10000,
     });
 
-    await expect(ip.errorBanner()).toBeVisible();
+    await expect(ip.errorBanner("Invitation has expired")).toBeVisible();
 
     // No success banner
-    await expect(ip.redeemBanner()).not.toBeVisible();
+    await expect(ip.redeemBanner()).toHaveCount(0);
 
     // Code removed from URL
     await page.waitForURL("**/invite", { waitUntil: "commit" });
@@ -223,7 +228,8 @@ test.describe("Invite / Accept flow", () => {
     });
 
     await ip.gotoInvite();
-    await ip.waitForVisible(page.getByText("ABCD1234"));
+    // The card does not print the code (#1428); its Pending badge marks it.
+    await ip.waitForVisible(page.getByText("Pending"));
 
     await page.getByRole("button", { name: /revoke/i }).click();
 
@@ -233,7 +239,8 @@ test.describe("Invite / Accept flow", () => {
     expect(deleteCalled).toBe(1);
 
     // Invitation card is gone
-    await expect(page.getByText("ABCD1234")).not.toBeVisible();
+    await expect(page.getByText("Pending")).toHaveCount(0);
+    await expect(ip.shareButton()).toHaveCount(0);
   });
 
   test("TC-06: Unauthenticated user is redirected to /login", async ({
@@ -259,13 +266,12 @@ test.describe("Invite / Accept flow", () => {
     await ip.gotoInvite();
     await ip.waitForVisible(ip.heading());
 
-    // Wait for invitation card
-    await expect(page.getByText("EFGH5678")).toBeVisible({ timeout: 10000 });
-
-    // Status badge shows "Used by @Alice"
+    // Wait for invitation card: status badge shows "Used by @alice".
+    // The code itself is not printed on the card (#1428).
     await expect(
       page.getByText(/used by/i, { exact: false }).first(),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("EFGH5678")).toHaveCount(0);
 
     // Link to @alice's profile
     const aliceLink = page.getByRole("link", { name: "@alice" });
@@ -276,8 +282,11 @@ test.describe("Invite / Accept flow", () => {
     await expect(
       page.getByRole("button", { name: /revoke/i }),
     ).not.toBeVisible();
+    await expect(ip.shareButton()).toHaveCount(0);
 
-    // Green tinted card
-    await expect(page.locator(".bg-green-900\\/20").first()).toBeVisible();
+    // Success-tinted card (no semantic marker for the used state's styling)
+    const card = ip.invitationCardWith(aliceLink);
+    await expect(card).toHaveClass(/bg-success\/20/);
+    await expect(card).toHaveClass(/border-success\/40/);
   });
 });

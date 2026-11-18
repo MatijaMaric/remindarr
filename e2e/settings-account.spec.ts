@@ -112,10 +112,10 @@ test.describe("Settings — Account tab", () => {
     await sap.gotoSettings();
     await sap.waitForVisible(sap.heading());
 
-    // Find the Display name input in the Edit profile card (the editable one,
-    // not the read-only one in the User identity card above it).
-    // Both sections label their input "Display name"; the editable one is second.
-    const displayNameInput = page.getByLabel(/display name/i).nth(1);
+    // #1435 folded the read-only profile card into this form, so there is a
+    // single Display name field (strict locator: fails if a duplicate returns).
+    const displayNameInput = sap.displayNameInput();
+    await expect(displayNameInput).toBeEditable();
     await displayNameInput.clear();
     await displayNameInput.fill("Updated Name");
 

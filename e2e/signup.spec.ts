@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { isAuthGetSession, mockLoggedIn } from "./helpers";
+import {
+  isAuthGetSession,
+  mockLoggedIn,
+  MOCK_SESSION,
+  stubAuthenticatedShell,
+} from "./helpers";
 import { SignupPage } from "./pages/signup-page";
 
 /**
@@ -39,7 +44,72 @@ async function stubHomepageApis(page: import("@playwright/test").Page) {
   );
 }
 
-// Run signup tests serially: TC-01 and TC-02 hit the real auth backend, and
+/**
+ * Stateful get-session mock mirroring the real backend: signed out until the
+ * sign-up call succeeds, signed in afterwards. Since #1429 SignupPage only
+ * redirects from an effect once AuthContext has a `user`, which it reads from
+ * get-session after sign-up (AuthContext.changeSession -> refreshSession).
+ *
+ * The first signed-in get-session response is parked until `release()` so the
+ * test can prove the page does not leave /signup before the session is signed
+ * in. `held` resolves once that request has arrived.
+ */
+async function mockSessionAfterSignup(
+  page: import("@playwright/test").Page,
+  user: { id: string; username: string; email: string; name: string },
+) {
+  let signedIn = false;
+  let release!: () => void;
+  const gate = new Promise<void>((r) => (release = r));
+  let markHeld!: () => void;
+  const held = new Promise<void>((r) => (markHeld = r));
+  await stubAuthenticatedShell(page);
+  await page.route(isAuthGetSession, async (route) => {
+    if (signedIn) {
+      markHeld();
+      await gate;
+    }
+    await route.fulfill({
+      json: signedIn
+        ? {
+            session: { ...MOCK_SESSION.session, userId: user.id },
+            user: { ...MOCK_SESSION.user, ...user, display_name: user.name },
+          }
+        : null,
+    });
+  });
+  return {
+    markSignedIn: () => {
+      signedIn = true;
+    },
+    held,
+    release: () => release(),
+  };
+}
+
+/**
+ * Sign-up redirect contract: stay on /signup while the session is still being
+ * resolved, then land on "/" signed in as the new user (nav profile link).
+ */
+async function expectSignedInRedirect(
+  page: import("@playwright/test").Page,
+  session: Awaited<ReturnType<typeof mockSessionAfterSignup>>,
+  user: { username: string; name: string },
+) {
+  await session.held;
+  await expect(page).toHaveURL(/\/signup/);
+  session.release();
+  await page.waitForURL((url) => url.pathname === "/", {
+    timeout: 15_000,
+    waitUntil: "domcontentloaded",
+  });
+  await expect(
+    page.getByRole("navigation").getByRole("link", { name: user.name }),
+  ).toHaveAttribute("href", `/user/${user.username}`);
+}
+
+// Run signup tests serially: several tests (e.g. TC-03) let get-session and
+// other auth calls through to the real backend, and
 // the dev server's default rate limit (20/min) is easily exceeded by 11
 // parallel workers all making auth requests concurrently.
 test.describe.configure({ mode: "serial" });
@@ -58,21 +128,24 @@ test.describe("Signup", () => {
     const suffix = Date.now();
     const username = `tc01_${suffix}`;
 
-    // Mock get-session to always return null (not logged in) so the signup
-    // form stays visible. The navigate('/') in handleSubmit fires directly
-    // after the signup call resolves — it doesn't wait for a session update.
-    await page.route(isAuthGetSession, (route) =>
-      route.fulfill({ json: null }),
-    );
+    // Signed out until sign-up succeeds, then signed in — the redirect to "/"
+    // is driven by the session becoming signed in, not by handleSubmit.
+    const session = await mockSessionAfterSignup(page, {
+      id: "mock-id",
+      username,
+      email: `${username}@example.com`,
+      name: "Test User One",
+    });
 
     // Stub home-page API calls so "load" fires promptly after the redirect.
     await stubHomepageApis(page);
 
     // Capture what the UI sends to the signup endpoint and return a mock
-    // success so the navigate('/') fires.
+    // success; from then on get-session reports the new user.
     let capturedBody: Record<string, unknown> | undefined;
     await page.route("**/api/auth/sign-up/email", async (route) => {
       capturedBody = route.request().postDataJSON() as Record<string, unknown>;
+      session.markSignedIn();
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -98,10 +171,10 @@ test.describe("Signup", () => {
     });
     await signup.submit();
 
-    // The form navigates to "/" immediately after a successful mock signup.
-    await page.waitForURL((url) => url.pathname === "/", {
-      timeout: 15_000,
-      waitUntil: "domcontentloaded",
+    // Once the session is signed in, the page redirects to "/".
+    await expectSignedInRedirect(page, session, {
+      username,
+      name: "Test User One",
     });
 
     // Verify the UI submitted all fields correctly.
@@ -118,9 +191,12 @@ test.describe("Signup", () => {
     const suffix = Date.now() + 2;
     const username = `tc02_${suffix}`;
 
-    await page.route(isAuthGetSession, (route) =>
-      route.fulfill({ json: null }),
-    );
+    const session = await mockSessionAfterSignup(page, {
+      id: "mock-id-2",
+      username,
+      email: `${username}@example.com`,
+      name: username,
+    });
 
     // Stub home-page API calls so "load" fires promptly after the redirect.
     await stubHomepageApis(page);
@@ -130,6 +206,7 @@ test.describe("Signup", () => {
     let capturedBody: Record<string, unknown> | undefined;
     await page.route("**/api/auth/sign-up/email", async (route) => {
       capturedBody = route.request().postDataJSON() as Record<string, unknown>;
+      session.markSignedIn();
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -155,10 +232,7 @@ test.describe("Signup", () => {
     });
     await signup.submit();
 
-    await page.waitForURL((url) => url.pathname === "/", {
-      timeout: 15_000,
-      waitUntil: "domcontentloaded",
-    });
+    await expectSignedInRedirect(page, session, { username, name: username });
 
     // When display name is blank the UI sends name = username as the fallback
     // (see: `name || username` in SignupPage.handleSubmit).
@@ -230,10 +304,9 @@ test.describe("Signup", () => {
     });
     await signup.submit();
 
-    await expect(signup.errorBanner).toBeVisible({ timeout: 5_000 });
-    await expect(signup.errorBanner).toContainText(
-      "Username is already taken. Please try another.",
-    );
+    await expect(
+      signup.errorBanner("Username is already taken. Please try another."),
+    ).toBeVisible({ timeout: 5_000 });
     await expect(page).toHaveURL(/\/signup/);
 
     // Form fields should retain values
@@ -263,66 +336,77 @@ test.describe("Signup", () => {
     });
     await signup.submit();
 
-    await expect(signup.errorBanner).toBeVisible({ timeout: 5_000 });
-    await expect(signup.errorBanner).toContainText(
-      "User already exists. Use another email.",
-    );
+    await expect(
+      signup.errorBanner("User already exists. Use another email."),
+    ).toBeVisible({ timeout: 5_000 });
     await expect(page).toHaveURL(/\/signup/);
   });
 
   // ── TC-06: Password too short ─────────────────────────────────────────────
-  test("TC-06: shows error banner when password is too short", async ({
+  test("TC-06: too-short password is blocked before reaching the server", async ({
     page,
   }) => {
     const signup = new SignupPage(page);
 
-    await page.route("**/api/auth/sign-up/email", (route) =>
-      route.fulfill({
+    // Since #1429 the password field has minLength=8, so a 7-character
+    // password is rejected by the browser and no sign-up request is sent.
+    let requestMade = false;
+    await page.route("**/api/auth/sign-up/email", (route) => {
+      requestMade = true;
+      return route.fulfill({
         status: 422,
-        contentType: "application/json",
-        body: JSON.stringify({
-          message: "Password must be at least 8 characters.",
-        }),
-      }),
-    );
+        json: { message: "Password must be at least 8 characters." },
+      });
+    });
 
     await signup.gotoSignup();
     await signup.fillForm({
       username: "shortpwuser",
       email: "shortpw@example.com",
-      password: "abc1234", // 7 characters — no HTML5 minlength, reaches server
+      password: "abc1234", // 7 characters
     });
     await signup.submit();
 
-    await expect(signup.errorBanner).toBeVisible({ timeout: 5_000 });
-    await expect(signup.errorBanner).toContainText("8");
+    await expect(signup.passwordField).toHaveJSProperty(
+      "validity.tooShort",
+      true,
+    );
+    await expect(signup.passwordField).toBeFocused();
+    expect(requestMade).toBe(false);
     await expect(page).toHaveURL(/\/signup/);
   });
 
   // ── TC-07: Invalid username characters ────────────────────────────────────
-  test("TC-07: shows error banner for invalid username characters", async ({
+  test("TC-07: invalid username characters are blocked by the browser", async ({
     page,
   }) => {
     const signup = new SignupPage(page);
 
-    await page.route("**/api/auth/sign-up/email", (route) =>
-      route.fulfill({
+    // Since #1429 the username field has pattern="[a-zA-Z0-9_.\-]+" (the
+    // server accepts the same set, dashes included), so "!" never reaches it.
+    let requestMade = false;
+    await page.route("**/api/auth/sign-up/email", (route) => {
+      requestMade = true;
+      return route.fulfill({
         status: 422,
-        contentType: "application/json",
-        body: JSON.stringify({ message: "Username is invalid" }),
-      }),
-    );
+        json: { message: "Username is invalid" },
+      });
+    });
 
     await signup.gotoSignup();
     await signup.fillForm({
-      username: "bad-username", // dash is rejected server-side
+      username: "bad!username",
       email: "invalid@example.com",
       password: "securePass7",
     });
     await signup.submit();
 
-    await expect(signup.errorBanner).toBeVisible({ timeout: 5_000 });
-    await expect(signup.errorBanner).toContainText("Username is invalid");
+    await expect(signup.usernameField).toHaveJSProperty(
+      "validity.patternMismatch",
+      true,
+    );
+    await expect(signup.usernameField).toBeFocused();
+    expect(requestMade).toBe(false);
     await expect(page).toHaveURL(/\/signup/);
   });
 

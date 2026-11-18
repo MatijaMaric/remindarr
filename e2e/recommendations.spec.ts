@@ -75,7 +75,7 @@ test.describe("Recommendations", () => {
     "Running on chromium only",
   );
 
-  test("TC-01: Discovery Activity tab loads and shows received recommendations", async ({
+  test("TC-01: Discovery friends row shows received recommendations", async ({
     page,
   }) => {
     const rp = new RecommendationsPage(page);
@@ -84,18 +84,21 @@ test.describe("Recommendations", () => {
     await rp.gotoDiscovery();
     await rp.waitForVisible(rp.forYouHeading());
 
-    await rp.activityTab().click();
-    await rp.waitForVisible(page.getByText("Alice"));
+    const row = rp.friendsRow();
+    await rp.waitForVisible(row);
 
-    // Sender name
-    await expect(page.getByText("Alice")).toBeVisible();
+    // Sender: avatar dot (named via title) + "— @alice" attribution
+    await expect(row.getByTitle("Alice")).toBeVisible();
+    await expect(row.getByText(/@alice/)).toBeVisible();
     // Title
-    await expect(page.getByText("Recommended Show").first()).toBeVisible();
+    await expect(
+      row.getByRole("link", { name: "Recommended Show" }),
+    ).toBeVisible();
     // Message
-    await expect(page.getByText(/You will love this one!/)).toBeVisible();
+    await expect(row.getByText(/You will love this one!/)).toBeVisible();
     // Track and Dismiss buttons
-    await expect(page.getByRole("button", { name: "Track" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Dismiss" })).toBeVisible();
+    await expect(row.getByRole("button", { name: "Track" })).toBeVisible();
+    await expect(row.getByRole("button", { name: "Dismiss" })).toBeVisible();
   });
 
   test("TC-02: Discovery page requires auth — unauthenticated redirect", async ({
@@ -179,11 +182,9 @@ test.describe("Recommendations", () => {
     await rp.gotoDiscovery();
     await rp.waitForVisible(rp.forYouHeading());
 
-    await rp.activityTab().click();
-    await page.waitForTimeout(300);
-
-    // No cards
-    await expect(page.getByText("Alice")).not.toBeVisible();
+    // No friends row, no cards
+    await expect(page.getByText("Friends are recommending")).toHaveCount(0);
+    await expect(page.getByText(/@alice/)).toHaveCount(0);
     // Empty-state message
     await expect(page.getByText(/No recommendations yet/i)).toBeVisible();
   });
@@ -197,10 +198,11 @@ test.describe("Recommendations", () => {
     await rp.gotoDiscovery();
     await rp.waitForVisible(rp.forYouHeading());
 
-    await rp.activityTab().click();
-    await rp.waitForVisible(page.getByText("Recommended Show").first());
-
-    await page.getByRole("link", { name: "Recommended Show" }).first().click();
+    const link = rp
+      .friendsRow()
+      .getByRole("link", { name: "Recommended Show" });
+    await rp.waitForVisible(link);
+    await link.click();
     await page.waitForURL("**/title/tt9999001**", { waitUntil: "commit" });
 
     expect(page.url()).toContain("/title/tt9999001");

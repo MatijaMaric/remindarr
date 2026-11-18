@@ -45,21 +45,23 @@ export class SignupPage extends BasePage {
 
   /**
    * "Sign in" link at the bottom of the signup form.
-   * Uses exact match on "Sign in" (lowercase i) to distinguish from the
-   * navbar "Sign In" link (capital I) which Tailwind renders as uppercase.
+   * The form link reads "Sign In" (signup.signIn); scoped to <main> so a nav
+   * sign-in link, if the signed-out shell shows one again, can't match.
    */
   get signInLink(): Locator {
-    return this.page.getByRole("link", { name: "Sign in", exact: true });
+    return this.page
+      .getByRole("main")
+      .getByRole("link", { name: /^sign in$/i });
   }
 
   // ── error banner ───────────────────────────────────────────────────────────
   /**
-   * The red error banner that appears when the server rejects the request.
-   * The element is a plain <div> (no ARIA role) styled with bg-red-900/50;
-   * locate it via its sibling container relationship to the form.
+   * The error banner that appears when the server rejects the request. It is
+   * a plain <div> (no ARIA role) and SignupPage shows no toast, so the server
+   * message inside <main> identifies it.
    */
-  get errorBanner(): Locator {
-    return this.page.locator(".bg-red-900\\/50");
+  errorBanner(message: string | RegExp): Locator {
+    return this.page.getByRole("main").getByText(message);
   }
 
   // ── navigation ─────────────────────────────────────────────────────────────

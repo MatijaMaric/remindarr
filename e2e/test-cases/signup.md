@@ -12,10 +12,11 @@
 ## TC-01: Happy path — sign up with all fields filled
 
 **Priority**: P0
-**Backend**: Real
+**Backend**: Mock (sign-up + stateful get-session)
 
-**Why real**: Verifies the actual session cookie is set, the browser is redirected to `/`,
-and the user record is persisted in the database. A mock cannot exercise any of this.
+**Why mock**: Keeps the suite hermetic and lets the test control when the session becomes
+signed in. Cookie issuance and persistence are better-auth's job and are covered by its
+own tests; this case verifies the UI's request body and the redirect contract.
 
 **Preconditions**:
 
@@ -33,20 +34,25 @@ and the user record is persisted in the database. A mock cannot exercise any of 
 
 **Expected**:
 
-- Browser is redirected to `/` (home page).
-- The home page loads without error (no redirect back to `/signup` or `/login`).
-- The authenticated session is active (subsequent calls to `/api/auth/get-session`
-  return a user object with `username: "testuser_01"`).
+- While the signed-in get-session response is held, the page stays on `/signup`.
+- Once released, the browser is redirected to `/` and the nav shows the new user's profile
+  link (`"Test User One"` → `/user/<username>`), i.e. the app is signed in.
+- The sign-up request body carries `username`, `email` and `name: "Test User One"`.
+
+> **Automation note**: the spec mocks sign-up. Since #1429 the redirect is driven only by
+> AuthContext's `user` becoming set (SignupPage's effect), which happens when get-session
+> returns a user after sign-up. The get-session mock must therefore be stateful: `null`
+> before the sign-up call, signed in after it (`mockSessionAfterSignup` in the spec).
 
 ---
 
 ## TC-02: Happy path — display name omitted (defaults to username)
 
 **Priority**: P1
-**Backend**: Real
+**Backend**: Mock (sign-up + stateful get-session)
 
-**Why real**: The default display-name behaviour is server-side — better-auth sets `name`
-to the username when the field is blank. A mock stub cannot verify this server logic.
+**Why mock**: The fallback is client-side — SignupPage sends `name = username` when the
+Display Name field is blank (`name || username`) — so the request body is what matters.
 
 **Preconditions**:
 
@@ -64,9 +70,9 @@ to the username when the field is blank. A mock stub cannot verify this server l
 
 **Expected**:
 
-- Browser is redirected to `/` (home page).
-- The session (from `/api/auth/get-session`) shows `name` equal to `"testuser_02"`
-  (the username), confirming the server applied the default.
+- The sign-up request body has `name` equal to the username.
+- Same redirect contract as TC-01: stays on `/signup` until the session is signed in, then
+  lands on `/` with the nav profile link named after the username.
 
 ---
 
@@ -169,73 +175,55 @@ replicated with a `page.route()` stub. No real DB state is required.
 
 ---
 
-## TC-06: Password too short — error banner
+## TC-06: Password too short — blocked by HTML5 validation
 
 **Priority**: P1
-**Backend**: Mock
+**Backend**: Mock (only to detect a stray request)
 
-**Why mock**: Better-auth enforces the 8-character minimum server-side. We mock the
-response to keep the test fast and hermetic, without a real DB write.
+**Why**: Since #1429 the password field has `minLength={8}`, so a sub-8-character password
+is rejected by the browser and never reaches better-auth.
 
 **Preconditions**:
 
-- `page.route()` intercepts `POST /api/auth/sign-up/email` and returns an error response
-  indicating the password is too short (the exact message better-auth sends for a
-  sub-8-character password).
-
-> **Note**: The 7-character password `"abc1234"` satisfies HTML5 validation (no
-> `minlength` attribute on the password field), so the form will submit and reach the
-> API — the rejection is purely server-side.
+- `page.route()` intercepts `POST /api/auth/sign-up/email` and records whether it was hit.
 
 **Steps**:
 
-1. Set up route intercept as described in preconditions.
-2. Navigate to `/signup`.
-3. `getByLabel("Username")` → fill `shortpwuser`.
-4. `getByLabel("Email")` → fill `shortpw@example.com`.
-5. `getByLabel("Password")` → fill `abc1234` (7 characters).
-6. `getByRole("button", { name: /create account/i })` → click.
-7. Wait for the error banner to appear.
+1. Navigate to `/signup`.
+2. `getByLabel("Username")` → fill `shortpwuser`.
+3. `getByLabel("Email")` → fill `shortpw@example.com`.
+4. `getByLabel("Password")` → fill `abc1234` (7 characters).
+5. Click the `"Sign Up"` button.
 
 **Expected**:
 
-- A red/error banner is visible above the form.
-- The banner contains a message referencing the password requirement (e.g. "Password must
-  be at least 8 characters" or whatever better-auth returns).
+- The password field reports `validity.tooShort === true` and is focused.
+- No sign-up request was sent.
 - The URL remains `/signup`.
 
 ---
 
-## TC-07: Invalid username characters — error banner
+## TC-07: Invalid username characters — blocked by HTML5 validation
 
 **Priority**: P1
-**Backend**: Mock
+**Backend**: Mock (only to detect a stray request)
 
-**Why mock**: Better-auth's username validator (`[a-zA-Z0-9_.]+`) rejects dashes
-server-side. We stub the response to stay hermetic.
-
-**Preconditions**:
-
-- `page.route()` intercepts `POST /api/auth/sign-up/email` and returns an error response
-  with message `"Username is invalid"`.
-
-> **Note**: A username like `"bad-username"` (containing a dash) passes HTML5 validation
-> but is rejected server-side. The form will submit and reach the API.
+**Why**: Since #1429 the username field has `pattern="[a-zA-Z0-9_.\-]+"`, matching the
+server's `usernameValidator` (dashes are allowed by both). Characters outside that set are
+rejected by the browser before any request.
 
 **Steps**:
 
-1. Set up route intercept as described in preconditions.
-2. Navigate to `/signup`.
-3. `getByLabel("Username")` → fill `bad-username`.
-4. `getByLabel("Email")` → fill `invalid@example.com`.
-5. `getByLabel("Password")` → fill `securePass7`.
-6. `getByRole("button", { name: /create account/i })` → click.
-7. Wait for the error banner to appear.
+1. Navigate to `/signup`.
+2. `getByLabel("Username")` → fill `bad!username`.
+3. `getByLabel("Email")` → fill `invalid@example.com`.
+4. `getByLabel("Password")` → fill `securePass7`.
+5. Click the `"Sign Up"` button.
 
 **Expected**:
 
-- A red/error banner is visible above the form.
-- The banner text contains `"Username is invalid"`.
+- The username field reports `validity.patternMismatch === true` and is focused.
+- No sign-up request was sent.
 - The URL remains `/signup`.
 
 ---

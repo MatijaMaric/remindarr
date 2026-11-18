@@ -50,13 +50,13 @@
 
 ---
 
-## TC-01: Discovery page — Activity tab loads and shows received recommendations
+## TC-01: Discovery page — friends row shows received recommendations
 
 **Priority**: P0
 **Backend**: Mock
 
-**Why mock**: Verifies the full render of the Activity tab — sender info, title card, optional
-message, unread indicator — without real user/follower data. A mock response guarantees a
+**Why mock**: Verifies the full render of the "Friends are recommending" row (the Activity
+tab was removed in #1421) — sender info, title card, optional message — without real user/follower data. A mock response guarantees a
 stable recommendation for assertion.
 
 **Preconditions**:
@@ -71,16 +71,13 @@ stable recommendation for assertion.
 1. Apply all shared route mocks.
 2. Navigate to `/discovery`.
 3. Wait for `getByRole("heading", { name: "For you" })` to be visible.
-4. Click the pill button labelled `"Activity"` to switch tabs.
-5. Wait for the recommendation card list to appear.
+4. Wait for the "Friends are recommending" section to appear.
 
-**Expected**:
+**Expected** (scoped to that section):
 
-- The "Activity" pill button is active (visually selected).
-- A card is visible containing the text `"Alice"` (sender display name).
-- The card shows the title `"Recommended Show"`.
+- The sender's avatar dot (`getByTitle("Alice")`) and `"— @alice"` attribution are visible.
+- The card links to the title `"Recommended Show"`.
 - The card shows the message text `"You will love this one!"`.
-- An amber left border is present on the card (indicating it is unread: `border-l-2 border-l-amber-500`).
 - A `"Track"` button and a `"Dismiss"` button are visible within the card.
 
 ---
@@ -158,7 +155,7 @@ hitting the real recommendation or title API.
 **Priority**: P1
 **Backend**: Mock
 
-**Why mock**: Tests the empty-state message in the Activity tab when the backend returns an
+**Why mock**: Tests the Discovery empty-state message when the backend returns an
 empty recommendations list.
 
 **Preconditions**:
@@ -175,12 +172,9 @@ empty recommendations list.
 1. Apply all shared route mocks with the empty recommendations response.
 2. Navigate to `/discovery`.
 3. Wait for `getByRole("heading", { name: "For you" })`.
-4. Click the `"Activity"` pill button to switch to the Activity tab.
-5. Wait for the tab content to settle.
+   **Expected**:
 
-**Expected**:
-
-- No recommendation cards are rendered.
+- No "Friends are recommending" row and no recommendation cards are rendered.
 - An empty-state message (sourced from i18n key `discovery.empty`) is visible — by default
   this is text such as `"No recommendations yet"` or similar placeholder text.
 - No error banner or spinner is shown.
@@ -206,17 +200,14 @@ a `RecommendationCard` routes to `/title/<id>`. No detail-page data needs to loa
 1. Apply all shared route mocks.
 2. Navigate to `/discovery`.
 3. Wait for `getByRole("heading", { name: "For you" })`.
-4. Click the `"Activity"` pill button.
-5. Wait for the recommendation card for `"Recommended Show"` to be visible.
-6. Click the link wrapping the title name or poster thumbnail inside the card
-   (the `<Link to="/title/tt9999001">` element).
-7. Wait for the URL to change.
+4. Wait for the `"Recommended Show"` card link in the "Friends are recommending" row.
+5. Click it (the `MediaCard` `<Link to="/title/tt9999001">`).
+6. Wait for the URL to change.
 
 **Expected**:
 
 - The browser URL changes to `/title/tt9999001`.
 - The Discovery page heading `"For you"` is no longer visible.
 
-> **Implementation note**: The `RecommendationCard` in `DiscoveryPage.tsx` renders a
-> `<Link to="/title/${rec.title.id}">` around both the poster image and the title text.
-> Either is a valid click target.
+> **Implementation note**: `FriendRecCard` in `DiscoveryPage.tsx` renders a `MediaCard`
+> whose link to `/title/${rec.title.id}` is named by the title.

@@ -18,12 +18,30 @@ export class DiscoveryPage extends BasePage {
     });
   }
 
-  activityTab() {
-    return this.page.getByRole("button", { name: /Activity/i });
+  /**
+   * "Friends are recommending" row. Since #1421 there is no Activity tab:
+   * received recommendations live in this row on the single For you view.
+   */
+  friendsRow() {
+    return this.section("Friends are recommending");
   }
 
-  forYouTab() {
-    return this.page.getByRole("button", { name: "For you" });
+  /** A content row (<section>) identified by its <h2> title. */
+  section(title: string) {
+    return this.page.locator("section").filter({
+      has: this.page.getByRole("heading", { name: title, level: 2 }),
+    });
+  }
+
+  /**
+   * Discovery link in the desktop top nav. The unread recommendation count
+   * moved here (and to the More page) when the Activity tab was removed; its
+   * accessible name includes "N unread recommendations".
+   */
+  discoveryNavLink() {
+    return this.page
+      .getByRole("navigation")
+      .getByRole("link", { name: /^Discovery/ });
   }
 
   heroTitle(name: string) {

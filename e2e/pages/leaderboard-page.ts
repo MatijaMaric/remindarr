@@ -35,6 +35,18 @@ export class LeaderboardPage extends BasePage {
   pageHeading() {
     return this.page.getByRole("heading", { name: /leaderboard/i });
   }
+
+  /**
+   * A podium/list card — each is a link to the user's profile, found by the
+   * display name it shows. (The @handle line is hidden when it would only
+   * repeat the name, e.g. "Alice"/"alice", so don't locate by handle.)
+   */
+  userCard(name: string) {
+    return this.page
+      .getByRole("main")
+      .getByRole("link")
+      .filter({ has: this.page.getByText(name, { exact: true }) });
+  }
 }
 
 // ── Leaderboard fixtures ──────────────────────────────────────────────────────
