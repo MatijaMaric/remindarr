@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import ScrollableRow from "../components/ScrollableRow";
 import * as api from "../api";
+import { ApiError } from "../lib/api-error";
 import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
 import { useAuth } from "../context/AuthContext";
@@ -43,7 +44,9 @@ export default function SeasonDetailPage() {
   const {
     data,
     isLoading: loading,
-    isError: error,
+    isError,
+    error,
+    refetch,
   } = useQuery({
     queryKey: ["season-detail", id, season],
     queryFn: ({ signal }) => api.getSeasonDetails(id!, Number(season), signal),
@@ -58,7 +61,11 @@ export default function SeasonDetailPage() {
   };
   type SeasonStatusData = { episodes: SeasonStatusEntry[] };
 
-  const { data: statusData } = useQuery({
+  const {
+    data: statusData,
+    isError: statusError,
+    refetch: refetchStatus,
+  } = useQuery({
     queryKey: ["season-status", id, season],
     queryFn: ({ signal }) =>
       user && id && season
@@ -253,12 +260,25 @@ export default function SeasonDetailPage() {
     return <DetailPageSkeleton />;
   }
 
-  if (error || !data) {
+  if (isError || !data) {
+    const notFound =
+      !isError || (error instanceof ApiError && error.status === 404);
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex flex-col items-center justify-center py-20">
         <div className="text-destructive">
-          {t("season.notFound", "Season not found")}
+          {notFound
+            ? t("season.notFound", "Season not found")
+            : t("season.loadFailed")}
         </div>
+        {!notFound && (
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="inline-block mt-4 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm transition-colors cursor-pointer"
+          >
+            {t("common.retry")}
+          </button>
+        )}
       </div>
     );
   }
@@ -390,6 +410,18 @@ export default function SeasonDetailPage() {
               )}
             </div>
             <div className="flex items-center gap-4">
+              {statusError && (
+                <span className="text-sm text-destructive">
+                  {t("season.statusLoadFailed")}{" "}
+                  <button
+                    type="button"
+                    onClick={() => void refetchStatus()}
+                    className="underline hover:text-foreground transition-colors cursor-pointer"
+                  >
+                    {t("common.retry")}
+                  </button>
+                </span>
+              )}
               {hasStatus && releasedWithStatus.length > 0 && (
                 <span className="text-[11px] font-mono text-muted-foreground tracking-wide whitespace-nowrap">
                   {t("season.watchProgress", {
