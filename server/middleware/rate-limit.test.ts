@@ -1,11 +1,13 @@
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { bunClientAddress } from "./client-address";
 import { describe, it, expect, spyOn, beforeEach, afterAll } from "bun:test";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
+import { Logger } from "../logger";
 import {
   rateLimiter,
   MemoryRateLimitStore,
   SqlRateLimitStore,
+  isSafeAuthRead,
   type RateLimitStore,
 } from "./rate-limit";
 import type { AppEnv } from "../types";
@@ -322,19 +324,90 @@ describe("trusted client addresses", () => {
 });
 
 describe("store outage policy", () => {
-  for (const scope of ["global", "auth"]) {
-    it(`fails closed for ${scope}`, async () => {
-      const store: RateLimitStore = {
-        consume: async () => {
-          throw new Error("unavailable");
-        },
-      };
-      const app = new Hono<AppEnv>();
-      app.use("*", rateLimiter({ store, scope, limit: 1, windowMs: 60_000 }));
-      app.get("/", (c) => c.text("must not run"));
-      const res = await app.request("/");
+  const failingStore: RateLimitStore = {
+    consume: async () => {
+      throw new Error("unavailable");
+    },
+  };
+  function outageApp(
+    scope: string,
+    failOpenReads?: boolean | ((c: Context<AppEnv>) => boolean),
+  ) {
+    const app = new Hono<AppEnv>();
+    app.use(
+      "*",
+      rateLimiter({
+        store: failingStore,
+        scope,
+        limit: 1,
+        windowMs: 60_000,
+        failOpenReads,
+      }),
+    );
+    app.all("*", (c) => c.text("ran"));
+    return app;
+  }
+
+  for (const scope of ["auth", "import", "account-export", "sync"]) {
+    it(`fails closed for ${scope} without failOpenReads`, async () => {
+      const res = await outageApp(scope).request("/api/x");
       expect(res.status).toBe(503);
       expect(res.headers.get("Retry-After")).toBe("60");
     });
   }
+
+  it("lets GET and HEAD through on a fail-open read scope", async () => {
+    const app = outageApp("global", true);
+    for (const method of ["GET", "HEAD"]) {
+      const res = await app.request("/api/titles", { method });
+      expect(res.status).toBe(200);
+    }
+  });
+
+  for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+    it(`fails closed for ${method} even on a fail-open read scope`, async () => {
+      const res = await outageApp("writes", true).request("/api/track/1", {
+        method,
+      });
+      expect(res.status).toBe(503);
+    });
+  }
+
+  it("fails open on auth only for the safe read paths", async () => {
+    const app = outageApp("auth", isSafeAuthRead);
+    expect((await app.request("/api/auth/get-session")).status).toBe(200);
+    expect((await app.request("/api/auth/custom/providers")).status).toBe(200);
+    for (const path of [
+      "/api/auth/callback/github",
+      "/api/auth/oauth2/callback/oidc",
+      "/api/auth/passkey/generate-authenticate-options",
+      "/api/auth/get-session/",
+    ]) {
+      expect((await app.request(path)).status).toBe(503);
+    }
+    const signIn = await app.request("/api/auth/sign-in/username", {
+      method: "POST",
+    });
+    expect(signIn.status).toBe(503);
+    const postSession = await app.request("/api/auth/get-session", {
+      method: "POST",
+    });
+    expect(postSession.status).toBe(503);
+  });
+
+  it("logs whether the request was let through", async () => {
+    const warn = spyOn(Logger.prototype, "warn");
+    try {
+      await outageApp("global", true).request("/api/titles");
+      await outageApp("global", true).request("/api/titles", {
+        method: "POST",
+      });
+      const calls = warn.mock.calls.filter(
+        (c) => c[0] === "Rate limit store error",
+      );
+      expect(calls.map((call) => call[1]?.failOpen)).toEqual([true, false]);
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });
