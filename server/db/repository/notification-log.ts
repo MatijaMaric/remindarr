@@ -98,45 +98,23 @@ export async function getSuccessRateForNotifier(
 /**
  * Prunes old rows, keeping at most 200 rows per notifier.
  * Runs as a maintenance job to bound table growth.
+ * One statement regardless of notifier count, so it fits the D1
+ * per-invocation query limit on the Workers daily tick (#1441).
  */
 export async function pruneOldRows(): Promise<void> {
   return traceDbQuery("pruneOldRows", async () => {
-    const db = getDb();
-
-    // Get distinct notifier IDs that have more than 200 rows
-    const counts = await db
-      .select({
-        notifierId: notificationLog.notifierId,
-        count: sql<number>`count(*)`.as("count"),
-      })
-      .from(notificationLog)
-      .groupBy(notificationLog.notifierId)
-      .all();
-
-    for (const { notifierId, count } of counts) {
-      if (count <= 200) continue;
-
-      // Find the ID cutoff: keep the 200 most recent rows
-      const cutoffRow = await db
-        .select({ id: notificationLog.id })
-        .from(notificationLog)
-        .where(eq(notificationLog.notifierId, notifierId))
-        .orderBy(desc(notificationLog.id))
-        .limit(1)
-        .offset(199)
-        .get();
-
-      if (!cutoffRow) continue;
-
-      await db
-        .delete(notificationLog)
-        .where(
-          and(
-            eq(notificationLog.notifierId, notifierId),
-            sql`${notificationLog.id} < ${cutoffRow.id}`,
-          ),
-        )
-        .run();
-    }
+    await getDb()
+      .delete(notificationLog)
+      .where(
+        sql`${notificationLog.id} IN (
+          SELECT id FROM (
+            SELECT id, ROW_NUMBER() OVER (
+              PARTITION BY notifier_id ORDER BY id DESC
+            ) AS rn
+            FROM notification_log
+          ) WHERE rn > 200
+        )`,
+      )
+      .run();
   });
 }

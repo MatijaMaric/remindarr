@@ -54,6 +54,7 @@ import {
   getUserByWatchlistShareToken,
   getSharedWatchlistTitles,
   deleteExpiredSessions,
+  pruneOldRows,
 } from "./db/repository";
 import { buildOgTags, wrappedShareOgTags } from "./lib/og-tags";
 import { optionalAuth, requireAuth, requireAdmin } from "./middleware/auth";
@@ -944,6 +945,16 @@ export const handler = {
             // heavy cleanup (session expiry, old job pruning, one-time migrations).
             if (isDailyTick) {
               await pruneRateLimits();
+              // Bun runs this via the prune-notification-log job; Workers has no
+              // equivalent cron, so prune here (#1441). Isolated so a failure
+              // doesn't skip the cleanup below.
+              try {
+                await pruneOldRows();
+              } catch (err) {
+                logger.warn("pruneOldRows failed", {
+                  error: err instanceof Error ? err.message : String(err),
+                });
+              }
               // One-time migrations (idempotent — no-ops once done)
               await enqueueOnce("migrate-offers");
               await enqueueOnce("migrate-backdrops");
