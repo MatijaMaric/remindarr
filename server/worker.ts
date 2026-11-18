@@ -449,7 +449,6 @@ function createApp(env: Env) {
   const searchRateLimiter = rateLimiter({
     store: rateLimitStore,
     scope: "search",
-    failOpenReads: true,
     limit: 30,
     windowMs: 60_000,
   });
@@ -460,7 +459,6 @@ function createApp(env: Env) {
   const browseRateLimiter = rateLimiter({
     store: rateLimitStore,
     scope: "browse",
-    failOpenReads: true,
     limit: 30,
     windowMs: 60_000,
   });
@@ -527,7 +525,6 @@ function createApp(env: Env) {
   const suggestionsRateLimiter = rateLimiter({
     store: rateLimitStore,
     scope: "suggestions",
-    failOpenReads: true,
     limit: 20,
     windowMs: 60_000,
   });
@@ -671,7 +668,6 @@ function createApp(env: Env) {
   const detailsRateLimiter = rateLimiter({
     store: rateLimitStore,
     scope: "details",
-    failOpenReads: true,
     limit: 60,
     windowMs: 60_000,
   });

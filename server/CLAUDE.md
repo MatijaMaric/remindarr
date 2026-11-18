@@ -79,7 +79,7 @@ Use the platform interface, not Bun-specific APIs, in shared code.
 
 ## Key patterns (server-wide)
 
-- Rate limiting: Bun uses network peers, with forwarded chains accepted only from `TRUSTED_PROXIES`; Workers use the platform client IP and atomic D1 counters. Store errors fail closed (503) unless the limiter sets `failOpenReads`, which lets GET/HEAD through and logs `failOpen` with the warn. Read scopes (`global`, `search`, `browse`, `details`, `ratings`, `episode-comments`, `suggestions`, `suggestion-dismiss`, `writes`) opt in; `auth` opts in only for `isSafeAuthRead` paths (`get-session`, `custom/providers`); `import`, `account-export` and `sync` stay closed for every method.
+- Rate limiting: Bun uses network peers, with forwarded chains accepted only from `TRUSTED_PROXIES`; Workers use the platform client IP and atomic D1 counters. Store errors fail closed (503) unless the limiter sets `failOpenReads`, which lets GET/HEAD through and logs `failOpen` with the warn. Opted in: `global`, `writes`, `ratings`, `episode-comments`, `suggestion-dismiss`; `auth` only for `isSafeAuthRead` paths (`get-session`, `custom/providers`). TMDB-backed scopes (`search`, `browse`, `details`, `suggestions`) stay closed because their GETs fan out to TMDB and upsert into D1, as do `import`, `account-export` and `sync`.
 - Auth middleware is composable: `optionalAuth` → `requireAuth` → `requireAdmin` (all in `server/middleware/auth.ts`)
 - OIDC settings have env-var precedence over DB (admin UI editable but env overrides)
 - All DB writes use transactions for consistency
