@@ -56,13 +56,12 @@ export class SignupPage extends BasePage {
 
   // ── error banner ───────────────────────────────────────────────────────────
   /**
-   * The red error banner that appears when the server rejects the request.
-   * The element is a plain <div> (no ARIA role) rendered directly before the
-   * form; without an error the heading precedes the form instead. Located by
-   * that position rather than by colour classes, which change with the theme.
+   * The error banner that appears when the server rejects the request. It is
+   * a plain <div> (no ARIA role) and SignupPage shows no toast, so the server
+   * message inside <main> identifies it.
    */
-  get errorBanner(): Locator {
-    return this.page.locator("div:has(+ form)");
+  errorBanner(message: string | RegExp): Locator {
+    return this.page.getByRole("main").getByText(message);
   }
 
   // ── navigation ─────────────────────────────────────────────────────────────

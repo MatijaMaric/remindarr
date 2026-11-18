@@ -227,9 +227,12 @@ test.describe("Discovery", () => {
       page.getByRole("heading", { name: "Because you loved Inception" }),
     ).toBeVisible();
     await expect(page.getByText("Suggested Movie").first()).toBeVisible();
+    // The row carries its own title and drops the one already in the hero (#1421)
+    const rail = dp.section("Because you loved Inception");
     await expect(
-      page.getByRole("link", { name: "Rail Only Movie" }),
+      rail.getByRole("link", { name: "Rail Only Movie" }),
     ).toBeVisible();
+    await expect(rail.getByText("Suggested Movie")).toHaveCount(0);
     await expect(page.getByText("Friends are recommending")).not.toBeVisible();
   });
 
@@ -287,7 +290,9 @@ test.describe("Discovery", () => {
     const navLink = dp.discoveryNavLink();
     await expect(navLink).toBeVisible();
     await expect(navLink).toHaveAccessibleName(/3 unread recommendations/);
-    await expect(navLink.getByTestId("unread-badge")).toHaveText("3");
+    const badge = navLink.getByTestId("unread-badge");
+    await expect(badge).toBeVisible();
+    await expect(badge).toHaveText("3");
   });
 
   test("TC-06: empty state — no suggestions and no recommendations", async ({

@@ -283,5 +283,10 @@ test.describe("Invite / Accept flow", () => {
       page.getByRole("button", { name: /revoke/i }),
     ).not.toBeVisible();
     await expect(ip.shareButton()).toHaveCount(0);
+
+    // Success-tinted card (no semantic marker for the used state's styling)
+    const card = ip.invitationCardWith(aliceLink);
+    await expect(card).toHaveClass(/bg-success\/20/);
+    await expect(card).toHaveClass(/border-success\/40/);
   });
 });

@@ -213,7 +213,8 @@ page component even mounts.
 
 **Expected**:
 
-- Exactly one `PUT …/user-2/role` was sent, after confirming; the dialog closes.
+- The dialog closes; exactly one `PUT …/user-2/role` with body `{ "role": "admin" }` was
+  sent, and only after confirming.
 
 - The `regularuser` row now displays an `"Admin"` badge (amber styling).
 - The role-toggle button aria-label changes to the `"Demote"` translation.

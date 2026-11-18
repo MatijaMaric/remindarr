@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { BasePage } from "./base-page";
 
 export class InvitePage extends BasePage {
@@ -48,6 +48,14 @@ export class InvitePage extends BasePage {
     return this.page.evaluate(
       () => (window as unknown as { __sharedUrls: string[] }).__sharedUrls,
     );
+  }
+
+  /**
+   * The invitation card containing `inner`. Cards have no role or label, so
+   * this takes the nearest rounded card ancestor; only for style assertions.
+   */
+  invitationCardWith(inner: Locator) {
+    return this.page.locator("div.rounded-md").filter({ has: inner }).last();
   }
 
   emptyState() {

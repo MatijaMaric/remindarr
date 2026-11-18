@@ -288,3 +288,4 @@ a green card with a `"Used by Alice"` label and a link to `@alice`'s profile pag
 - No `"Revoke"` or `"Share"` button is visible (pending-only actions are hidden for used
   invitations).
 - The code `"EFGH5678"` is not printed on the card (#1428).
+- The card has the success tint (`bg-success/20`, `border-success/40`).

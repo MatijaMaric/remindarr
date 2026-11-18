@@ -23,11 +23,13 @@ export class DiscoveryPage extends BasePage {
    * received recommendations live in this row on the single For you view.
    */
   friendsRow() {
+    return this.section("Friends are recommending");
+  }
+
+  /** A content row (<section>) identified by its <h2> title. */
+  section(title: string) {
     return this.page.locator("section").filter({
-      has: this.page.getByRole("heading", {
-        name: "Friends are recommending",
-        level: 2,
-      }),
+      has: this.page.getByRole("heading", { name: title, level: 2 }),
     });
   }
 

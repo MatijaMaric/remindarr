@@ -230,7 +230,8 @@ database with a tracked title.
 **Expected**:
 
 - `getByText("Because you loved Inception")` section heading is visible.
-- Inside that section, the `"Rail Only Movie"` card link is visible. (Rows drop titles
+- Inside that section, the `"Rail Only Movie"` card link is visible and the hero's
+  `"Suggested Movie"` is not repeated. (Rows drop titles
   already shown in the hero or "Suggested next" (#1421), so the fixture's Inception group
   carries a title of its own.)
 - The "Friends are recommending" section is absent (no friend recs in the fixture).
