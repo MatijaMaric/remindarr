@@ -589,6 +589,7 @@ describe("scheduled() bootstrap KV timestamp", () => {
         fakeCtx,
       );
       expect(pruneLogSpy).not.toHaveBeenCalled();
+      expect(repository.deleteExpiredSessions).not.toHaveBeenCalled();
 
       await handler.scheduled(
         { cron: "0 0 * * *", type: "scheduled", scheduledTime: Date.now() },
@@ -597,7 +598,7 @@ describe("scheduled() bootstrap KV timestamp", () => {
       );
       expect(pruneLogSpy).toHaveBeenCalledTimes(1);
       // deleteExpiredSessions is stubbed in beforeEach; it runs after the prune.
-      expect(repository.deleteExpiredSessions).toHaveBeenCalled();
+      expect(repository.deleteExpiredSessions).toHaveBeenCalledTimes(1);
     } finally {
       pruneLogSpy.mockRestore();
       rateSpy.mockRestore();
