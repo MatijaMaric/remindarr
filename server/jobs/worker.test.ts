@@ -161,3 +161,216 @@ describe("worker error logging includes stack traces", () => {
     consoleErrorSpy.mockRestore();
   });
 });
+
+describe("worker drain and in-flight guards (#1442)", () => {
+  function deferred() {
+    let resolve!: () => void;
+    const promise = new Promise<void>((r) => (resolve = r));
+    return { promise, resolve };
+  }
+
+  it("drains all pending jobs of one name within a single tick", async () => {
+    let calls = 0;
+    registerHandler("drain-job", async () => {
+      calls++;
+    });
+    for (let i = 0; i < 20; i++) enqueueJob("drain-job");
+
+    await processJobs();
+
+    expect(calls).toBe(20);
+    expect(getJobStats()["drain-job"].completed).toBe(20);
+  });
+
+  it("stops claiming a name once its per-tick budget is spent", async () => {
+    let now = 0;
+    const nowSpy = spyOn(performance, "now").mockImplementation(() => now);
+    try {
+      registerHandler("budget-job", async () => {
+        now += 20; // each job "takes" 20 ms of fake clock
+      });
+      for (let i = 0; i < 10; i++) enqueueJob("budget-job");
+
+      // Claims at elapsed 0 and 20; at 40 the 30 ms budget is spent.
+      await processJobs(30);
+
+      const stats = getJobStats()["budget-job"];
+      expect(stats.completed).toBe(2);
+      expect(stats.pending).toBe(8);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it("does not start a tick while the previous one is still running", async () => {
+    const gate = deferred();
+    const started = deferred();
+    let calls = 0;
+    registerHandler("overlap-job", async () => {
+      calls++;
+      started.resolve();
+      await gate.promise;
+    });
+    let otherCalls = 0;
+    registerHandler("overlap-other", async () => {
+      otherCalls++;
+    });
+    enqueueJob("overlap-job");
+
+    const first = processJobs();
+    await started.promise;
+    // A different name, so only the tick guard (not the per-name guard) can
+    // stop the overlapping call from claiming it.
+    enqueueJob("overlap-other");
+    await processJobs(); // overlapping tick returns without claiming
+    expect(otherCalls).toBe(0);
+    expect(getJobStats()["overlap-other"].pending).toBe(1);
+
+    gate.resolve();
+    await first;
+    expect(calls).toBe(1);
+    expect(otherCalls).toBe(1);
+  });
+
+  it("skips a name whose timed-out handler has not settled yet", async () => {
+    const original = CONFIG.JOB_HANDLER_TIMEOUT_MS;
+    CONFIG.JOB_HANDLER_TIMEOUT_MS = 30;
+    const gate = deferred();
+    let calls = 0;
+    try {
+      registerHandler("unsettled-job", async () => {
+        calls++;
+        if (calls === 1) await gate.promise;
+      });
+      enqueueJob("unsettled-job", undefined, { maxAttempts: 1 });
+      enqueueJob("unsettled-job", undefined, { maxAttempts: 1 });
+
+      await processJobs(); // first job times out; its handler is still running
+      await processJobs(); // name still unsettled: second job is not claimed
+      expect(calls).toBe(1);
+      expect(getJobStats()["unsettled-job"].pending).toBe(1);
+
+      gate.resolve();
+      await new Promise((r) => setImmediate(r)); // let the handler's finally run
+      await processJobs();
+      expect(calls).toBe(2);
+      expect(getJobStats()["unsettled-job"].completed).toBe(1);
+    } finally {
+      CONFIG.JOB_HANDLER_TIMEOUT_MS = original;
+    }
+  });
+
+  it("does not count a handler's synchronous start against the timeout window", async () => {
+    // The timeout is armed after the handler is invoked, as before #1442.
+    const original = CONFIG.JOB_HANDLER_TIMEOUT_MS;
+    CONFIG.JOB_HANDLER_TIMEOUT_MS = 25;
+    try {
+      registerHandler("sync-start-job", () => {
+        const until = Date.now() + 60;
+        while (Date.now() < until); // synchronous work longer than the timeout
+        return new Promise((r) => setTimeout(r, 5));
+      });
+      enqueueJob("sync-start-job", undefined, { maxAttempts: 1 });
+
+      await processJobs();
+
+      expect(getJobStats()["sync-start-job"].completed).toBe(1);
+    } finally {
+      CONFIG.JOB_HANDLER_TIMEOUT_MS = original;
+    }
+  });
+
+  it("releases the name when a handler throws synchronously", async () => {
+    let calls = 0;
+    registerHandler("sync-throw-job", () => {
+      calls++;
+      throw new Error("boom");
+    });
+    enqueueJob("sync-throw-job", undefined, { maxAttempts: 1 });
+    enqueueJob("sync-throw-job", undefined, { maxAttempts: 1 });
+
+    await processJobs();
+
+    expect(calls).toBe(2);
+    expect(getJobStats()["sync-throw-job"].failed).toBe(2);
+  });
+
+  it("stops claiming after stopWorker() during an active drain", async () => {
+    const gate = deferred();
+    const started = deferred();
+    let calls = 0;
+    registerHandler("stop-drain-job", async () => {
+      calls++;
+      started.resolve();
+      await gate.promise;
+    });
+    enqueueJob("stop-drain-job");
+    enqueueJob("stop-drain-job");
+
+    const tick = processJobs();
+    await started.promise;
+    stopWorker();
+    gate.resolve();
+    await tick;
+
+    expect(calls).toBe(1);
+    expect(getJobStats()["stop-drain-job"].pending).toBe(1);
+  });
+
+  it("does not count a handler's synchronous start against the timeout window", async () => {
+    // The timeout is armed after the handler is invoked, as before #1442.
+    const original = CONFIG.JOB_HANDLER_TIMEOUT_MS;
+    CONFIG.JOB_HANDLER_TIMEOUT_MS = 25;
+    try {
+      registerHandler("sync-start-job", () => {
+        const until = Date.now() + 60;
+        while (Date.now() < until); // synchronous work longer than the timeout
+        return new Promise((r) => setTimeout(r, 5));
+      });
+      enqueueJob("sync-start-job", undefined, { maxAttempts: 1 });
+
+      await processJobs();
+
+      expect(getJobStats()["sync-start-job"].completed).toBe(1);
+    } finally {
+      CONFIG.JOB_HANDLER_TIMEOUT_MS = original;
+    }
+  });
+
+  it("releases the name when a handler throws synchronously", async () => {
+    let calls = 0;
+    registerHandler("sync-throw-job", () => {
+      calls++;
+      throw new Error("boom");
+    });
+    enqueueJob("sync-throw-job", undefined, { maxAttempts: 1 });
+    enqueueJob("sync-throw-job", undefined, { maxAttempts: 1 });
+
+    await processJobs();
+
+    expect(calls).toBe(2);
+    expect(getJobStats()["sync-throw-job"].failed).toBe(2);
+  });
+
+  it("stops claiming after stopWorker() during an active drain", async () => {
+    const gate = deferred();
+    const started = deferred();
+    let calls = 0;
+    registerHandler("stop-drain-job", async () => {
+      calls++;
+      started.resolve();
+      await gate.promise;
+    });
+    enqueueJob("stop-drain-job");
+    enqueueJob("stop-drain-job");
+
+    const tick = processJobs();
+    await started.promise;
+    stopWorker();
+    gate.resolve();
+    await tick;
+
+    expect(calls).toBe(1);
+    expect(getJobStats()["stop-drain-job"].pending).toBe(1);
+  });
+});

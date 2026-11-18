@@ -482,6 +482,7 @@
     "nextEpisode": "Next episode, {{code}}",
     "episode": "Episode {{number}}",
     "notFound": "Episode not found",
+    "loadFailed": "Couldn't load this episode.",
     "votes_one": "{{count}} vote",
     "votes_other": "{{count}} votes",
     "watchedOn": "Watched {{date}}",
@@ -514,6 +515,8 @@
   },
   "season": {
     "notFound": "Season not found",
+    "loadFailed": "Couldn't load this season.",
+    "statusLoadFailed": "Couldn't load your watched progress.",
     "episodes": "Episodes",
     "episodeCount_one": "{{count}} episode",
     "episodeCount_other": "{{count}} episodes",

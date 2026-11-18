@@ -210,10 +210,11 @@ test.describe("More page", () => {
     // Display name shown as primary label
     await expect(page.getByText("Alice Smith").first()).toBeVisible();
 
-    // Initials derived from "Alice Smith" → "AS"
-    await expect(page.getByText("AS")).toBeVisible();
+    // Initials derived from "Alice Smith" → "AS", in the profile card avatar
+    const card = mp.profileCard("alice");
+    await expect(card.getByText("AS", { exact: true })).toBeVisible();
 
     // Username shown in monospace
-    await expect(page.getByText("@alice")).toBeVisible();
+    await expect(card.getByText("@alice", { exact: true })).toBeVisible();
   });
 });

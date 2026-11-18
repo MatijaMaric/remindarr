@@ -19,11 +19,21 @@ import {
 const POLL_INTERVAL_MS = 30_000; // Check for jobs every 30s
 const CRON_TICK_INTERVAL_MS = 60_000; // Check cron schedules every 60s
 const CLEANUP_INTERVAL_MS = 24 * 60 * 60_000; // Clean old jobs daily
+// Per name, keep claiming jobs until the queue is empty or this much time has
+// passed, so fan-out jobs drain in one tick without starving other names (#1442).
+const NAME_BUDGET_MS = 10_000;
 
 const handlers = new Map<string, JobHandler>();
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let cronTimer: ReturnType<typeof setInterval> | null = null;
 let cleanupTimer: ReturnType<typeof setInterval> | null = null;
+// Guards: a tick never overlaps the previous one, and a name whose handler has
+// not settled (e.g. it lost the withTimeout race and is still running) is not
+// claimed again until it does.
+let processing = false;
+const unsettled = new Set<string>();
+// Bumped by stopWorker so an in-flight tick stops claiming new jobs.
+let generation = 0;
 
 export function registerHandler(name: string, handler: JobHandler) {
   handlers.set(name, handler);
@@ -59,49 +69,83 @@ async function withTimeout<T>(
   }
 }
 
-export async function processJobs() {
-  for (const [name, handler] of handlers) {
-    const job = claimNextJob(name);
-    if (!job) continue;
-
-    const cronExpr = getCronExpression(name);
-    const monitorConfig = cronExpr
-      ? {
-          schedule: { type: "crontab" as const, value: cronExpr },
-          maxRuntime: 30,
-        }
-      : undefined;
-
-    const jobStart = performance.now();
-    try {
-      const exec = () =>
-        withTimeout(handler(job), CONFIG.JOB_HANDLER_TIMEOUT_MS, name);
-      if (cronExpr) {
-        await Sentry.withMonitor(name, exec, monitorConfig);
-      } else {
-        await exec();
+export async function processJobs(budgetMs = NAME_BUDGET_MS) {
+  if (processing) return;
+  processing = true;
+  const gen = generation;
+  try {
+    for (const [name, handler] of handlers) {
+      const start = performance.now();
+      while (
+        gen === generation &&
+        !unsettled.has(name) &&
+        performance.now() - start < budgetMs &&
+        (await runNext(name, handler))
+      ) {
+        // Yield to the event loop between jobs so timers and HTTP callbacks
+        // are not starved by a long drain of microtask-only handlers.
+        await new Promise((r) => setImmediate(r));
       }
-      completeJob(job.id);
-      const duration = (performance.now() - jobStart) / 1000;
-      jobsTotal.inc({ name, status: "completed" });
-      jobDurationSeconds.observe({ name }, duration);
-      log.info("Completed job", { name, jobId: job.id });
-    } catch (err) {
-      Sentry.captureException(err);
-      const message = err instanceof Error ? err.message : String(err);
-      failJob(job.id, message);
-      const duration = (performance.now() - jobStart) / 1000;
-      jobsTotal.inc({ name, status: "failed" });
-      jobDurationSeconds.observe({ name }, duration);
-      log.error("Failed job", {
-        name,
-        jobId: job.id,
-        attempt: job.attempts,
-        maxAttempts: job.max_attempts,
-        err,
-      });
     }
+  } finally {
+    processing = false;
   }
+}
+
+/** Claim and run one job for `name`. Returns false when none was pending. */
+async function runNext(name: string, handler: JobHandler): Promise<boolean> {
+  const job = claimNextJob(name);
+  if (!job) return false;
+
+  const cronExpr = getCronExpression(name);
+  const monitorConfig = cronExpr
+    ? {
+        schedule: { type: "crontab" as const, value: cronExpr },
+        maxRuntime: 30,
+      }
+    : undefined;
+
+  const jobStart = performance.now();
+  try {
+    const exec = () => {
+      unsettled.add(name);
+      let run: Promise<void>;
+      try {
+        // Call synchronously (before the timeout is armed), as before #1442.
+        run = Promise.resolve(handler(job));
+      } catch (err) {
+        unsettled.delete(name);
+        throw err;
+      }
+      run = run.finally(() => unsettled.delete(name));
+      return withTimeout(run, CONFIG.JOB_HANDLER_TIMEOUT_MS, name);
+    };
+    if (cronExpr) {
+      await Sentry.withMonitor(name, exec, monitorConfig);
+    } else {
+      await exec();
+    }
+    completeJob(job.id);
+    const duration = (performance.now() - jobStart) / 1000;
+    jobsTotal.inc({ name, status: "completed" });
+    jobDurationSeconds.observe({ name }, duration);
+    log.info("Completed job", { name, jobId: job.id });
+  } catch (err) {
+    Sentry.captureException(err);
+    const message = err instanceof Error ? err.message : String(err);
+    failJob(job.id, message);
+    const duration = (performance.now() - jobStart) / 1000;
+    jobsTotal.inc({ name, status: "failed" });
+    jobDurationSeconds.observe({ name }, duration);
+    log.error("Failed job", {
+      name,
+      jobId: job.id,
+      attempt: job.attempts,
+      maxAttempts: job.max_attempts,
+      err,
+    });
+  }
+  return true;
 }
 
 export function startWorker() {
@@ -112,7 +156,7 @@ export function startWorker() {
   recoverStaleJobs();
 
   // Poll for pending jobs
-  pollTimer = setInterval(processJobs, POLL_INTERVAL_MS);
+  pollTimer = setInterval(() => processJobs(), POLL_INTERVAL_MS);
 
   // Tick cron schedules
   cronTimer = setInterval(tickCrons, CRON_TICK_INTERVAL_MS);
@@ -128,6 +172,7 @@ export function startWorker() {
 }
 
 export function stopWorker() {
+  generation++;
   if (pollTimer) clearInterval(pollTimer);
   if (cronTimer) clearInterval(cronTimer);
   if (cleanupTimer) clearInterval(cleanupTimer);

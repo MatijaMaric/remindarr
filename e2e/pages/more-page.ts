@@ -10,8 +10,11 @@ export class MorePagePO extends BasePage {
     await super.goto("/more");
   }
 
-  profileCard() {
-    return this.page.getByRole("link", { name: /testuser/i }).first();
+  profileCard(username = "testuser") {
+    // The card link's name is "<initials> <display name> @<username>".
+    return this.page
+      .getByRole("link", { name: new RegExp(`@${username}$`, "i") })
+      .first();
   }
 
   signOutButton() {

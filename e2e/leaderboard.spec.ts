@@ -66,24 +66,19 @@ test.describe("Leaderboard", () => {
     await lb.gotoLeaderboard();
     await expect(lb.pageHeading()).toBeVisible();
 
-    // Current user is rank 2 (in podium). Locate the @testuser text, then
-    // walk up to the podium card container and verify amber highlight class.
-    const usernameEl = page.getByText("@testuser");
-    await expect(usernameEl).toBeVisible();
-
-    // The PodiumSpot div is the first ancestor div with border-primary-border
-    const podiumCard = usernameEl
-      .locator("xpath=ancestor::a[contains(@class,'border-primary')]")
-      .first();
+    // Current user is rank 2 (in podium). Their card shows the amber
+    // highlight; there is no semantic marker for it, so the class is checked.
+    const podiumCard = lb.userCard("Test User");
     await expect(podiumCard).toBeVisible();
-    await expect(podiumCard).toHaveClass(/border-primary/);
+    await expect(podiumCard).toContainText("@testuser");
+    await expect(podiumCard).toHaveClass(/border-primary-border/);
 
-    // Other podium cards (Alice, Bob) do not have amber border
-    const aliceCard = page
-      .getByText("@alice")
-      .locator("xpath=ancestor::a[contains(@class,'rounded-lg')]")
-      .first();
-    await expect(aliceCard).not.toHaveClass(/border-primary/);
+    // Other podium cards (Alice, Bob) do not have the amber border
+    for (const name of ["Alice", "Bob"]) {
+      const card = lb.userCard(name);
+      await expect(card).toBeVisible();
+      await expect(card).not.toHaveClass(/border-primary/);
+    }
   });
 
   // ── TC-03: Empty leaderboard shows empty state message ───────────────────────

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ScrollableRow from "../components/ScrollableRow";
 import * as api from "../api";
+import { ApiError } from "../lib/api-error";
 import type { CastMember, CrewMember } from "../types";
 import PersonCard from "../components/PersonCard";
 import { DetailPageSkeleton } from "../components/SkeletonComponents";
@@ -41,7 +42,9 @@ export default function EpisodeDetailPage() {
   const {
     data,
     isLoading: loading,
-    isError: error,
+    isError,
+    error,
+    refetch,
   } = useQuery({
     queryKey: ["episode-detail", id, season, episode],
     queryFn: ({ signal }) =>
@@ -164,12 +167,25 @@ export default function EpisodeDetailPage() {
     return <DetailPageSkeleton />;
   }
 
-  if (error || !data) {
+  if (isError || !data) {
+    const notFound =
+      !isError || (error instanceof ApiError && error.status === 404);
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex flex-col items-center justify-center py-20">
         <div className="text-destructive select-text">
-          {t("episodes.notFound", "Episode not found")}
+          {notFound
+            ? t("episodes.notFound", "Episode not found")
+            : t("episodes.loadFailed")}
         </div>
+        {!notFound && (
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="inline-block mt-4 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm transition-colors cursor-pointer"
+          >
+            {t("common.retry")}
+          </button>
+        )}
       </div>
     );
   }

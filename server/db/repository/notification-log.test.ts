@@ -206,4 +206,31 @@ describe("pruneOldRows", () => {
     const latencies = rows.map((r) => r.latencyMs ?? 0);
     expect(latencies[0]).toBeGreaterThanOrEqual(5); // most recent = latencyMs 204
   });
+
+  it("caps each notifier independently (#1441)", async () => {
+    const otherUser = await createUser("otheruser", "hash");
+    const otherId = await createNotifier(
+      otherUser,
+      "discord",
+      "Discord",
+      {
+        webhookUrl: "https://discord.com/api/webhooks/987654321/zyxwvutsrqponm",
+      },
+      "09:00",
+      "UTC",
+    );
+    for (let i = 0; i < 205; i++) {
+      await recordDelivery({ notifierId, status: "success", latencyMs: i });
+    }
+    for (let i = 0; i < 10; i++) {
+      await recordDelivery({ notifierId: otherId, status: "failure" });
+    }
+
+    await pruneOldRows();
+
+    const rows = await getRecentForNotifier(notifierId, 300);
+    expect(rows).toHaveLength(200);
+    expect(Math.min(...rows.map((r) => r.latencyMs ?? 0))).toBe(5);
+    expect(await getRecentForNotifier(otherId, 300)).toHaveLength(10);
+  });
 });

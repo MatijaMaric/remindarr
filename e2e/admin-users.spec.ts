@@ -189,14 +189,19 @@ test.describe("Admin users page", () => {
     // Stateful handler: after PUT /role, GET returns promoted user
     let regularUserRole = "user";
     let regularUserIsAdmin = 0;
+    const putBodies: unknown[] = [];
 
     await page.route("**/api/admin/users**", (route) => {
       const url = route.request().url();
       const method = route.request().method();
 
       if (method === "PUT" && url.includes("/user-2/role")) {
-        regularUserRole = "admin";
-        regularUserIsAdmin = 1;
+        const body = route.request().postDataJSON() as { role?: string };
+        putBodies.push(body);
+        if (body?.role === "admin") {
+          regularUserRole = "admin";
+          regularUserIsAdmin = 1;
+        }
         return route.fulfill({ json: { message: "Role updated" } });
       }
 
@@ -221,8 +226,15 @@ test.describe("Admin users page", () => {
     await aup.gotoAdminUsers();
     await aup.waitForVisible(page.getByText("regularuser").first());
 
-    // Click promote button
+    // Click promote button — opens a confirmation dialog, no request yet
     await aup.promoteButton("regularuser").click();
+    await expect(
+      aup.roleDialog().getByText("Make regularuser an admin?"),
+    ).toBeVisible();
+    expect(putBodies).toHaveLength(0);
+
+    await aup.confirmRoleButton(/promote to admin/i).click();
+    await expect(aup.roleDialog()).not.toBeVisible();
 
     // After refetch, "Admin" badge appears in regularuser's row (last = sm:table-cell, visible)
     await expect(
@@ -230,6 +242,8 @@ test.describe("Admin users page", () => {
     ).toBeVisible();
     // Demote button is now shown
     await expect(aup.demoteButton("regularuser")).toBeVisible();
+    // Exactly one role change was sent, and it asked for admin
+    expect(putBodies).toEqual([{ role: "admin" }]);
   });
 
   test("TC-06: Deleting a user removes them from the table", async ({

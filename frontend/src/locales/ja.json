@@ -474,6 +474,7 @@
     "nextEpisode": "次のエピソード、{{code}}",
     "episode": "第 {{number}} 話",
     "notFound": "エピソードが見つかりません",
+    "loadFailed": "このエピソードを読み込めませんでした。",
     "votes_other": "{{count}} 票",
     "watchedOn": "{{date}} に視聴",
     "rateThis": "このエピソードを評価",
@@ -505,6 +506,8 @@
   },
   "season": {
     "notFound": "シーズンが見つかりません",
+    "loadFailed": "このシーズンを読み込めませんでした。",
+    "statusLoadFailed": "視聴状況を読み込めませんでした。",
     "episodes": "エピソード",
     "episodeCount_other": "{{count}} エピソード",
     "watchProgress": "{{total}} 話中 {{watched}} 話視聴 · 残り {{remaining}} 話",

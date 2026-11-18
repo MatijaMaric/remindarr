@@ -37,10 +37,14 @@ export default function TitleDetailPage() {
   }
 
   if (data && data.title.object_type === "MOVIE") {
-    return <MovieDetail data={data as MovieDetailsResponse} />;
+    return (
+      <MovieDetail key={data.title.id} data={data as MovieDetailsResponse} />
+    );
   }
   if (data && data.title.object_type === "SHOW") {
-    return <ShowDetail data={data as ShowDetailsResponse} />;
+    return (
+      <ShowDetail key={data.title.id} data={data as ShowDetailsResponse} />
+    );
   }
 
   return (

@@ -7,6 +7,7 @@ import {
   afterEach,
   mock,
   spyOn,
+  setSystemTime,
 } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import {
@@ -409,6 +410,13 @@ import {
   insertPersonCreditAlerts,
   listPersonCreditAlerts,
 } from "../db/repository/person-follows";
+import { getDb, notifiers } from "../db/schema";
+import { eq } from "drizzle-orm";
+import {
+  upsertAchievementDef,
+  upsertUserAchievement,
+} from "../db/repository/achievements";
+import { ACHIEVEMENTS } from "../achievements/definitions";
 
 // Suppress Sentry withMonitor calls from worker.ts
 const withMonitorSpy = spyOn(Sentry, "withMonitor").mockImplementation(((
@@ -517,6 +525,95 @@ describe("New credits in Bun digests", () => {
     await processJobs();
 
     expect(await listPersonCreditAlerts(id)).toHaveLength(1);
+  });
+});
+
+describe("achievements do not leak between a user's notifiers (#1440)", () => {
+  afterEach(() => {
+    setSystemTime();
+  });
+
+  beforeEach(async () => {
+    setupTestDb();
+    await registerNotificationJobs();
+    recordDeliverySpy.mockResolvedValue(undefined);
+    markNotifierSentSpy.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    getProviderSpy.mockClear();
+    buildContentSpy.mockClear();
+  });
+
+  it("does not send the badge to a notifier with achievements off", async () => {
+    // Freeze the clock so setup and the job agree on the due minute.
+    setSystemTime(new Date("2026-06-01T12:00:00Z"));
+    const uid = await createUser("badgeuser", "hash");
+    buildContentSpy.mockResolvedValue({ episodes: [], movies: [], date: "x" });
+    const send = mock(async () => {});
+    getProviderSpy.mockReturnValue({
+      name: "discord",
+      send,
+      validateConfig: () => ({ valid: true }),
+    });
+    const { time } = nowUtc();
+    const onId = await createNotifier(
+      uid,
+      "discord",
+      "On",
+      { webhookUrl: "https://discord.com/on" },
+      time,
+      "UTC",
+    );
+    await createNotifier(
+      uid,
+      "discord",
+      "Off",
+      { webhookUrl: "https://discord.com/off" },
+      time,
+      "UTC",
+    );
+    await getDb()
+      .update(notifiers)
+      .set({ achievementsEnabled: 1 })
+      .where(eq(notifiers.id, onId))
+      .run();
+    await upsertAchievementDef(ACHIEVEMENTS[0]);
+    await upsertUserAchievement(
+      uid,
+      ACHIEVEMENTS[0].key,
+      1,
+      new Date().toISOString(),
+    );
+
+    // getDueNotifiers has no ORDER BY; force the achievements-on notifier to
+    // run first, since that is the order that exposed the leak.
+    const realGetDue = repositoryModule.getDueNotifiers;
+    const dueSpy = spyOn(
+      repositoryModule,
+      "getDueNotifiers",
+    ).mockImplementation(async (times) => {
+      const due = await realGetDue(times);
+      expect(due.map((n) => n.name).sort()).toEqual(["Off", "On"]);
+      return due.sort(
+        (a, b) => Number(b.name === "On") - Number(a.name === "On"),
+      );
+    });
+    try {
+      enqueueJob("send-notifications");
+      await processJobs();
+    } finally {
+      dueSpy.mockRestore();
+    }
+
+    // Only the achievements-on notifier has anything to send.
+    expect(send).toHaveBeenCalledTimes(1);
+    const [config, content] = send.mock.calls[0] as unknown as [
+      { webhookUrl: string },
+      { achievementsEarned?: unknown[] },
+    ];
+    expect(config.webhookUrl).toBe("https://discord.com/on");
+    expect(content.achievementsEarned).toHaveLength(1);
   });
 });
 
