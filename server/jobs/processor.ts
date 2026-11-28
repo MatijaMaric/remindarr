@@ -48,26 +48,14 @@ import { getCurrentTimeInTimezone, nextRetryAt } from "./time-utils";
 import {
   listEarnedSince,
   markAchievementsNotified,
-  upsertUserAchievements,
-  type UserAchievementUpsert,
 } from "../db/repository/achievements";
-import { recomputeStreakFromHistory } from "../db/repository/streaks";
 import { getSetting, setSetting } from "../db/repository/settings";
-import {
-  ACHIEVEMENTS,
-  type AchievementKind,
-} from "../achievements/definitions";
+import { ACHIEVEMENTS } from "../achievements/definitions";
 import { BACKFILL_DONE_KEY } from "../achievements/sync";
 import {
-  evaluateCountMovies,
-  evaluateCountEpisodes,
-  evaluateStreak,
-  evaluateGenreCount,
-  evaluateCompletionist,
-  evaluateSpeedBingeSeason,
-  evaluateSocialFirstFollow,
-  evaluateSocialFirstRecommendation,
-} from "../achievements/evaluate";
+  backfillUserAchievements,
+  runEvaluateAchievements,
+} from "./achievement-handlers";
 
 const log = logger.child({ module: "job-processor" });
 
@@ -500,105 +488,6 @@ async function handleCleanup() {
 
 const BACKFILL_PAGE_SIZE = 50;
 
-async function handleEvaluateAchievements(data: string | null): Promise<void> {
-  const raw = typeof data === "string" ? JSON.parse(data) : data;
-  const { userId, kinds, titleId } = (raw ?? {}) as {
-    userId: string;
-    kinds: AchievementKind[];
-    titleId?: string;
-  };
-
-  if (!userId || !Array.isArray(kinds)) {
-    log.warn("evaluate-achievements: invalid job data");
-    return;
-  }
-
-  const pending: Array<UserAchievementUpsert & { kind: AchievementKind }> = [];
-
-  for (const kind of kinds) {
-    const matchingAchievements = ACHIEVEMENTS.filter((a) => a.kind === kind);
-    for (const a of matchingAchievements) {
-      try {
-        let result: { progress: number; earned: boolean };
-        switch (kind) {
-          case "count_movies":
-            result = await evaluateCountMovies(userId, a.threshold);
-            break;
-          case "count_episodes":
-            result = await evaluateCountEpisodes(userId, a.threshold);
-            break;
-          case "streak_days":
-            result = await evaluateStreak(userId, a.threshold);
-            break;
-          case "genre_count":
-            result = await evaluateGenreCount(
-              userId,
-              a.threshold,
-              a.genre ?? "__any__",
-            );
-            break;
-          case "completionist":
-            result = await evaluateCompletionist(userId, a.threshold, titleId);
-            break;
-          case "speed_binge_season":
-            if (!titleId) continue;
-            result = await evaluateSpeedBingeSeason(
-              userId,
-              a.threshold,
-              a.windowHours ?? 24,
-              titleId,
-            );
-            break;
-          case "social_first_follow":
-            result = await evaluateSocialFirstFollow(userId);
-            break;
-          case "social_first_recommendation":
-            result = await evaluateSocialFirstRecommendation(userId);
-            break;
-          default:
-            log.warn("evaluate-achievements: unknown kind, skipping", {
-              kind,
-              userId,
-            });
-            continue;
-        }
-        pending.push({
-          key: a.key,
-          kind,
-          progress: result.progress,
-          earnedAt: result.earned ? new Date().toISOString() : null,
-        });
-      } catch (err) {
-        log.error("evaluate-achievements: error evaluating achievement", {
-          userId,
-          key: a.key,
-          kind,
-          error: err instanceof Error ? err.message : String(err),
-        });
-      }
-    }
-  }
-
-  if (pending.length === 0) return;
-
-  try {
-    const results = await upsertUserAchievements(userId, pending);
-    for (const item of pending) {
-      if (!results.get(item.key)?.newlyEarned) continue;
-      log.info("Achievement newly earned (deferred)", {
-        userId,
-        key: item.key,
-        kind: item.kind,
-      });
-    }
-  } catch (err) {
-    log.error("evaluate-achievements: error persisting achievements", {
-      userId,
-      error: err instanceof Error ? err.message : String(err),
-    });
-  }
-}
-
 async function handleBackfillAchievements(
   _data?: string | null,
 ): Promise<void> {
@@ -624,92 +513,7 @@ async function handleBackfillAchievements(
   for (const row of rows) {
     const userId = row.id;
     try {
-      await recomputeStreakFromHistory(userId);
-
-      const pending: UserAchievementUpsert[] = [];
-      for (const a of ACHIEVEMENTS) {
-        try {
-          let result: { progress: number; earned: boolean };
-          switch (a.kind) {
-            case "count_movies":
-              result = await evaluateCountMovies(userId, a.threshold);
-              break;
-            case "count_episodes":
-              result = await evaluateCountEpisodes(userId, a.threshold);
-              break;
-            case "streak_days":
-              result = await evaluateStreak(userId, a.threshold);
-              break;
-            case "genre_count":
-              result = await evaluateGenreCount(
-                userId,
-                a.threshold,
-                a.genre ?? "__any__",
-              );
-              break;
-            case "completionist":
-              result = await evaluateCompletionist(userId, a.threshold);
-              break;
-            case "speed_binge_season": {
-              const threshold = a.threshold;
-              const windowHours = a.windowHours ?? 24;
-              const candidateRows = await db.all<{ title_id: string }>(sql`
-                SELECT e.title_id
-                FROM watched_episodes we
-                JOIN episodes e ON e.id = we.episode_id
-                WHERE we.user_id = ${userId}
-                  AND we.watched_at IS NOT NULL
-                GROUP BY e.title_id
-                HAVING COUNT(*) >= ${threshold}
-              `);
-              let maxProgress = 0;
-              let anyEarned = false;
-              for (const c of candidateRows) {
-                const r = await evaluateSpeedBingeSeason(
-                  userId,
-                  threshold,
-                  windowHours,
-                  c.title_id,
-                );
-                if (r.earned) anyEarned = true;
-                maxProgress = Math.max(maxProgress, r.progress);
-              }
-              result = { progress: maxProgress, earned: anyEarned };
-              break;
-            }
-            case "social_first_follow":
-              result = await evaluateSocialFirstFollow(userId);
-              break;
-            case "social_first_recommendation":
-              result = await evaluateSocialFirstRecommendation(userId);
-              break;
-            default:
-              continue;
-          }
-          pending.push({
-            key: a.key,
-            progress: result.progress,
-            earnedAt: result.earned ? new Date().toISOString() : null,
-            earnedNotified: 1,
-          });
-        } catch (err) {
-          log.warn("Backfill: error evaluating achievement for user", {
-            userId,
-            key: a.key,
-            error: err instanceof Error ? err.message : String(err),
-          });
-        }
-      }
-      if (pending.length > 0) {
-        try {
-          await upsertUserAchievements(userId, pending);
-        } catch (err) {
-          log.warn("Backfill: error persisting achievements for user", {
-            userId,
-            error: err instanceof Error ? err.message : String(err),
-          });
-        }
-      }
+      await backfillUserAchievements(userId);
     } catch (err) {
       log.warn("Backfill: error processing user", {
         userId,
@@ -752,7 +556,7 @@ export const handlers: Record<string, (data: string | null) => Promise<void>> =
     "migrate-backdrops": () => handleMigrateBackdrops(),
     "sync-deep-links": () => handleSyncDeepLinks(),
     cleanup: () => handleCleanup(),
-    "evaluate-achievements": (data) => handleEvaluateAchievements(data),
+    "evaluate-achievements": runEvaluateAchievements,
     "backfill-achievements": (data) => handleBackfillAchievements(data),
   };
 

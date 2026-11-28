@@ -12,6 +12,7 @@ import {
   userAchievementEarns,
 } from "../db/schema";
 import { traceDbQuery } from "../tracing";
+import type { Achievement } from "./definitions";
 
 export type EvalResult = { progress: number; earned: boolean };
 
@@ -555,4 +556,124 @@ export async function evaluateWeekendWarriorRepeatable(
 
     return { progress, newEarns };
   });
+}
+
+export type AchievementEvaluation = {
+  progress: number;
+  earnedAt: string | null;
+  newEarns?: RepeatEvalResult["newEarns"];
+};
+
+export async function evaluateAchievement(
+  userId: string,
+  def: Achievement,
+  opts: { titleId?: string; backfill?: boolean } = {},
+): Promise<AchievementEvaluation | null> {
+  let result: EvalResult;
+  switch (def.kind) {
+    case "count_movies":
+      result = await evaluateCountMovies(userId, def.threshold);
+      break;
+    case "count_episodes":
+      result = await evaluateCountEpisodes(userId, def.threshold);
+      break;
+    case "streak_days":
+      result = await evaluateStreak(userId, def.threshold);
+      break;
+    case "genre_count":
+      result = await evaluateGenreCount(
+        userId,
+        def.threshold,
+        def.genre ?? "__any__",
+      );
+      break;
+    case "completionist":
+      result = await evaluateCompletionist(userId, def.threshold, opts.titleId);
+      break;
+    case "speed_binge_season": {
+      const threshold = def.threshold;
+      const windowHours = def.windowHours ?? 24;
+      if (opts.titleId) {
+        result = await evaluateSpeedBingeSeason(
+          userId,
+          threshold,
+          windowHours,
+          opts.titleId,
+        );
+        break;
+      }
+      if (!opts.backfill) return null;
+      const candidateRows = await getDb().all<{ title_id: string }>(sql`
+        SELECT e.title_id
+        FROM watched_episodes we
+        JOIN episodes e ON e.id = we.episode_id
+        WHERE we.user_id = ${userId}
+          AND we.watched_at IS NOT NULL
+        GROUP BY e.title_id
+        HAVING COUNT(*) >= ${threshold}
+      `);
+
+      let maxProgress = 0;
+      let anyEarned = false;
+
+      for (const c of candidateRows) {
+        const r = await evaluateSpeedBingeSeason(
+          userId,
+          threshold,
+          windowHours,
+          c.title_id,
+        );
+        if (r.earned) anyEarned = true;
+        maxProgress = Math.max(maxProgress, r.progress);
+      }
+
+      result = { progress: maxProgress, earned: anyEarned };
+      break;
+    }
+    case "social_first_follow":
+      result = await evaluateSocialFirstFollow(userId);
+      break;
+    case "social_first_recommendation":
+      result = await evaluateSocialFirstRecommendation(userId);
+      break;
+    case "decade_count":
+      result = await evaluateDecadeCount(userId, def.threshold);
+      break;
+    case "language_count":
+      result = await evaluateLanguageCount(userId, def.threshold);
+      break;
+    case "long_film":
+      result = await evaluateLongFilm(userId);
+      break;
+    case "miniseries_completed":
+      result = await evaluateMiniseriesCompleted(userId, def.threshold);
+      break;
+    case "deep_show_completed":
+      result = await evaluateDeepShowCompleted(userId, def.threshold);
+      break;
+    case "monthly_count_repeatable":
+    case "weekend_warrior_repeatable": {
+      const { progress, newEarns } = await (def.kind ===
+      "monthly_count_repeatable"
+        ? evaluateMonthlyCountRepeatable(userId, def.threshold, def.key)
+        : evaluateWeekendWarriorRepeatable(userId, def.threshold, def.key));
+      const earnedAt =
+        newEarns.length > 0
+          ? newEarns.reduce(
+              (min, earn) => (earn.earnedAt < min ? earn.earnedAt : min),
+              newEarns[0].earnedAt,
+            )
+          : null;
+      return { progress, earnedAt, newEarns };
+    }
+    default: {
+      const unhandled: never = def.kind;
+      throw new Error(`Unhandled achievement kind: ${unhandled}`);
+    }
+  }
+
+  return {
+    progress: result.progress,
+    earnedAt: result.earned ? new Date().toISOString() : null,
+  };
 }

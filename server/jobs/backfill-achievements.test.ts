@@ -1,17 +1,22 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import { eq } from "drizzle-orm";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createUser } from "../db/repository";
-import * as achievementsRepo from "../db/repository/achievements";
+import { getDb, titles, userAchievements } from "../db/schema";
+import { upsertAchievementDefs } from "../db/repository/achievements";
 import * as streaksRepo from "../db/repository/streaks";
-import * as settingsRepo from "../db/repository/settings";
 import { getSetting } from "../db/repository/settings";
-import * as queue from "../jobs/queue";
-import * as evaluate from "../achievements/evaluate";
+import { watchTitle } from "../db/repository/watched-titles";
+import * as queue from "./queue";
 import { runBackfillAchievements } from "./backfill-achievements";
+import { ACHIEVEMENTS } from "../achievements/definitions";
 import { BACKFILL_DONE_KEY } from "../achievements/sync";
 
 beforeEach(async () => {
   setupTestDb();
+  await upsertAchievementDefs(
+    ACHIEVEMENTS.map((achievement) => ({ achievement })),
+  );
 });
 
 afterEach(() => {
@@ -20,261 +25,84 @@ afterEach(() => {
 
 describe("backfill-achievements job", () => {
   it("processes 50 users, updates cursor, re-enqueues itself", async () => {
-    // Create 50 users
+    const userIds = [];
     for (let i = 0; i < 50; i++) {
-      await createUser(
-        `user${String(i).padStart(3, "0")}`,
-        "hash",
-        `User ${i}`,
-      );
+      userIds.push(await createUser(`user${i}`, "hash", `User ${i}`));
     }
 
-    const recomputeSpy = spyOn(
-      streaksRepo,
-      "recomputeStreakFromHistory",
-    ).mockResolvedValue({
-      userId: "",
-      currentStreak: 0,
-      longestStreak: 0,
-      lastWatchDate: null,
-      updatedAt: new Date().toISOString(),
-    });
-    const upsertSpy = spyOn(
-      achievementsRepo,
-      "upsertUserAchievement",
-    ).mockResolvedValue({ newlyEarned: false });
-    const setSettingSpy = spyOn(settingsRepo, "setSetting").mockResolvedValue(
-      undefined,
-    );
-    const getSettingSpy = spyOn(settingsRepo, "getSetting").mockResolvedValue(
-      null,
-    );
+    const recomputeSpy = spyOn(streaksRepo, "recomputeStreakFromHistory");
     const enqueueSpy = spyOn(queue, "enqueueJob").mockReturnValue(1);
-    const evalMoviesSpy = spyOn(
-      evaluate,
-      "evaluateCountMovies",
-    ).mockResolvedValue({ progress: 0, earned: false });
-    const evalEpsSpy = spyOn(
-      evaluate,
-      "evaluateCountEpisodes",
-    ).mockResolvedValue({ progress: 0, earned: false });
-    const evalStreakSpy = spyOn(evaluate, "evaluateStreak").mockResolvedValue({
-      progress: 0,
-      earned: false,
-    });
-    const evalGenreSpy = spyOn(
-      evaluate,
-      "evaluateGenreCount",
-    ).mockResolvedValue({ progress: 0, earned: false });
-    const evalCompSpy = spyOn(
-      evaluate,
-      "evaluateCompletionist",
-    ).mockResolvedValue({ progress: 0, earned: false });
-    const evalFollowSpy = spyOn(
-      evaluate,
-      "evaluateSocialFirstFollow",
-    ).mockResolvedValue({ progress: 0, earned: false });
-    const evalRecSpy = spyOn(
-      evaluate,
-      "evaluateSocialFirstRecommendation",
-    ).mockResolvedValue({ progress: 0, earned: false });
-    const evalSpeedSpy = spyOn(
-      evaluate,
-      "evaluateSpeedBingeSeason",
-    ).mockResolvedValue({ progress: 0, earned: false });
 
-    await runBackfillAchievements(null);
+    try {
+      await runBackfillAchievements(null);
 
-    expect(recomputeSpy).toHaveBeenCalledTimes(50);
-    expect(setSettingSpy).toHaveBeenCalledWith(
-      "achievements_backfill_cursor",
-      expect.any(String),
-    );
-    expect(enqueueSpy).toHaveBeenCalledWith(
-      "backfill-achievements",
-      {},
-      expect.objectContaining({ runAt: expect.any(Date) }),
-    );
+      expect(recomputeSpy).toHaveBeenCalledTimes(50);
+      expect(await getSetting("achievements_backfill_cursor")).toBe(
+        userIds.sort().at(-1)!,
+      );
+      expect(enqueueSpy).toHaveBeenCalledWith(
+        "backfill-achievements",
+        {},
+        expect.objectContaining({ runAt: expect.any(Date) }),
+      );
 
-    // Verify all upserts use earnedNotified=1
-    const upsertCalls = upsertSpy.mock.calls;
-    expect(upsertCalls.length).toBeGreaterThan(0);
-    for (const call of upsertCalls) {
-      expect(call[4]).toEqual({ earnedNotified: 1 });
+      const rows = await getDb().select().from(userAchievements).all();
+      expect(rows).toHaveLength(50 * ACHIEVEMENTS.length);
+      for (const row of rows) expect(row.earnedNotified).toBe(1);
+    } finally {
+      recomputeSpy.mockRestore();
+      enqueueSpy.mockRestore();
     }
-
-    recomputeSpy.mockRestore();
-    upsertSpy.mockRestore();
-    setSettingSpy.mockRestore();
-    getSettingSpy.mockRestore();
-    enqueueSpy.mockRestore();
-    evalMoviesSpy.mockRestore();
-    evalEpsSpy.mockRestore();
-    evalStreakSpy.mockRestore();
-    evalGenreSpy.mockRestore();
-    evalCompSpy.mockRestore();
-    evalFollowSpy.mockRestore();
-    evalRecSpy.mockRestore();
-    evalSpeedSpy.mockRestore();
   });
 
   it("on last batch: sets achievements_backfill_done=1, does NOT re-enqueue", async () => {
-    // Create fewer than 50 users
     for (let i = 0; i < 3; i++) {
       await createUser(`smalluser${i}`, "hash", `Small User ${i}`);
     }
 
-    const recomputeSpy = spyOn(
-      streaksRepo,
-      "recomputeStreakFromHistory",
-    ).mockResolvedValue({
-      userId: "",
-      currentStreak: 0,
-      longestStreak: 0,
-      lastWatchDate: null,
-      updatedAt: new Date().toISOString(),
-    });
-    const upsertSpy = spyOn(
-      achievementsRepo,
-      "upsertUserAchievement",
-    ).mockResolvedValue({ newlyEarned: false });
-    const setSettingSpy = spyOn(settingsRepo, "setSetting").mockResolvedValue(
-      undefined,
-    );
-    const getSettingSpy = spyOn(settingsRepo, "getSetting").mockResolvedValue(
-      null,
-    );
     const enqueueSpy = spyOn(queue, "enqueueJob").mockReturnValue(1);
-    const evalMoviesSpy = spyOn(
-      evaluate,
-      "evaluateCountMovies",
-    ).mockResolvedValue({ progress: 0, earned: false });
-    const evalEpsSpy = spyOn(
-      evaluate,
-      "evaluateCountEpisodes",
-    ).mockResolvedValue({ progress: 0, earned: false });
-    const evalStreakSpy = spyOn(evaluate, "evaluateStreak").mockResolvedValue({
-      progress: 0,
-      earned: false,
-    });
-    const evalGenreSpy = spyOn(
-      evaluate,
-      "evaluateGenreCount",
-    ).mockResolvedValue({ progress: 0, earned: false });
-    const evalCompSpy = spyOn(
-      evaluate,
-      "evaluateCompletionist",
-    ).mockResolvedValue({ progress: 0, earned: false });
-    const evalFollowSpy = spyOn(
-      evaluate,
-      "evaluateSocialFirstFollow",
-    ).mockResolvedValue({ progress: 0, earned: false });
-    const evalRecSpy = spyOn(
-      evaluate,
-      "evaluateSocialFirstRecommendation",
-    ).mockResolvedValue({ progress: 0, earned: false });
-
-    await runBackfillAchievements(null);
-
-    // Last batch (< 50): sets done flag and does NOT re-enqueue
-    expect(setSettingSpy).toHaveBeenCalledWith(BACKFILL_DONE_KEY, "1");
-    const backfillEnqueues = enqueueSpy.mock.calls.filter(
-      (c) => c[0] === "backfill-achievements",
-    );
-    expect(backfillEnqueues.length).toBe(0);
-
-    recomputeSpy.mockRestore();
-    upsertSpy.mockRestore();
-    setSettingSpy.mockRestore();
-    getSettingSpy.mockRestore();
-    enqueueSpy.mockRestore();
-    evalMoviesSpy.mockRestore();
-    evalEpsSpy.mockRestore();
-    evalStreakSpy.mockRestore();
-    evalGenreSpy.mockRestore();
-    evalCompSpy.mockRestore();
-    evalFollowSpy.mockRestore();
-    evalRecSpy.mockRestore();
+    try {
+      await runBackfillAchievements(null);
+      expect(await getSetting(BACKFILL_DONE_KEY)).toBe("1");
+      const backfillEnqueues = enqueueSpy.mock.calls.filter(
+        (c) => c[0] === "backfill-achievements",
+      );
+      expect(backfillEnqueues).toHaveLength(0);
+    } finally {
+      enqueueSpy.mockRestore();
+    }
   });
 
-  it("all earns written with earnedNotified=1 (no notification burst)", async () => {
-    await createUser("notifuser", "hash", "Notif User");
-
-    const recomputeSpy = spyOn(
-      streaksRepo,
-      "recomputeStreakFromHistory",
-    ).mockResolvedValue({
-      userId: "",
-      currentStreak: 0,
-      longestStreak: 0,
-      lastWatchDate: null,
-      updatedAt: new Date().toISOString(),
+  it("writes every registry key and marks historical earns as notified", async () => {
+    const userId = await createUser("notifuser", "hash", "Notif User");
+    await getDb().insert(titles).values({
+      id: "long-film",
+      objectType: "MOVIE",
+      title: "Long Film",
+      runtimeMinutes: 195,
     });
-    const upsertSpy = spyOn(
-      achievementsRepo,
-      "upsertUserAchievement",
-    ).mockResolvedValue({ newlyEarned: true });
-    const setSettingSpy = spyOn(settingsRepo, "setSetting").mockResolvedValue(
-      undefined,
-    );
-    const getSettingSpy = spyOn(settingsRepo, "getSetting").mockResolvedValue(
-      null,
-    );
-    const enqueueSpy = spyOn(queue, "enqueueJob").mockReturnValue(1);
-    const evalMoviesSpy = spyOn(
-      evaluate,
-      "evaluateCountMovies",
-    ).mockResolvedValue({ progress: 100, earned: true });
-    const evalEpsSpy = spyOn(
-      evaluate,
-      "evaluateCountEpisodes",
-    ).mockResolvedValue({ progress: 0, earned: false });
-    const evalStreakSpy = spyOn(evaluate, "evaluateStreak").mockResolvedValue({
-      progress: 0,
-      earned: false,
-    });
-    const evalGenreSpy = spyOn(
-      evaluate,
-      "evaluateGenreCount",
-    ).mockResolvedValue({ progress: 0, earned: false });
-    const evalCompSpy = spyOn(
-      evaluate,
-      "evaluateCompletionist",
-    ).mockResolvedValue({ progress: 0, earned: false });
-    const evalFollowSpy = spyOn(
-      evaluate,
-      "evaluateSocialFirstFollow",
-    ).mockResolvedValue({ progress: 0, earned: false });
-    const evalRecSpy = spyOn(
-      evaluate,
-      "evaluateSocialFirstRecommendation",
-    ).mockResolvedValue({ progress: 0, earned: false });
+    await watchTitle("long-film", userId);
 
     await runBackfillAchievements(null);
 
-    const upsertCalls = upsertSpy.mock.calls;
-    expect(upsertCalls.length).toBeGreaterThan(0);
-    for (const call of upsertCalls) {
-      expect(call[4]).toEqual({ earnedNotified: 1 });
-    }
-
-    recomputeSpy.mockRestore();
-    upsertSpy.mockRestore();
-    setSettingSpy.mockRestore();
-    getSettingSpy.mockRestore();
-    enqueueSpy.mockRestore();
-    evalMoviesSpy.mockRestore();
-    evalEpsSpy.mockRestore();
-    evalStreakSpy.mockRestore();
-    evalGenreSpy.mockRestore();
-    evalCompSpy.mockRestore();
-    evalFollowSpy.mockRestore();
-    evalRecSpy.mockRestore();
+    const rows = await getDb()
+      .select()
+      .from(userAchievements)
+      .where(eq(userAchievements.userId, userId))
+      .all();
+    expect(rows.map((row) => row.achievementKey).sort()).toEqual(
+      ACHIEVEMENTS.map((def) => def.key).sort(),
+    );
+    const def = ACHIEVEMENTS.find((a) => a.kind === "long_film")!;
+    expect(rows.find((row) => row.achievementKey === def.key)).toMatchObject({
+      earnedAt: expect.any(String),
+      earnedNotified: 1,
+    });
+    for (const row of rows) expect(row.earnedNotified).toBe(1);
   });
 
   it("writer/reader key parity: BACKFILL_DONE_KEY is written when zero users exist", async () => {
     await runBackfillAchievements(null);
-    const value = await getSetting(BACKFILL_DONE_KEY);
-    expect(value).toBe("1");
+    expect(await getSetting(BACKFILL_DONE_KEY)).toBe("1");
   });
 });

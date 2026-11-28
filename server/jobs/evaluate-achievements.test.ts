@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  spyOn,
+  mock,
+} from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createUser, upsertTitles } from "../db/repository";
 import { makeParsedTitle } from "../test-utils/fixtures";
@@ -26,6 +34,8 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  // Restores spies even when an assertion fails mid-test.
+  mock.restore();
   teardownTestDb();
 });
 
@@ -58,9 +68,9 @@ describe("evaluate-achievements job handler", () => {
       achievementsRepo,
       "upsertUserAchievements",
     ).mockResolvedValue(new Map());
-    const evalSpy = spyOn(evaluate, "evaluateCountMovies").mockResolvedValue({
+    const evalSpy = spyOn(evaluate, "evaluateAchievement").mockResolvedValue({
       progress: 5,
-      earned: false,
+      earnedAt: null,
     });
 
     await handler(
@@ -85,9 +95,9 @@ describe("evaluate-achievements job handler", () => {
       achievementsRepo,
       "upsertUserAchievements",
     ).mockResolvedValue(new Map());
-    const evalSpy = spyOn(evaluate, "evaluateCountEpisodes").mockResolvedValue({
+    const evalSpy = spyOn(evaluate, "evaluateAchievement").mockResolvedValue({
       progress: 100,
-      earned: true,
+      earnedAt: "2024-01-01T00:00:00.000Z",
     });
 
     await handler(
@@ -107,10 +117,6 @@ describe("evaluate-achievements job handler", () => {
 
   it("skips speed_binge_season when titleId is missing", async () => {
     const handler = getHandler("evaluate-achievements")!;
-    const evalSpeedSpy = spyOn(
-      evaluate,
-      "evaluateSpeedBingeSeason",
-    ).mockResolvedValue({ progress: 0, earned: false });
     const upsertSpy = spyOn(
       achievementsRepo,
       "upsertUserAchievements",
@@ -121,18 +127,17 @@ describe("evaluate-achievements job handler", () => {
     );
 
     // speed_binge_season without titleId should be skipped
-    expect(evalSpeedSpy).not.toHaveBeenCalled();
+    expect(upsertSpy).not.toHaveBeenCalled();
 
     upsertSpy.mockRestore();
-    evalSpeedSpy.mockRestore();
   });
 
   it("evaluates speed_binge_season when titleId is provided", async () => {
     const handler = getHandler("evaluate-achievements")!;
     const evalSpeedSpy = spyOn(
       evaluate,
-      "evaluateSpeedBingeSeason",
-    ).mockResolvedValue({ progress: 3, earned: false });
+      "evaluateAchievement",
+    ).mockResolvedValue({ progress: 3, earnedAt: null });
     const upsertSpy = spyOn(
       achievementsRepo,
       "upsertUserAchievements",
@@ -173,9 +178,9 @@ describe("evaluate-achievements job handler", () => {
       achievementsRepo,
       "upsertUserAchievements",
     ).mockResolvedValue(new Map());
-    const evalSpy = spyOn(evaluate, "evaluateCountMovies").mockResolvedValue({
+    const evalSpy = spyOn(evaluate, "evaluateAchievement").mockResolvedValue({
       progress: 2,
-      earned: false,
+      earnedAt: null,
     });
 
     await handler(
@@ -200,10 +205,11 @@ describe("evaluate-achievements job handler", () => {
       achievementsRepo,
       "appendUserAchievementEarns",
     ).mockResolvedValue(undefined);
-    const evalSpy = spyOn(
-      evaluate,
-      "evaluateWeekendWarriorRepeatable",
-    ).mockResolvedValue({ progress: 7, newEarns: [] });
+    const evalSpy = spyOn(evaluate, "evaluateAchievement").mockResolvedValue({
+      progress: 7,
+      earnedAt: null,
+      newEarns: [],
+    });
 
     await handler(
       makeJob({
