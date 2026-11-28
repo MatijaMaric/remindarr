@@ -91,7 +91,7 @@ export default function TrackedActionsMenu({ title, onChange }: Props) {
               {t("tracked.row.untrack")}
             </button>
             <Popover.Close className="block min-h-10 text-sm">
-              {t("common.close")}
+              {t("calendar.close")}
             </Popover.Close>
           </Popover.Popup>
         </Popover.Positioner>

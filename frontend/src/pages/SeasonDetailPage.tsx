@@ -852,7 +852,7 @@ function EpisodeOverflowMenu({
             className="w-full flex items-center gap-2 text-left px-3 py-2 text-[13px] text-foreground-secondary hover:bg-accent cursor-pointer transition-colors"
           >
             <Share2 size={13} aria-hidden="true" />
-            {t("share.share", "Share")}
+            {t("common.share")}
           </button>
         </Card>
       )}

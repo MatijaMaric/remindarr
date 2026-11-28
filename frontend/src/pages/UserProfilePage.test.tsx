@@ -15,7 +15,7 @@ import {
   cleanup,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Routes, Route } from "react-router";
+import { MemoryRouter, Routes, Route, Link } from "react-router";
 // apiMock must be imported BEFORE the page component so the complete `../api`
 // mock is registered before the component binds its api namespace.
 import { apiMock, resetApiMock } from "../test-utils/apiMock";
@@ -35,10 +35,11 @@ function newTestClient() {
   });
 }
 
-function renderPage() {
+function renderPage(showBobLink = false) {
   return render(
     <QueryClientProvider client={newTestClient()}>
       <MemoryRouter initialEntries={["/user/alice"]}>
+        {showBobLink && <Link to="/user/bob">Open Bob</Link>}
         <Routes>
           <Route path="/user/:username" element={<UserProfilePage />} />
         </Routes>
@@ -115,7 +116,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   resetApiMock();
-  for (const spy of spies) spy.mockRestore();
+  for (const spy of spies.reverse()) spy.mockRestore();
   spies = [];
 });
 
@@ -275,4 +276,44 @@ describe("UserProfilePage watchlist", () => {
       expect(link.getAttribute("href")).toBe("/u/testuser/overlap/alice");
     }
   });
+});
+
+it("clears the edited bio when navigating to another profile", async () => {
+  const auth = AuthContextModule.useAuth();
+  spies.push(
+    spyOn(AuthContextModule, "useAuth").mockReturnValue({
+      ...auth,
+      user: auth.user && { ...auth.user, id: "u2", username: "alice" },
+    }),
+  );
+  apiMock.getUserProfile.mockImplementation(async (username) =>
+    username === "alice"
+      ? { ...profileFixture, is_own_profile: true }
+      : {
+          ...profileFixture,
+          user: {
+            ...profileFixture.user,
+            id: "u3",
+            username: "bob",
+            display_name: "Bob",
+            bio: "Bob's bio",
+          },
+        },
+  );
+  apiMock.updateMyBio.mockResolvedValue({ bio: "Alice's edited bio" });
+
+  renderPage(true);
+
+  fireEvent.click(await screen.findByTestId("bio-edit"));
+  fireEvent.change(screen.getByTestId("bio-textarea"), {
+    target: { value: "Alice's edited bio" },
+  });
+  fireEvent.click(screen.getByTestId("bio-save"));
+  await screen.findByText("Alice's edited bio");
+  expect(apiMock.updateMyBio).toHaveBeenCalledWith("Alice's edited bio");
+
+  fireEvent.click(screen.getByRole("link", { name: "Open Bob" }));
+  await screen.findByText("@bob");
+  expect(screen.getByTestId("bio-text").textContent).toBe("Bob's bio");
+  expect(screen.queryByText("Alice's edited bio")).toBeNull();
 });

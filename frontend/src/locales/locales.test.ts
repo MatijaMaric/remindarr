@@ -55,6 +55,22 @@ describe("locale files", () => {
     expect(codes.sort()).toEqual(Object.keys(TRANSLATIONS).sort());
   });
 
+  it("defines every literal translation key used in source", async () => {
+    const src = `${import.meta.dir}/..`;
+    const missing = new Set<string>();
+    for await (const file of new Bun.Glob("**/*.{ts,tsx}").scan({ cwd: src })) {
+      if (/\.(test|spec)\.tsx?$/.test(file)) continue;
+      const source = await Bun.file(`${src}/${file}`).text();
+      for (const [, key] of source.matchAll(
+        /\bt\(\s*["']([a-zA-Z0-9_.]+)["']/g,
+      )) {
+        if (!enGroups.plain.has(key) && !enGroups.plural.has(key))
+          missing.add(key);
+      }
+    }
+    expect([...missing].sort()).toEqual([]);
+  });
+
   for (const [lang, tree] of Object.entries(TRANSLATIONS)) {
     describe(lang, () => {
       const { plain, plural } = groupPlurals(flatten(tree));

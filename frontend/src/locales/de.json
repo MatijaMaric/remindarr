@@ -558,7 +558,28 @@
     "signUp": "Konto erstellen",
     "discoverMore": "Mehr entdecken"
   },
+  "overlap": {
+    "privateWatchlist": "Merkliste kann nicht verglichen werden.",
+    "error": "Beim Laden des Vergleichs ist ein Fehler aufgetreten.",
+    "privateWatchlistHint": "Beide Merklisten müssen öffentlich sein und ihr müsst einander folgen, um sie zu vergleichen.",
+    "backToProfile": "Zurück zum Profil",
+    "heading": "Was ihr zusammen ansehen könnt",
+    "withFriend": "mit @{{friend}}",
+    "inCommon": "gemeinsam",
+    "yourOnly": "nur bei dir",
+    "friendOnly": "nur bei {{friend}}",
+    "sharedProviders": "gemeinsame Streamingdienste",
+    "bothSubscribedTo": "Ihr habt beide ein Abo bei",
+    "filterAll": "Alle",
+    "filterMovies": "Nur Filme",
+    "filterWatchable": "Jetzt verfügbar",
+    "filterByGenre": "Nach Genre",
+    "noCommon": "Du und @{{friend}} habt noch keine gemeinsamen Titel. Empfiehl doch etwas!",
+    "noMatchingFilter": "Keine Titel entsprechen dem aktuellen Filter.",
+    "viewProfile": "Profil von @{{friend}} ansehen"
+  },
   "userProfile": {
+    "watchTogether": "Zusammen ansehen",
     "memberSince": "Mitglied seit {{date}}",
     "memberSinceKicker": "Mitglied · seit {{date}}",
     "editSettings": "Einstellungen",
