@@ -1,5 +1,13 @@
 import * as rateLimitModule from "./middleware/rate-limit";
-import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  mock,
+  spyOn,
+} from "bun:test";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import Sentry from "./sentry";
@@ -10,6 +18,7 @@ import {
   resetAchievementRegistrySync,
   handler,
 } from "./worker";
+import worker from "./worker";
 import { logger } from "./logger";
 import { rateLimiter, type RateLimitStore } from "./middleware/rate-limit";
 import * as backendModule from "./jobs/backend";
@@ -604,4 +613,40 @@ describe("scheduled() bootstrap KV timestamp", () => {
       rateSpy.mockRestore();
     }
   });
+});
+
+describe("default export fetch() scanner probes (#1391)", () => {
+  it.each([
+    ["GET", "/.env.local"],
+    ["HEAD", "/wp-content/debug.log"],
+    ["POST", "/xmlrpc.php"],
+  ])(
+    "404s %s %s with no body, D1 access, or waitUntil work",
+    async (method, path) => {
+      const getDbBinding = mock(() => {
+        throw new Error("Unexpected D1 access");
+      });
+      const fakeEnv = {
+        get DB() {
+          return getDbBinding();
+        },
+      } as unknown as Parameters<typeof handler.fetch>[1];
+      const waitUntil = mock(() => {});
+      const fakeCtx = {
+        passThroughOnException() {},
+        waitUntil,
+      } as unknown as ExecutionContext;
+
+      const response = await worker.fetch(
+        new Request(`https://remindarr.app${path}`, { method }),
+        fakeEnv,
+        fakeCtx,
+      );
+
+      expect(response.status).toBe(404);
+      expect(response.body).toBeNull();
+      expect(getDbBinding).not.toHaveBeenCalled();
+      expect(waitUntil).not.toHaveBeenCalled();
+    },
+  );
 });

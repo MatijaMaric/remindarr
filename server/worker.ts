@@ -109,7 +109,7 @@ import type { AppEnv } from "./types";
 import { logger, requestLogger, resetLogLevel } from "./logger";
 import { patchConfig, CONFIG, cfEnvToConfigOverrides } from "./config";
 import { classifyError } from "./lib/error-classifier";
-import { isFileLikePath } from "./lib/spa-fallback";
+import { isFileLikePath, isScannerProbePath } from "./lib/spa-fallback";
 import { errorsByCategory } from "./metrics";
 import Sentry from "./sentry";
 import {
@@ -785,7 +785,8 @@ function createApp(env: Env) {
       return c.json({ error: "Not found" }, 404);
     }
     // File-like paths (scanner probes) are guaranteed 404s here — real assets
-    // never reach the worker. Skip the index.html fetch (saves a KV round-trip).
+    // never reach the worker. The default export already 404s these before
+    // Sentry/D1 (#1391); this stays as a backstop for direct handler calls.
     if (isFileLikePath(c.req.path)) {
       return c.text("Not Found", 404);
     }
@@ -991,7 +992,7 @@ export const handler = {
   },
 };
 
-export default withSentry(
+const sentryHandler = withSentry(
   (env: Env) => ({
     dsn: env.SENTRY_DSN,
     release: env.SENTRY_RELEASE,
@@ -1003,3 +1004,20 @@ export default withSentry(
   }),
   handler,
 );
+
+/**
+ * Scanner probes (/.env, /wp-login.php, ...) are guaranteed 404s. Answer them
+ * outside withSentry, before any D1/KV work or job drain (#1391). Sentry pipes
+ * text/plain responses without Content-Length through a TransformStream, the
+ * likely source of "Network connection lost." when a scanner hangs up; a null
+ * body is never streamed.
+ */
+export default {
+  ...sentryHandler,
+  fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    if (isScannerProbePath(new URL(request.url).pathname)) {
+      return new Response(null, { status: 404 });
+    }
+    return sentryHandler.fetch(request, env, ctx);
+  },
+};

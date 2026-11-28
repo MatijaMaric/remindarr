@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { isFileLikePath } from "./spa-fallback";
+import { isFileLikePath, isScannerProbePath } from "./spa-fallback";
 
 describe("isFileLikePath", () => {
   it("returns true for scanner-probe file paths", () => {
@@ -22,5 +22,21 @@ describe("isFileLikePath", () => {
     expect(isFileLikePath("/u/john.doe")).toBe(false);
     expect(isFileLikePath("/user/john.doe")).toBe(false);
     expect(isFileLikePath("/u/alice/achievements")).toBe(false);
+  });
+});
+
+describe("isScannerProbePath", () => {
+  it("flags non-API file-like paths", () => {
+    expect(isScannerProbePath("/.env.local")).toBe(true);
+    expect(isScannerProbePath("/wp-content/debug.log")).toBe(true);
+  });
+
+  it("never flags API routes, even with a dot (calendar feed)", () => {
+    expect(isScannerProbePath("/api/feed/calendar.ics")).toBe(false);
+  });
+
+  it("does not flag SPA or username routes", () => {
+    expect(isScannerProbePath("/title/movie-123")).toBe(false);
+    expect(isScannerProbePath("/u/john.doe")).toBe(false);
   });
 });
