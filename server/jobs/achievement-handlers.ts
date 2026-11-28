@@ -41,7 +41,7 @@ export async function runEvaluateAchievements(
     }
   > = [];
 
-  for (const kind of kinds) {
+  for (const kind of new Set(kinds)) {
     const matchingAchievements = ACHIEVEMENTS.filter((a) => a.kind === kind);
 
     for (const a of matchingAchievements) {

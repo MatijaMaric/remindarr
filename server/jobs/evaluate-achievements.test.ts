@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  spyOn,
+  mock,
+} from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
 import { createUser, upsertTitles } from "../db/repository";
 import { makeParsedTitle } from "../test-utils/fixtures";
@@ -26,6 +34,8 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  // Restores spies even when an assertion fails mid-test.
+  mock.restore();
   teardownTestDb();
 });
 

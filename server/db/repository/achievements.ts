@@ -279,7 +279,9 @@ export async function upsertUserAchievements(
           set: {
             progress: sql`excluded.progress`,
             earnedAt: sql`COALESCE(${userAchievements.earnedAt}, excluded.earned_at)`,
-            earnedNotified: sql`CASE WHEN excluded.earned_notified = 1 THEN 1 ELSE ${userAchievements.earnedNotified} END`,
+            // A backfilled-but-unearned row carries earned_notified = 1; re-arm it
+            // on the real first earn so the user still gets notified (#1464).
+            earnedNotified: sql`CASE WHEN excluded.earned_notified = 1 THEN 1 WHEN ${userAchievements.earnedAt} IS NULL AND excluded.earned_at IS NOT NULL THEN 0 ELSE ${userAchievements.earnedNotified} END`,
             updatedAt: sql`excluded.updated_at`,
           },
         })

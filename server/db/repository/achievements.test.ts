@@ -139,6 +139,21 @@ function countUserAchievementInserts(): {
 }
 
 describe("upsertUserAchievements", () => {
+  it("re-arms notification when a backfilled unearned row is first earned (#1464)", async () => {
+    const userId = await createUser("rearm-ua", "hash");
+    await upsertAchievementDef(makeAchievementDef("rearm_ua"));
+    // Backfill writes unearned rows with earnedNotified = 1.
+    await upsertUserAchievements(userId, [
+      { key: "rearm_ua", progress: 1, earnedAt: null, earnedNotified: 1 },
+    ]);
+    await upsertUserAchievements(userId, [
+      { key: "rearm_ua", progress: 5, earnedAt: "2024-01-01T00:00:00.000Z" },
+    ]);
+    const [row] = await getUserAchievements(userId);
+    expect(row.earnedAt).toBe("2024-01-01T00:00:00.000Z");
+    expect(row.earnedNotified).toBe(0);
+  });
+
   it("writes many rows in one statement and skips unchanged rows (#1344)", async () => {
     const userId = await createUser("batch-ua", "hash");
     const otherId = await createUser("batch-ua-other", "hash");
