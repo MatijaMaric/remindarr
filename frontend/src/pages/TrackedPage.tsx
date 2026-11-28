@@ -15,6 +15,7 @@ import { useGridNavigation } from "../hooks/useGridNavigation";
 import { useScrollRestoration } from "../hooks/useScrollRestoration";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { PageHeader, Pill } from "../components/design";
+import PickForMeDialog from "../components/PickForMeDialog";
 import BackdateWatchedButton from "../components/BackdateWatchedButton";
 import TrackedActionsMenu from "../components/TrackedActionsMenu";
 import { StatsView, formatEta } from "./StatsPage";
@@ -278,6 +279,7 @@ export default function TrackedPage() {
         title={t("tracked.heading")}
         right={
           <div className="flex items-center gap-2 flex-wrap justify-end">
+            <PickForMeDialog />
             {/* Bulk-rewrites watch dates for the monthly chart, so it lives
                 with the stats rather than in every view. */}
             {view === "stats" && (

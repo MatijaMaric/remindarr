@@ -84,6 +84,29 @@ async function doFetch(url: string, options: RequestInit): Promise<Response> {
   return res;
 }
 
+export async function pickTrackedTitle(
+  params: {
+    type?: "MOVIE" | "SHOW";
+    maxRuntime?: number;
+    availableOnly?: boolean;
+    exclude?: string[];
+  },
+  signal?: AbortSignal,
+): Promise<Title | null> {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) query.set(key, String(value));
+  }
+  const identity = identityRequest(signal);
+  const res = await doFetch(`/track/pick?${query}`, {
+    signal: identity.signal,
+  });
+  const data: { title: Title } | null =
+    res.status === 204 ? null : await res.json();
+  identity.check();
+  return data?.title ?? null;
+}
+
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const identity = identityRequest(options?.signal);
   if (!navigator.onLine && (!options?.method || options.method === "GET")) {

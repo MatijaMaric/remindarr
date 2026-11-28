@@ -5,6 +5,7 @@ import {
   untrackTitle,
   untrackTitlesBulk,
   getTrackedTitles,
+  getSubscribedProviderIds,
   insertTitlesIfAbsent,
   getWatchedEpisodesForExport,
   getEpisodeIdsBySEForTitles,
@@ -39,6 +40,9 @@ import { ok } from "./response";
 import { zValidator } from "../lib/validator";
 import { enqueueAdhoc, cancelReleaseReminder } from "../jobs/backend";
 
+import { PLEX_PROVIDER_ID } from "../db/repository/plex-library";
+import { canonicalProviderId } from "../streaming-availability/provider-map";
+
 const log = logger.child({ module: "track" });
 
 const app = new Hono<AppEnv>();
@@ -62,6 +66,67 @@ app.get("/", async (c) => {
     profile_visibility:
       fullUser?.profile_visibility ??
       (fullUser?.profile_public ? "public" : "private"),
+  });
+});
+
+const pickQuerySchema = z.object({
+  type: z.enum(["MOVIE", "SHOW"]).optional(),
+  maxRuntime: z.coerce.number().int().min(1).max(1000).optional(),
+  availableOnly: z
+    .enum(["true", "false"])
+    .transform((value) => value === "true")
+    .optional(),
+  exclude: z
+    .string()
+    .transform((value) => value.split(",").filter(Boolean))
+    .pipe(z.array(z.string()).max(200))
+    .optional(),
+});
+
+app.get("/pick", zValidator("query", pickQuerySchema), async (c) => {
+  const user = c.get("user")!;
+  const { type, maxRuntime, availableOnly, exclude } = c.req.valid("query");
+  const [titles, subscriptions] = await Promise.all([
+    getTrackedTitles(user.id),
+    availableOnly ? getSubscribedProviderIds(user.id) : [],
+  ]);
+
+  const subscribed = new Set(subscriptions);
+  const excluded = new Set(exclude);
+  const candidates = titles.filter(
+    (title) =>
+      !title.is_watched &&
+      title.user_status !== "completed" &&
+      title.user_status !== "dropped" &&
+      // Shows with no aired unwatched episode have nothing to start tonight.
+      !["completed", "caught_up", "unreleased"].includes(
+        title.show_status ?? "",
+      ) &&
+      !excluded.has(title.id) &&
+      (!type || title.object_type === type) &&
+      (maxRuntime === undefined ||
+        (title.runtime_minutes != null &&
+          title.runtime_minutes <= maxRuntime)) &&
+      (!availableOnly ||
+        title.offers.some(
+          (offer) =>
+            offer.provider_id === PLEX_PROVIDER_ID ||
+            (offer.monetization_type != null &&
+              ["FLATRATE", "FREE", "ADS"].includes(offer.monetization_type) &&
+              offer.provider_id != null &&
+              subscribed.has(canonicalProviderId(offer.provider_id))),
+        )),
+  );
+  const title = candidates[Math.floor(Math.random() * candidates.length)];
+  if (!title) return c.body(null, 204);
+
+  const pace = await getUserPace(user.id);
+  return ok(c, {
+    title: {
+      ...title,
+      remaining_minutes: title.remaining_runtime_minutes ?? null,
+      eta_days: computeEta(title.remaining_runtime_minutes, pace.minutesPerDay),
+    },
   });
 });
 

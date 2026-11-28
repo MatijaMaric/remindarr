@@ -29,8 +29,46 @@ afterEach(() => {
   fetchSpy.mockRestore();
 });
 
-const { getTitles, browseTitles, getAdminSettings, updateAdminSettings } =
-  await import("./api");
+const {
+  getTitles,
+  browseTitles,
+  getAdminSettings,
+  updateAdminSettings,
+  pickTrackedTitle,
+} = await import("./api");
+
+describe("pickTrackedTitle", () => {
+  it("returns null on 204 and serialises filters", async () => {
+    fetchSpy.mockImplementation(async (url: string | URL | Request) => {
+      lastFetchUrl = String(url);
+      return new Response(null, { status: 204 });
+    });
+    expect(
+      await pickTrackedTitle({
+        type: "MOVIE",
+        exclude: [],
+        availableOnly: true,
+      }),
+    ).toBeNull();
+    expect(lastFetchUrl).toContain(
+      "/track/pick?type=MOVIE&exclude=&availableOnly=true",
+    );
+  });
+
+  it("returns the picked title and joins excluded ids", async () => {
+    fetchSpy.mockImplementation(async (url: string | URL | Request) => {
+      lastFetchUrl = String(url);
+      return new Response(JSON.stringify({ title: { id: "movie-1" } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    expect((await pickTrackedTitle({ exclude: ["a", "b"] }))?.id).toBe(
+      "movie-1",
+    );
+    expect(lastFetchUrl).toContain("exclude=a%2Cb");
+  });
+});
 
 describe("getTitles", () => {
   it("includes offset=0 in query params (falsy zero must not be dropped)", async () => {

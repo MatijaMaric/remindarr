@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { Hono } from "hono";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { makeParsedTitle } from "../test-utils/fixtures";
+import { makeParsedOffer, makeParsedTitle } from "../test-utils/fixtures";
 import {
   upsertTitles,
   upsertEpisodes,
@@ -9,10 +9,13 @@ import {
   createSession,
   getSessionWithUser,
   trackTitle,
+  watchTitle,
+  setSubscribedProviderIds,
   setTags,
   getTagsForTitle,
   getWatchedTitleIds,
 } from "../db/repository";
+import { upsertPlexLibraryItems } from "../db/repository/plex-library";
 import { requireAuth } from "../middleware/auth";
 import { getRawDb } from "../db/bun-db";
 import { CONFIG } from "../config";
@@ -80,6 +83,143 @@ describe("GET /track", () => {
   it("returns 401 without auth", async () => {
     const res = await app.request("/track");
     expect(res.status).toBe(401);
+  });
+});
+
+describe("GET /track/pick", () => {
+  function requestPick(query = "") {
+    return app.request(`/track/pick${query}`, { headers: headers() });
+  }
+
+  async function seedPick() {
+    const user = (await getSessionWithUser(userToken))!;
+    const title = makeParsedTitle({
+      offers: [
+        makeParsedOffer(),
+        makeParsedOffer({
+          providerId: 337,
+          providerName: "Disney Plus",
+          providerTechnicalName: "disney-plus",
+          monetizationType: "RENT",
+        }),
+      ],
+    });
+    await upsertTitles([title]);
+    await trackTitle(title.id, user.id);
+    return { user, title };
+  }
+
+  describe("validation", () => {
+    it.each([
+      "?type=BOOK",
+      "?maxRuntime=0",
+      `?exclude=${Array.from({ length: 201 }, (_, index) => index).join(",")}`,
+    ])("rejects %s", async (query) => {
+      const res = await requestPick(query);
+      expect(res.status).toBe(400);
+      expect((await res.json()).issues).toBeInstanceOf(Array);
+    });
+  });
+
+  it("returns the same title shape as the tracked list", async () => {
+    await seedPick();
+    const res = await requestPick();
+    expect(res.status).toBe(200);
+    const list = await app.request("/track", { headers: headers() });
+    expect((await res.json()).title).toEqual((await list.json()).titles[0]);
+  });
+
+  it("returns 204 for an empty watchlist", async () => {
+    expect((await requestPick()).status).toBe(204);
+  });
+
+  it("excludes watched titles", async () => {
+    const { user, title } = await seedPick();
+    await watchTitle(title.id, user.id);
+    expect((await requestPick()).status).toBe(204);
+  });
+
+  it("filters by type", async () => {
+    await seedPick();
+    expect((await requestPick("?type=SHOW")).status).toBe(204);
+    expect((await requestPick("?type=MOVIE")).status).toBe(200);
+  });
+
+  it("filters by maximum runtime inclusively", async () => {
+    await seedPick();
+    expect((await requestPick("?maxRuntime=119")).status).toBe(204);
+    expect((await requestPick("?maxRuntime=120")).status).toBe(200);
+  });
+
+  it("requires a matching subscription when requested", async () => {
+    const { user } = await seedPick();
+    expect((await requestPick("?availableOnly=true")).status).toBe(204);
+    await setSubscribedProviderIds(user.id, [337]);
+    expect((await requestPick("?availableOnly=true")).status).toBe(204);
+    await setSubscribedProviderIds(user.id, [8]);
+    expect((await requestPick("?availableOnly=true")).status).toBe(200);
+  });
+
+  it("counts a Plex library copy as available without subscriptions", async () => {
+    const { user, title } = await seedPick();
+    getRawDb()
+      .prepare(
+        `INSERT INTO integrations (id, user_id, provider, name, config, enabled) VALUES ('plex-1', ?, 'plex', 'Plex', ?, 1)`,
+      )
+      .run(
+        user.id,
+        JSON.stringify({
+          plexToken: "tok",
+          serverUrl: "http://plex",
+          serverId: "srv",
+          serverName: "Plex",
+          plexUsername: "u",
+          syncMovies: true,
+          syncEpisodes: true,
+        }),
+      );
+    await upsertPlexLibraryItems([
+      {
+        integrationId: "plex-1",
+        userId: user.id,
+        titleId: title.id,
+        ratingKey: "1",
+        mediaType: "movie",
+      },
+    ]);
+    expect((await requestPick("?availableOnly=true")).status).toBe(200);
+  });
+
+  it("skips shows with no aired unwatched episode", async () => {
+    const user = (await getSessionWithUser(userToken))!;
+    const show = makeParsedTitle({
+      id: "tv-1",
+      objectType: "SHOW",
+      tmdbId: "1",
+      offers: [],
+    });
+    await upsertTitles([show]);
+    await trackTitle(show.id, user.id);
+    // Unreleased: no aired episodes yet.
+    expect((await requestPick("?type=SHOW")).status).toBe(204);
+    await upsertEpisodes([
+      {
+        title_id: show.id,
+        season_number: 1,
+        episode_number: 1,
+        name: "Pilot",
+        overview: null,
+        air_date: "2020-01-01",
+        still_path: null,
+      },
+    ]);
+    expect((await requestPick("?type=SHOW")).status).toBe(200);
+  });
+
+  it("excludes dismissed ids and ignores empty entries", async () => {
+    await seedPick();
+    expect((await requestPick("?exclude=other,,")).status).toBe(200);
+    expect((await requestPick("?exclude=,movie-123,other")).status).toBe(204);
   });
 });
 
