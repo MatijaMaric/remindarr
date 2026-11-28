@@ -1,31 +1,17 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "../db/schema";
-import { users } from "../db/schema";
-import { ACHIEVEMENTS } from "../achievements/definitions";
 import { BACKFILL_DONE_KEY } from "../achievements/sync";
-import {
-  evaluateCountMovies,
-  evaluateCountEpisodes,
-  evaluateStreak,
-  evaluateGenreCount,
-  evaluateCompletionist,
-  evaluateSpeedBingeSeason,
-  evaluateSocialFirstFollow,
-  evaluateSocialFirstRecommendation,
-} from "../achievements/evaluate";
-import { upsertUserAchievement } from "../db/repository/achievements";
-import { recomputeStreakFromHistory } from "../db/repository/streaks";
 import { getSetting, setSetting } from "../db/repository/settings";
 import { enqueueJob } from "./queue";
 import { logger } from "../logger";
 import { registerHandler } from "./worker";
+import { backfillUserAchievements } from "./achievement-handlers";
+
+export { backfillUserAchievements };
 
 const log = logger.child({ module: "backfill-achievements" });
 const PAGE_SIZE = 50;
 
-/**
- * Core handler logic — shared between Bun (registerHandler) and CF Workers (processor.ts).
- */
 export async function runBackfillAchievements(
   _data?: string | null,
 ): Promise<void> {
@@ -53,92 +39,7 @@ export async function runBackfillAchievements(
   for (const row of rows) {
     const userId = row.id;
     try {
-      // 3a. Recompute streak from history
-      await recomputeStreakFromHistory(userId);
-
-      // 3b. Evaluate every achievement with earnedNotified=1 (backfill should not burst notifications)
-      for (const a of ACHIEVEMENTS) {
-        try {
-          let result: { progress: number; earned: boolean };
-
-          switch (a.kind) {
-            case "count_movies":
-              result = await evaluateCountMovies(userId, a.threshold);
-              break;
-            case "count_episodes":
-              result = await evaluateCountEpisodes(userId, a.threshold);
-              break;
-            case "streak_days":
-              result = await evaluateStreak(userId, a.threshold);
-              break;
-            case "genre_count":
-              result = await evaluateGenreCount(
-                userId,
-                a.threshold,
-                a.genre ?? "__any__",
-              );
-              break;
-            case "completionist":
-              // Without titleId — checks all shows the user has episodes for
-              result = await evaluateCompletionist(userId, a.threshold);
-              break;
-            case "speed_binge_season": {
-              // Query for candidate (user, title) pairs with >= threshold episodes
-              const threshold = a.threshold;
-              const windowHours = a.windowHours ?? 24;
-              const candidateRows = await db.all<{ title_id: string }>(sql`
-                SELECT e.title_id
-                FROM watched_episodes we
-                JOIN episodes e ON e.id = we.episode_id
-                WHERE we.user_id = ${userId}
-                  AND we.watched_at IS NOT NULL
-                GROUP BY e.title_id
-                HAVING COUNT(*) >= ${threshold}
-              `);
-
-              let maxProgress = 0;
-              let anyEarned = false;
-
-              for (const c of candidateRows) {
-                const r = await evaluateSpeedBingeSeason(
-                  userId,
-                  threshold,
-                  windowHours,
-                  c.title_id,
-                );
-                if (r.earned) anyEarned = true;
-                maxProgress = Math.max(maxProgress, r.progress);
-              }
-
-              result = { progress: maxProgress, earned: anyEarned };
-              break;
-            }
-            case "social_first_follow":
-              result = await evaluateSocialFirstFollow(userId);
-              break;
-            case "social_first_recommendation":
-              result = await evaluateSocialFirstRecommendation(userId);
-              break;
-            default:
-              continue;
-          }
-
-          const earnedAt = result.earned ? new Date().toISOString() : null;
-          await upsertUserAchievement(
-            userId,
-            a.key,
-            result.progress,
-            earnedAt,
-            { earnedNotified: 1 },
-          );
-        } catch (err) {
-          log.warn("Backfill: error evaluating achievement for user", {
-            userId,
-            key: a.key,
-            error: err instanceof Error ? err.message : String(err),
-          });
-        }
-      }
+      await backfillUserAchievements(userId);
     } catch (err) {
       log.warn("Backfill: error processing user", {
         userId,

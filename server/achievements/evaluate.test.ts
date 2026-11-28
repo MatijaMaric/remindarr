@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterAll } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
+import { ACHIEVEMENTS } from "./definitions";
 import { makeParsedTitle } from "../test-utils/fixtures";
 import {
   createUser,
@@ -20,6 +21,7 @@ import {
   watchHistory,
 } from "../db/schema";
 import {
+  evaluateAchievement,
   evaluateCountMovies,
   evaluateCountEpisodes,
   evaluateStreak,
@@ -46,6 +48,22 @@ beforeEach(async () => {
 
 afterAll(() => {
   teardownTestDb();
+});
+
+describe("evaluateAchievement", () => {
+  it("evaluates every registry definition incrementally and during backfill", async () => {
+    const titleId = "show-all-kinds";
+    await upsertTitles([makeParsedTitle({ id: titleId, objectType: "SHOW" })]);
+
+    for (const def of ACHIEVEMENTS) {
+      expect(await evaluateAchievement(userId, def, { titleId })).toEqual(
+        expect.objectContaining({ progress: expect.any(Number) }),
+      );
+      expect(
+        await evaluateAchievement(userId, def, { backfill: true }),
+      ).toEqual(expect.objectContaining({ progress: expect.any(Number) }));
+    }
+  });
 });
 
 // ─── count_movies ─────────────────────────────────────────────────────────────
@@ -689,6 +707,20 @@ describe("evaluateMonthlyCountRepeatable", () => {
     );
     expect(months).toContain("2024-01");
     expect(months).toContain("2024-02");
+    const def = ACHIEVEMENTS.find(
+      (a) => a.kind === "monthly_count_repeatable",
+    )!;
+    expect(
+      await evaluateAchievement(userId, {
+        ...def,
+        key: achievementKey,
+        threshold: 2,
+      }),
+    ).toEqual({
+      progress: result.progress,
+      earnedAt: "2024-01-01T00:00:00.000Z",
+      newEarns: result.newEarns,
+    });
   });
 
   it("skips months already in user_achievement_earns", async () => {

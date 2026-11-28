@@ -8,7 +8,7 @@ import {
   spyOn,
 } from "bun:test";
 import { setupTestDb, teardownTestDb } from "../test-utils/setup";
-import { getDb, jobs } from "../db/schema";
+import { getDb, jobs, titles, userAchievements } from "../db/schema";
 import { eq } from "drizzle-orm";
 import Sentry from "../sentry";
 
@@ -72,6 +72,8 @@ const mockFetchTrendingPeople = spyOn(
 
 import { CONFIG } from "../config";
 import { getSetting } from "../db/repository/settings";
+import { ACHIEVEMENTS } from "../achievements/definitions";
+import { upsertAchievementDefs } from "../db/repository/achievements";
 import { BACKFILL_DONE_KEY } from "../achievements/sync";
 import { initCache, getCache } from "../cache";
 import { MemoryCache } from "../cache/memory";
@@ -871,7 +873,80 @@ describe("sync-deep-links batch (#1128)", () => {
   });
 });
 
+async function seedAchievementUser() {
+  await upsertAchievementDefs(
+    ACHIEVEMENTS.map((achievement) => ({ achievement })),
+  );
+  const userId = await repository.createUser("achievements-user", "hash");
+  const titleId = "long-film";
+  await getDb().insert(titles).values({
+    id: titleId,
+    objectType: "MOVIE",
+    title: "Long Film",
+    runtimeMinutes: 195,
+  });
+  return { userId, titleId };
+}
+
+async function getUserAchievementRows(userId: string) {
+  return getDb()
+    .select()
+    .from(userAchievements)
+    .where(eq(userAchievements.userId, userId))
+    .all();
+}
+
+describe("evaluate-achievements handler (CF path)", () => {
+  it("writes a row for every achievement kind", async () => {
+    const { userId, titleId } = await seedAchievementUser();
+    const kinds = [...new Set(ACHIEVEMENTS.map((def) => def.kind))];
+
+    await handlers["evaluate-achievements"](
+      JSON.stringify({ userId, kinds, titleId }),
+    );
+
+    const rows = await getUserAchievementRows(userId);
+    expect(rows.map((row) => row.achievementKey).sort()).toEqual(
+      ACHIEVEMENTS.map((def) => def.key).sort(),
+    );
+  });
+
+  it("marks a qualifying user as having earned long_film", async () => {
+    const { userId, titleId } = await seedAchievementUser();
+    await repository.watchTitle(titleId, userId);
+
+    await handlers["evaluate-achievements"](
+      JSON.stringify({ userId, kinds: ["long_film"] }),
+    );
+
+    const [row] = await getUserAchievementRows(userId);
+    const def = ACHIEVEMENTS.find((a) => a.kind === "long_film")!;
+    expect(row).toMatchObject({
+      achievementKey: def.key,
+      progress: 1,
+      earnedAt: expect.any(String),
+    });
+  });
+});
+
 describe("backfill-achievements handler (CF path)", () => {
+  it("writes every registry key and suppresses notifications for historical earns", async () => {
+    const { userId, titleId } = await seedAchievementUser();
+    await repository.watchTitle(titleId, userId);
+
+    await handlers["backfill-achievements"](null);
+
+    const rows = await getUserAchievementRows(userId);
+    expect(rows.map((row) => row.achievementKey).sort()).toEqual(
+      ACHIEVEMENTS.map((def) => def.key).sort(),
+    );
+    const earned = rows.filter((row) => row.earnedAt !== null);
+    expect(earned.map((row) => row.achievementKey)).toContain(
+      ACHIEVEMENTS.find((a) => a.kind === "long_film")!.key,
+    );
+    for (const row of earned) expect(row.earnedNotified).toBe(1);
+  });
+
   it("writes BACKFILL_DONE_KEY so the registry guard finds it (#1062)", async () => {
     // Zero users in the test DB → handler marks the backfill done immediately.
     await handlers["backfill-achievements"](null);
