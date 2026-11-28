@@ -28,6 +28,10 @@ import StreakCounter from "../components/profile/StreakCounter";
 
 export default function UserProfilePage() {
   const { username } = useParams<{ username: string }>();
+  return <UserProfileView key={username} username={username ?? ""} />;
+}
+
+function UserProfileView({ username }: { username: string }) {
   const { t } = useTranslation();
   const { user: currentUser } = useAuth();
   const qc = useQueryClient();
@@ -39,7 +43,7 @@ export default function UserProfilePage() {
     refetch,
   } = useQuery({
     queryKey: ["user-profile", username],
-    queryFn: ({ signal }) => api.getUserProfile(username!, signal),
+    queryFn: ({ signal }) => api.getUserProfile(username, signal),
     enabled: !!username,
     // A 404 is definitive — retrying won't make the user exist.
     retry: (failureCount, err) =>
@@ -53,7 +57,7 @@ export default function UserProfilePage() {
     queryFn: ({ signal }) =>
       isOwnProfileQuery
         ? api.getMyAchievements(signal)
-        : api.getUserAchievements(username!, signal),
+        : api.getUserAchievements(username, signal),
     // The card only renders when the watchlist is visible; a hidden profile 404s.
     enabled: !!username && data?.show_watchlist === true,
     retry: (failureCount, err) =>
@@ -151,7 +155,7 @@ export default function UserProfilePage() {
         to={`/u/${currentUser.username}/overlap/${user.username}`}
         className={`${className} items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm transition-colors`}
       >
-        {t("userProfile.watchTogether", "Watch together")}
+        {t("userProfile.watchTogether")}
       </Link>
     );
 

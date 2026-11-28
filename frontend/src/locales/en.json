@@ -558,7 +558,28 @@
     "signUp": "Sign Up",
     "discoverMore": "Discover More"
   },
+  "overlap": {
+    "privateWatchlist": "Watchlist overlap unavailable.",
+    "error": "Something went wrong loading the overlap.",
+    "privateWatchlistHint": "Both watchlists must be public and you must follow each other to compare watchlists.",
+    "backToProfile": "Back to profile",
+    "heading": "What to watch together",
+    "withFriend": "with @{{friend}}",
+    "inCommon": "in common",
+    "yourOnly": "yours only",
+    "friendOnly": "{{friend}}'s only",
+    "sharedProviders": "shared streaming services",
+    "bothSubscribedTo": "Both subscribed to",
+    "filterAll": "All",
+    "filterMovies": "Movies only",
+    "filterWatchable": "Watchable now",
+    "filterByGenre": "By genre",
+    "noCommon": "You and @{{friend}} don't have any titles in common yet. Try recommending something!",
+    "noMatchingFilter": "No titles match the current filter.",
+    "viewProfile": "View @{{friend}}'s profile"
+  },
   "userProfile": {
+    "watchTogether": "Watch together",
     "memberSince": "Member since {{date}}",
     "memberSinceKicker": "Member · since {{date}}",
     "editSettings": "Settings",
@@ -961,6 +982,7 @@
     "removed": "Invitation removed"
   },
   "common": {
+    "close": "Close",
     "scrollLeft": "Scroll left",
     "scrollRight": "Scroll right",
     "loading": "Loading...",

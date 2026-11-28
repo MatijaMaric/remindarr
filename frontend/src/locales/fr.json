@@ -571,7 +571,28 @@
     "signUp": "Créer un compte",
     "discoverMore": "En découvrir plus"
   },
+  "overlap": {
+    "privateWatchlist": "La comparaison des listes est indisponible.",
+    "error": "Une erreur est survenue lors du chargement de la comparaison.",
+    "privateWatchlistHint": "Pour comparer vos listes, elles doivent être publiques et vous devez vous suivre mutuellement.",
+    "backToProfile": "Retour au profil",
+    "heading": "Que regarder ensemble",
+    "withFriend": "avec @{{friend}}",
+    "inCommon": "en commun",
+    "yourOnly": "dans votre liste uniquement",
+    "friendOnly": "dans la liste de {{friend}} uniquement",
+    "sharedProviders": "services de streaming en commun",
+    "bothSubscribedTo": "Vous avez tous les deux un abonnement à",
+    "filterAll": "Tous",
+    "filterMovies": "Films uniquement",
+    "filterWatchable": "Disponibles maintenant",
+    "filterByGenre": "Par genre",
+    "noCommon": "Vous et @{{friend}} n’avez encore aucun titre en commun. Essayez de recommander quelque chose !",
+    "noMatchingFilter": "Aucun titre ne correspond au filtre actuel.",
+    "viewProfile": "Voir le profil de @{{friend}}"
+  },
   "userProfile": {
+    "watchTogether": "Regarder ensemble",
     "memberSince": "Membre depuis {{date}}",
     "memberSinceKicker": "Membre · depuis {{date}}",
     "editSettings": "Paramètres",
@@ -977,6 +998,7 @@
     "removed": "Invitation supprimée"
   },
   "common": {
+    "close": "Fermer",
     "scrollLeft": "Défiler vers la gauche",
     "scrollRight": "Défiler vers la droite",
     "loading": "Chargement...",

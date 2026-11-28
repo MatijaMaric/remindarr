@@ -103,23 +103,18 @@ export default function UserOverlapPage() {
     return (
       <div className="max-w-2xl mx-auto py-16 text-center space-y-4">
         <p className="text-muted-foreground text-lg">
-          {isPrivate
-            ? t("overlap.privateWatchlist", "Watchlist overlap unavailable.")
-            : t("overlap.error", "Something went wrong loading the overlap.")}
+          {isPrivate ? t("overlap.privateWatchlist") : t("overlap.error")}
         </p>
         {isPrivate && (
           <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-            {t(
-              "overlap.privateWatchlistHint",
-              "Both watchlists must be public and you must follow each other to compare watchlists.",
-            )}
+            {t("overlap.privateWatchlistHint")}
           </p>
         )}
         <Link
           to={`/user/${friendUsername}`}
           className="inline-block text-primary-text hover:text-primary-text text-sm transition-colors"
         >
-          {t("overlap.backToProfile", "Back to profile")}
+          {t("overlap.backToProfile")}
         </Link>
       </div>
     );
@@ -197,10 +192,10 @@ export default function UserOverlapPage() {
         {/* Heading */}
         <div className="sm:ml-4 text-center sm:text-left">
           <h1 className="text-xl font-bold text-foreground">
-            {t("overlap.heading", "What to watch together")}
+            {t("overlap.heading")}
           </h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            {t("overlap.withFriend", "with @{{friend}}", {
+            {t("overlap.withFriend", {
               friend: friendUser.username,
             })}
           </p>
@@ -212,22 +207,21 @@ export default function UserOverlapPage() {
         <span className="bg-muted px-3 py-1.5 rounded-md text-foreground font-semibold">
           {counts.intersection}{" "}
           <span className="text-muted-foreground font-normal">
-            {t("overlap.inCommon", "in common")}
+            {t("overlap.inCommon")}
           </span>
         </span>
         <span className="bg-muted px-3 py-1.5 rounded-md text-muted-foreground">
-          {counts.viewerOnly} {t("overlap.yourOnly", "yours only")}
+          {counts.viewerOnly} {t("overlap.yourOnly")}
         </span>
         <span className="bg-muted px-3 py-1.5 rounded-md text-muted-foreground">
           {counts.friendOnly}{" "}
-          {t("overlap.friendOnly", "{{friend}}'s only", {
+          {t("overlap.friendOnly", {
             friend: friendUser.username,
           })}
         </span>
         {sharedProviders.length > 0 && (
           <span className="bg-muted px-3 py-1.5 rounded-md text-muted-foreground">
-            {sharedProviders.length}{" "}
-            {t("overlap.sharedProviders", "shared streaming services")}
+            {sharedProviders.length} {t("overlap.sharedProviders")}
           </span>
         )}
       </div>
@@ -236,7 +230,7 @@ export default function UserOverlapPage() {
       {sharedProviders.length > 0 && (
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 font-semibold">
-            {t("overlap.bothSubscribedTo", "Both subscribed to")}
+            {t("overlap.bothSubscribedTo")}
           </p>
           <div className="flex flex-wrap gap-2">
             {sharedProviders.map((p) => (
@@ -258,10 +252,9 @@ export default function UserOverlapPage() {
                 : "bg-muted text-foreground-secondary hover:bg-muted-hover"
             }`}
           >
-            {mode === "all" && t("overlap.filterAll", "All")}
-            {mode === "movies" && t("overlap.filterMovies", "Movies only")}
-            {mode === "watchable" &&
-              t("overlap.filterWatchable", "Watchable now")}
+            {mode === "all" && t("overlap.filterAll")}
+            {mode === "movies" && t("overlap.filterMovies")}
+            {mode === "watchable" && t("overlap.filterWatchable")}
           </button>
         ))}
         {allGenres.length > 0 && (
@@ -269,7 +262,7 @@ export default function UserOverlapPage() {
             options={allGenres.map((g) => ({ value: g, label: g }))}
             selected={selectedGenres}
             onChange={setSelectedGenres}
-            label={t("overlap.filterByGenre", "By genre")}
+            label={t("overlap.filterByGenre")}
           />
         )}
       </div>
@@ -280,22 +273,15 @@ export default function UserOverlapPage() {
         <div className="py-16 text-center space-y-3">
           <p className="text-muted-foreground text-lg">
             {counts.intersection === 0
-              ? t(
-                  "overlap.noCommon",
-                  "You and @{{friend}} don't have any titles in common yet. Try recommending something!",
-                  { friend: friendUser.username },
-                )
-              : t(
-                  "overlap.noMatchingFilter",
-                  "No titles match the current filter.",
-                )}
+              ? t("overlap.noCommon", { friend: friendUser.username })
+              : t("overlap.noMatchingFilter")}
           </p>
           {counts.intersection === 0 && (
             <Link
               to={`/user/${friendUser.username}`}
               className="inline-block text-primary-text hover:text-primary-text text-sm transition-colors"
             >
-              {t("overlap.viewProfile", "View @{{friend}}'s profile", {
+              {t("overlap.viewProfile", {
                 friend: friendUser.username,
               })}
             </Link>

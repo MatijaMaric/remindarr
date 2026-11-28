@@ -545,7 +545,28 @@
     "signUp": "アカウントを作成",
     "discoverMore": "もっと見る"
   },
+  "overlap": {
+    "privateWatchlist": "ウォッチリストを比較できません。",
+    "error": "比較結果の読み込み中にエラーが発生しました。",
+    "privateWatchlistHint": "比較するには、両方のウォッチリストを公開し、お互いをフォローする必要があります。",
+    "backToProfile": "プロフィールに戻る",
+    "heading": "一緒に観る作品",
+    "withFriend": "@{{friend}}と",
+    "inCommon": "共通の作品",
+    "yourOnly": "自分のリストのみ",
+    "friendOnly": "{{friend}}のリストのみ",
+    "sharedProviders": "共通の配信サービス",
+    "bothSubscribedTo": "二人とも登録済みのサービス",
+    "filterAll": "すべて",
+    "filterMovies": "映画のみ",
+    "filterWatchable": "今すぐ視聴可能",
+    "filterByGenre": "ジャンル別",
+    "noCommon": "@{{friend}}との共通作品はまだありません。作品をおすすめしてみましょう！",
+    "noMatchingFilter": "現在のフィルターに一致する作品はありません。",
+    "viewProfile": "@{{friend}}のプロフィールを見る"
+  },
   "userProfile": {
+    "watchTogether": "一緒に観る",
     "memberSince": "{{date}} から利用",
     "memberSinceKicker": "メンバー · {{date}} から",
     "editSettings": "設定",
@@ -945,6 +966,7 @@
     "removed": "招待を削除しました"
   },
   "common": {
+    "close": "閉じる",
     "scrollLeft": "左にスクロール",
     "scrollRight": "右にスクロール",
     "loading": "読み込み中...",
