@@ -1,5 +1,13 @@
 import * as rateLimitModule from "./middleware/rate-limit";
-import { describe, it, expect, beforeEach, afterEach, spyOn } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  mock,
+  spyOn,
+} from "bun:test";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import Sentry from "./sentry";
@@ -602,6 +610,77 @@ describe("scheduled() bootstrap KV timestamp", () => {
     } finally {
       pruneLogSpy.mockRestore();
       rateSpy.mockRestore();
+    }
+  });
+});
+
+describe("fetch() scanner probes", () => {
+  withConfigGuard();
+
+  it.each([
+    ["GET", "/.env.local"],
+    ["HEAD", "/wp-content/debug.log"],
+  ])(
+    "returns 404 for %s %s without touching D1 or scheduling jobs",
+    async (method, path) => {
+      const db = new Proxy(
+        {},
+        {
+          get() {
+            throw new Error("Unexpected D1 access");
+          },
+        },
+      );
+      const getDbBinding = mock(() => db);
+      const fakeEnv = {
+        get DB() {
+          return getDbBinding();
+        },
+      } as unknown as Parameters<typeof handler.fetch>[1];
+      const waitUntil = mock(() => {});
+      const fakeCtx = {
+        passThroughOnException() {},
+        waitUntil,
+      } as unknown as ExecutionContext;
+
+      const response = await handler.fetch(
+        new Request(`https://remindarr.app${path}`, { method }),
+        fakeEnv,
+        fakeCtx,
+      );
+
+      expect(response.status).toBe(404);
+      expect(getDbBinding).not.toHaveBeenCalled();
+      expect(waitUntil).not.toHaveBeenCalled();
+    },
+  );
+
+  it("enters normal worker setup for POST /.env", async () => {
+    const getDbBinding = mock(() => {
+      throw new Error("Stop after reaching D1 setup");
+    });
+    const fakeEnv = {
+      get DB() {
+        return getDbBinding();
+      },
+    } as unknown as Parameters<typeof handler.fetch>[1];
+    const fakeCtx = {
+      passThroughOnException() {},
+      waitUntil() {},
+    } as unknown as ExecutionContext;
+    const captureException = spyOn(Sentry, "captureException").mockReturnValue(
+      "",
+    );
+
+    try {
+      await handler.fetch(
+        new Request("https://remindarr.app/.env", { method: "POST" }),
+        fakeEnv,
+        fakeCtx,
+      );
+      expect(getDbBinding).toHaveBeenCalledTimes(1);
+    } finally {
+      captureException.mockRestore();
     }
   });
 });

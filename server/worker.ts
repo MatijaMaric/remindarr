@@ -833,6 +833,16 @@ export const handler = {
     ctx: ExecutionContext,
   ): Promise<Response> {
     ctx.passThroughOnException();
+    // Scanner probes (/.env, /wp-login.php, ...) are guaranteed 404s; answer before any D1/KV work or job drain (#1391).
+    const { pathname } = new URL(request.url);
+    if (
+      (request.method === "GET" || request.method === "HEAD") &&
+      !pathname.startsWith("/api/") &&
+      isFileLikePath(pathname)
+    ) {
+      return new Response("Not Found", { status: 404 });
+    }
+
     patchConfigFromEnv(env);
     try {
       const db = drizzle(env.DB, {
@@ -1001,5 +1011,6 @@ export default withSentry(
     beforeSendTransaction: redactTelemetry,
     beforeSendSpan: redactTelemetry,
   }),
-  handler,
+  // withSentry wraps the methods in place. Keep the named handler unwrapped.
+  { ...handler },
 );
