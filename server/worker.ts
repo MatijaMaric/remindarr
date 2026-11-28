@@ -1011,6 +1011,5 @@ export default withSentry(
     beforeSendTransaction: redactTelemetry,
     beforeSendSpan: redactTelemetry,
   }),
-  // withSentry wraps the methods in place. Keep the named handler unwrapped.
-  { ...handler },
+  handler,
 );

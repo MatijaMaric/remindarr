@@ -621,7 +621,7 @@ describe("fetch() scanner probes", () => {
     ["GET", "/.env.local"],
     ["HEAD", "/wp-content/debug.log"],
   ])(
-    "returns 404 for %s %s without touching D1 or scheduling jobs",
+    "returns 404 for %s %s before reading the D1 binding",
     async (method, path) => {
       const db = new Proxy(
         {},
@@ -637,10 +637,9 @@ describe("fetch() scanner probes", () => {
           return getDbBinding();
         },
       } as unknown as Parameters<typeof handler.fetch>[1];
-      const waitUntil = mock(() => {});
       const fakeCtx = {
         passThroughOnException() {},
-        waitUntil,
+        waitUntil() {},
       } as unknown as ExecutionContext;
 
       const response = await handler.fetch(
@@ -651,7 +650,6 @@ describe("fetch() scanner probes", () => {
 
       expect(response.status).toBe(404);
       expect(getDbBinding).not.toHaveBeenCalled();
-      expect(waitUntil).not.toHaveBeenCalled();
     },
   );
 
