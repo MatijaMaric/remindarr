@@ -27,6 +27,11 @@ updates:
       timezone: "Europe/Zagreb"
     open-pull-requests-limit: 10
     labels: ["dependencies", "frontend"]
+    ignore:
+      # Must share a major with @better-auth/passkey's copy, or LoginPage's
+      # WebAuthnAbortService.cancelCeremony() hits a different singleton (#1468).
+      - dependency-name: "@simplewebauthn/browser"
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: "chore"
       prefix-development: "chore"

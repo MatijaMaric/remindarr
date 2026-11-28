@@ -1,4 +1,13 @@
-import { describe, it, expect, mock, afterEach, beforeEach } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  mock,
+  afterEach,
+  beforeEach,
+  spyOn,
+} from "bun:test";
+import { WebAuthnAbortService } from "@simplewebauthn/browser";
 import {
   render,
   screen,
@@ -24,9 +33,14 @@ type SessionResult = {
   } | null;
 };
 
-let mockPasskeySignIn: (opts?: {
+type PasskeyOptions = {
   autoFill?: boolean;
-}) => Promise<PasskeyResult>;
+  fetchOptions?: { signal?: AbortSignal };
+};
+let mockPasskeySignIn: (opts?: PasskeyOptions) => Promise<PasskeyResult>;
+let cancelCeremonySpy:
+  | ReturnType<typeof spyOn<typeof WebAuthnAbortService, "cancelCeremony">>
+  | undefined;
 let mockGetSession: () => Promise<SessionResult>;
 const mockSocialSignIn = mock((_opts: unknown) => {});
 
@@ -34,7 +48,7 @@ mock.module("../lib/auth-client", () => ({
   authClient: {
     getSession: () => mockGetSession(),
     signIn: {
-      passkey: (opts?: { autoFill?: boolean }) => mockPasskeySignIn(opts),
+      passkey: (opts?: PasskeyOptions) => mockPasskeySignIn(opts),
       username: mock(() => Promise.resolve({ data: null, error: null })),
       social: (opts: unknown) => mockSocialSignIn(opts),
     },
@@ -82,6 +96,8 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  cancelCeremonySpy?.mockRestore();
+  cancelCeremonySpy = undefined;
   if (originalPublicKeyCredential === undefined) {
     delete (globalThis as unknown as { PublicKeyCredential?: unknown })
       .PublicKeyCredential;
@@ -93,6 +109,25 @@ afterEach(() => {
 });
 
 describe("LoginPage passkey sign-in", () => {
+  it("aborts pending passkey autofill on unmount", async () => {
+    PublicKeyCredential.isConditionalMediationAvailable = async () => true;
+    cancelCeremonySpy = spyOn(WebAuthnAbortService, "cancelCeremony");
+    const signIn = mock(
+      (_opts?: PasskeyOptions) => new Promise<PasskeyResult>(() => {}),
+    );
+    mockPasskeySignIn = signIn;
+
+    const { unmount } = renderAt({ pathname: "/login" });
+    await waitFor(() => expect(signIn).toHaveBeenCalledTimes(1));
+    const opts = signIn.mock.calls[0]?.[0];
+    expect(opts?.autoFill).toBe(true);
+
+    unmount();
+
+    expect(opts?.fetchOptions?.signal?.aborted).toBe(true);
+    expect(cancelCeremonySpy).toHaveBeenCalledTimes(1);
+  });
+
   it("does not show an error when the passkey prompt is cancelled (AUTH_CANCELLED)", async () => {
     mockPasskeySignIn = () =>
       Promise.resolve({

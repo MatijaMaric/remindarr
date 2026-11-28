@@ -47,7 +47,10 @@ test.describe("Passkey signup + login", () => {
         mod as {
           authClient: {
             passkey: {
-              addPasskey: (opts?: Record<string, unknown>) => Promise<unknown>;
+              addPasskey: (opts?: Record<string, unknown>) => Promise<{
+                data: unknown;
+                error: unknown;
+              }>;
             };
           };
         }
@@ -64,12 +67,23 @@ test.describe("Passkey signup + login", () => {
     });
 
     expect(addResult.ok, "virtual passkey enrolment must succeed").toBe(true);
+    expect(addResult.result?.error).toBeNull();
+    expect(addResult.result?.data).toBeTruthy();
 
     // Sign the user out to prove the passkey alone can sign them back in.
     // Clearing cookies is enough for the frontend to treat the user as
     // logged out — we don't care whether the server-side sign-out succeeded.
     await page.context().clearCookies();
+    const signedOutSession = await page.request.get("/api/auth/get-session");
+    expect(signedOutSession.ok()).toBeTruthy();
+    expect(await signedOutSession.json()).toBeNull();
 
+    // Leave autofill on for the first /login visit so a leaked ceremony (#1468)
+    // still breaks this test. Turn it off now: with a credential enrolled, the
+    // virtual authenticator answers conditional UI on its own, before the click.
+    await page.addInitScript(() => {
+      PublicKeyCredential.isConditionalMediationAvailable = async () => false;
+    });
     await page.goto("/login");
     const passkeyButton = page.getByRole("button", {
       name: /sign in with passkey/i,
