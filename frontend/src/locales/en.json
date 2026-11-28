@@ -982,6 +982,7 @@
     "removed": "Invitation removed"
   },
   "common": {
+    "close": "Close",
     "scrollLeft": "Scroll left",
     "scrollRight": "Scroll right",
     "loading": "Loading...",

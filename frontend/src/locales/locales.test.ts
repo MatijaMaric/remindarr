@@ -59,7 +59,7 @@ describe("locale files", () => {
     const src = `${import.meta.dir}/..`;
     const missing = new Set<string>();
     for await (const file of new Bun.Glob("**/*.{ts,tsx}").scan({ cwd: src })) {
-      if (/\.(test|spec)\.tsx?$/.test(file)) continue;
+      if (/\.(test|spec|stories)\.tsx?$/.test(file)) continue;
       const source = await Bun.file(`${src}/${file}`).text();
       for (const [, key] of source.matchAll(
         /\bt\(\s*["']([a-zA-Z0-9_.]+)["']/g,

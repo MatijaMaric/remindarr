@@ -998,6 +998,7 @@
     "removed": "Invitación eliminada"
   },
   "common": {
+    "close": "Cerrar",
     "scrollLeft": "Desplazar a la izquierda",
     "scrollRight": "Desplazar a la derecha",
     "loading": "Cargando...",
