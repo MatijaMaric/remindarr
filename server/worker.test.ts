@@ -18,6 +18,7 @@ import {
   resetAchievementRegistrySync,
   handler,
 } from "./worker";
+import worker from "./worker";
 import { logger } from "./logger";
 import { rateLimiter, type RateLimitStore } from "./middleware/rate-limit";
 import * as backendModule from "./jobs/backend";
@@ -614,71 +615,38 @@ describe("scheduled() bootstrap KV timestamp", () => {
   });
 });
 
-describe("fetch() scanner probes", () => {
-  withConfigGuard();
-
+describe("default export fetch() scanner probes (#1391)", () => {
   it.each([
     ["GET", "/.env.local"],
     ["HEAD", "/wp-content/debug.log"],
+    ["POST", "/xmlrpc.php"],
   ])(
-    "returns 404 for %s %s before reading the D1 binding",
+    "404s %s %s with no body, D1 access, or waitUntil work",
     async (method, path) => {
-      const db = new Proxy(
-        {},
-        {
-          get() {
-            throw new Error("Unexpected D1 access");
-          },
-        },
-      );
-      const getDbBinding = mock(() => db);
+      const getDbBinding = mock(() => {
+        throw new Error("Unexpected D1 access");
+      });
       const fakeEnv = {
         get DB() {
           return getDbBinding();
         },
       } as unknown as Parameters<typeof handler.fetch>[1];
+      const waitUntil = mock(() => {});
       const fakeCtx = {
         passThroughOnException() {},
-        waitUntil() {},
+        waitUntil,
       } as unknown as ExecutionContext;
 
-      const response = await handler.fetch(
+      const response = await worker.fetch(
         new Request(`https://remindarr.app${path}`, { method }),
         fakeEnv,
         fakeCtx,
       );
 
       expect(response.status).toBe(404);
+      expect(response.body).toBeNull();
       expect(getDbBinding).not.toHaveBeenCalled();
+      expect(waitUntil).not.toHaveBeenCalled();
     },
   );
-
-  it("enters normal worker setup for POST /.env", async () => {
-    const getDbBinding = mock(() => {
-      throw new Error("Stop after reaching D1 setup");
-    });
-    const fakeEnv = {
-      get DB() {
-        return getDbBinding();
-      },
-    } as unknown as Parameters<typeof handler.fetch>[1];
-    const fakeCtx = {
-      passThroughOnException() {},
-      waitUntil() {},
-    } as unknown as ExecutionContext;
-    const captureException = spyOn(Sentry, "captureException").mockReturnValue(
-      "",
-    );
-
-    try {
-      await handler.fetch(
-        new Request("https://remindarr.app/.env", { method: "POST" }),
-        fakeEnv,
-        fakeCtx,
-      );
-      expect(getDbBinding).toHaveBeenCalledTimes(1);
-    } finally {
-      captureException.mockRestore();
-    }
-  });
 });
