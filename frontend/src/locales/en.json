@@ -1195,5 +1195,15 @@
     "available": "Saved library and calendar data are available for up to 24 hours. Watchlist adds/removes are saved on this device; episode changes require a connection.",
     "unavailable": "Reconnect to verify your account. Saved data is unavailable or has expired.",
     "syncError": "Sync failed. Your changes remain queued; try again when connected."
+  },
+  "pickForMe": {
+    "title": "Pick for me",
+    "type": "Type",
+    "any": "Any",
+    "runtime": "Runtime",
+    "available": "Available on my subscriptions",
+    "pick": "Pick",
+    "another": "Another",
+    "error": "Pick failed."
   }
 }

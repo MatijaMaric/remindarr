@@ -1195,5 +1195,15 @@
     "available": "Gespeicherte Bibliotheks- und Kalenderdaten sind bis zu 24 Stunden verfügbar. Hinzufügen und Entfernen von Titeln wird auf diesem Gerät gespeichert; Episodenänderungen benötigen eine Verbindung.",
     "unavailable": "Stelle eine Verbindung her, um dein Konto zu bestätigen. Gespeicherte Daten fehlen oder sind abgelaufen.",
     "syncError": "Synchronisierung fehlgeschlagen. Deine Änderungen bleiben vorgemerkt; versuche es mit Verbindung erneut."
+  },
+  "pickForMe": {
+    "title": "Für mich auswählen",
+    "type": "Typ",
+    "any": "Beliebig",
+    "runtime": "Laufzeit",
+    "available": "In meinen Abos verfügbar",
+    "pick": "Auswählen",
+    "another": "Nochmal",
+    "error": "Es konnte kein Titel ausgewählt werden."
   }
 }

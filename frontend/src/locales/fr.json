@@ -1221,5 +1221,15 @@
     "available": "La bibliothèque et le calendrier enregistrés sont disponibles jusqu’à 24 heures. Les ajouts et retraits sont enregistrés sur cet appareil ; les épisodes nécessitent une connexion.",
     "unavailable": "Reconnectez-vous pour vérifier votre compte. Les données enregistrées sont indisponibles ou ont expiré.",
     "syncError": "Échec de la synchronisation. Les modifications restent en attente ; réessayez une fois connecté."
+  },
+  "pickForMe": {
+    "title": "Choisis pour moi",
+    "type": "Type",
+    "any": "Indifférent",
+    "runtime": "Durée",
+    "available": "Disponible dans mes abonnements",
+    "pick": "Choisir",
+    "another": "Un autre",
+    "error": "Impossible de choisir un titre."
   }
 }

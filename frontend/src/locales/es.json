@@ -1221,5 +1221,15 @@
     "available": "La biblioteca y el calendario guardados están disponibles hasta 24 horas. Los títulos añadidos o eliminados se guardan en este dispositivo; los episodios requieren conexión.",
     "unavailable": "Conéctate para verificar tu cuenta. Los datos guardados no están disponibles o han caducado.",
     "syncError": "La sincronización ha fallado. Los cambios siguen en cola; inténtalo cuando tengas conexión."
+  },
+  "pickForMe": {
+    "title": "Elige por mí",
+    "type": "Tipo",
+    "any": "Cualquiera",
+    "runtime": "Duración",
+    "available": "Disponible en mis suscripciones",
+    "pick": "Elegir",
+    "another": "Otro",
+    "error": "No se pudo elegir un título."
   }
 }
