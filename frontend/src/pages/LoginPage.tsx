@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams, useLocation, Link } from "react-router";
 import { useTranslation } from "react-i18next";
+import { WebAuthnAbortService } from "@simplewebauthn/browser";
 import { useAuth } from "../context/AuthContext";
 import { authClient } from "../lib/auth-client";
 import { getDailyPlaceholder } from "../data/movie-characters";
@@ -48,6 +49,7 @@ export default function LoginPage() {
   // passkey button click aborts this pending ceremony and starts its own.
   useEffect(() => {
     if (!passkeyAvailable) return;
+    const controller = new AbortController();
     let cancelled = false;
     (async () => {
       try {
@@ -56,7 +58,10 @@ export default function LoginPage() {
             "function" &&
           (await PublicKeyCredential.isConditionalMediationAvailable());
         if (!available || cancelled) return;
-        const result = await authClient.signIn.passkey({ autoFill: true });
+        const result = await authClient.signIn.passkey({
+          autoFill: true,
+          fetchOptions: { signal: controller.signal },
+        });
         if (cancelled) return;
         if (result?.error) return;
         const session = await authClient.getSession();
@@ -67,6 +72,9 @@ export default function LoginPage() {
     })();
     return () => {
       cancelled = true;
+      // Stop the browser prompt and prevent late verification from setting a session cookie.
+      controller.abort();
+      WebAuthnAbortService.cancelCeremony();
     };
   }, [passkeyAvailable, refresh]);
 
