@@ -33,10 +33,6 @@ test.describe("Passkey signup + login", () => {
       },
     );
 
-    // The virtual authenticator answers conditional UI automatically.
-    await page.addInitScript(() => {
-      PublicKeyCredential.isConditionalMediationAvailable = async () => false;
-    });
     await loginUi(page, user.username, user.password);
 
     // Enrol a passkey via better-auth's passkey plugin. The UI doesn't
@@ -82,6 +78,12 @@ test.describe("Passkey signup + login", () => {
     expect(signedOutSession.ok()).toBeTruthy();
     expect(await signedOutSession.json()).toBeNull();
 
+    // Leave autofill on for the first /login visit so a leaked ceremony (#1468)
+    // still breaks this test. Turn it off now: with a credential enrolled, the
+    // virtual authenticator answers conditional UI on its own, before the click.
+    await page.addInitScript(() => {
+      PublicKeyCredential.isConditionalMediationAvailable = async () => false;
+    });
     await page.goto("/login");
     const passkeyButton = page.getByRole("button", {
       name: /sign in with passkey/i,
