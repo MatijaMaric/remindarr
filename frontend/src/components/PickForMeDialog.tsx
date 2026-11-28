@@ -46,6 +46,7 @@ export default function PickForMeDialog() {
   const title = pick.data;
 
   function another(id: string) {
+    if (pick.isPending) return;
     const next = [...new Set([...dismissed, id])].slice(-200);
     setDismissed(next);
     try {
@@ -95,7 +96,7 @@ export default function PickForMeDialog() {
             </Pill>
           ))}
         </fieldset>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-2 text-sm cursor-pointer pointer-coarse:min-h-11">
           <input
             type="checkbox"
             checked={availableOnly}
@@ -144,7 +145,11 @@ export default function PickForMeDialog() {
                   >
                     {t("episodes.watch")}
                   </Link>
-                  <Button variant="outline" onClick={() => another(title.id)}>
+                  <Button
+                    variant="outline"
+                    disabled={pick.isPending}
+                    onClick={() => another(title.id)}
+                  >
                     {t("pickForMe.another")}
                   </Button>
                 </div>

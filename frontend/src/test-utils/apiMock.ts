@@ -72,6 +72,7 @@ const defaults: Record<string, (...args: unknown[]) => Promise<unknown>> = {
   trackTitle: async () => ({}),
   untrackTitle: async () => ({}),
   getTrackedTitles: async () => ({ titles: [] }),
+  pickTrackedTitle: async () => null,
   bulkTrackAction: async () => ({}),
   updateTrackedStatus: async () => ({}),
   updateTrackedNotes: async () => ({}),

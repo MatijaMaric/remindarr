@@ -15,6 +15,7 @@ import {
   getTagsForTitle,
   getWatchedTitleIds,
 } from "../db/repository";
+import { upsertPlexLibraryItems } from "../db/repository/plex-library";
 import { requireAuth } from "../middleware/auth";
 import { getRawDb } from "../db/bun-db";
 import { CONFIG } from "../config";
@@ -157,6 +158,62 @@ describe("GET /track/pick", () => {
     expect((await requestPick("?availableOnly=true")).status).toBe(204);
     await setSubscribedProviderIds(user.id, [8]);
     expect((await requestPick("?availableOnly=true")).status).toBe(200);
+  });
+
+  it("counts a Plex library copy as available without subscriptions", async () => {
+    const { user, title } = await seedPick();
+    getRawDb()
+      .prepare(
+        `INSERT INTO integrations (id, user_id, provider, name, config, enabled) VALUES ('plex-1', ?, 'plex', 'Plex', ?, 1)`,
+      )
+      .run(
+        user.id,
+        JSON.stringify({
+          plexToken: "tok",
+          serverUrl: "http://plex",
+          serverId: "srv",
+          serverName: "Plex",
+          plexUsername: "u",
+          syncMovies: true,
+          syncEpisodes: true,
+        }),
+      );
+    await upsertPlexLibraryItems([
+      {
+        integrationId: "plex-1",
+        userId: user.id,
+        titleId: title.id,
+        ratingKey: "1",
+        mediaType: "movie",
+      },
+    ]);
+    expect((await requestPick("?availableOnly=true")).status).toBe(200);
+  });
+
+  it("skips shows with no aired unwatched episode", async () => {
+    const user = (await getSessionWithUser(userToken))!;
+    const show = makeParsedTitle({
+      id: "tv-1",
+      objectType: "SHOW",
+      tmdbId: "1",
+      offers: [],
+    });
+    await upsertTitles([show]);
+    await trackTitle(show.id, user.id);
+    // Unreleased: no aired episodes yet.
+    expect((await requestPick("?type=SHOW")).status).toBe(204);
+    await upsertEpisodes([
+      {
+        title_id: show.id,
+        season_number: 1,
+        episode_number: 1,
+        name: "Pilot",
+        overview: null,
+        air_date: "2020-01-01",
+        still_path: null,
+      },
+    ]);
+    expect((await requestPick("?type=SHOW")).status).toBe(200);
   });
 
   it("excludes dismissed ids and ignores empty entries", async () => {

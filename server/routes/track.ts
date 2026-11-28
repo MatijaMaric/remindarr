@@ -90,7 +90,6 @@ app.get("/pick", zValidator("query", pickQuerySchema), async (c) => {
     getTrackedTitles(user.id),
     availableOnly ? getSubscribedProviderIds(user.id) : [],
   ]);
-  if (availableOnly && subscriptions.length === 0) return c.body(null, 204);
 
   const subscribed = new Set(subscriptions);
   const excluded = new Set(exclude);
@@ -99,7 +98,10 @@ app.get("/pick", zValidator("query", pickQuerySchema), async (c) => {
       !title.is_watched &&
       title.user_status !== "completed" &&
       title.user_status !== "dropped" &&
-      title.show_status !== "completed" &&
+      // Shows with no aired unwatched episode have nothing to start tonight.
+      !["completed", "caught_up", "unreleased"].includes(
+        title.show_status ?? "",
+      ) &&
       !excluded.has(title.id) &&
       (!type || title.object_type === type) &&
       (maxRuntime === undefined ||
